@@ -1,0 +1,79 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../features/auth/presentation/providers/auth_provider.dart';
+import '../features/auth/presentation/screens/login_screen.dart';
+import '../features/auth/presentation/screens/otp_screen.dart';
+import '../features/home/presentation/screens/home_shell.dart';
+import '../features/home/presentation/screens/home_screen.dart';
+import '../features/promotions/presentation/screens/promotions_screen.dart';
+import '../features/legal_support/presentation/screens/legal_support_screen.dart';
+import '../features/profile/presentation/screens/profile_screen.dart';
+
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final _shellNavigatorKey = GlobalKey<NavigatorState>();
+
+final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authStateProvider);
+
+  return GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: '/login',
+    redirect: (context, state) {
+      final isLoggedIn = authState.value?.isAuthenticated ?? false;
+      final isOnLoginPage = state.matchedLocation == '/login' ||
+          state.matchedLocation == '/otp';
+
+      if (!isLoggedIn && !isOnLoginPage) return '/login';
+      if (isLoggedIn && isOnLoginPage) return '/home';
+      return null;
+    },
+    routes: [
+      // Auth routes
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/otp',
+        builder: (context, state) {
+          final phone = state.extra as String? ?? '';
+          return OtpScreen(phoneNumber: phone);
+        },
+      ),
+
+      // Main shell with bottom navigation
+      ShellRoute(
+        navigatorKey: _shellNavigatorKey,
+        builder: (context, state, child) => HomeShell(child: child),
+        routes: [
+          GoRoute(
+            path: '/home',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: HomeScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/promotions',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: PromotionsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/legal',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: LegalSupportScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/profile',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: ProfileScreen(),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+});

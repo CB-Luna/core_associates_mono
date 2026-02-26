@@ -1,0 +1,46 @@
+# ── Environment ──
+.env
+.env.local
+.env.production
+
+# ── Dependencies ──
+node_modules/
+
+# ── IDE ──
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# ── Build outputs ──
+dist/
+build/
+.next/
+
+# ── Docker volumes (local) ──
+docker/data/
+
+# ── Logs ──
+*.log
+logs/
+
+# ── Coverage ──
+coverage/
+
+# ── Flutter ──
+core_associates_app/.dart_tool/
+core_associates_app/build/
+core_associates_app/.flutter-plugins
+core_associates_app/.flutter-plugins-dependencies
+core_associates_app/ios/Pods/
+core_associates_app/ios/Podfile.lock
+core_associates_app/.pub-cache/
+core_associates_app/pubspec.lock
+
+# ── Prisma ──
+core-associates-api/prisma/*.db
+
+# ── Generated ──
+*.freezed.dart
+*.g.dart

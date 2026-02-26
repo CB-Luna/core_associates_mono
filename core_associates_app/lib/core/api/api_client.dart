@@ -1,0 +1,104 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../constants/app_constants.dart';
+import '../storage/secure_storage.dart';
+
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final storage = ref.watch(secureStorageProvider);
+  return ApiClient(storage: storage);
+});
+
+class ApiClient {
+  late final Dio _dio;
+  final SecureStorageService storage;
+
+  ApiClient({required this.storage}) {
+    _dio = Dio(BaseOptions(
+      baseUrl: AppConstants.apiBaseUrl,
+      connectTimeout: AppConstants.connectionTimeout,
+      receiveTimeout: AppConstants.apiTimeout,
+      headers: {'Content-Type': 'application/json'},
+    ));
+
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await storage.getAccessToken();
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        handler.next(options);
+      },
+      onError: (error, handler) async {
+        if (error.response?.statusCode == 401) {
+          final refreshed = await _refreshToken();
+          if (refreshed) {
+            final retryResponse = await _retry(error.requestOptions);
+            return handler.resolve(retryResponse);
+          }
+        }
+        handler.next(error);
+      },
+    ));
+  }
+
+  Future<bool> _refreshToken() async {
+    try {
+      final refreshToken = await storage.getRefreshToken();
+      if (refreshToken == null) return false;
+
+      final response = await Dio().post(
+        '${AppConstants.apiBaseUrl}${AppConstants.apiPrefix}/auth/refresh',
+        data: {'refreshToken': refreshToken},
+      );
+
+      final newAccessToken = response.data['accessToken'] as String;
+      await storage.setAccessToken(newAccessToken);
+      return true;
+    } catch (_) {
+      await storage.clearTokens();
+      return false;
+    }
+  }
+
+  Future<Response<dynamic>> _retry(RequestOptions requestOptions) {
+    return _dio.request(
+      requestOptions.path,
+      data: requestOptions.data,
+      queryParameters: requestOptions.queryParameters,
+      options: Options(
+        method: requestOptions.method,
+        headers: requestOptions.headers,
+      ),
+    );
+  }
+
+  String _prefixed(String path) => '${AppConstants.apiPrefix}$path';
+
+  Future<Response<T>> get<T>(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) =>
+      _dio.get<T>(_prefixed(path), queryParameters: queryParameters);
+
+  Future<Response<T>> post<T>(
+    String path, {
+    dynamic data,
+  }) =>
+      _dio.post<T>(_prefixed(path), data: data);
+
+  Future<Response<T>> put<T>(
+    String path, {
+    dynamic data,
+  }) =>
+      _dio.put<T>(_prefixed(path), data: data);
+
+  Future<Response<T>> patch<T>(
+    String path, {
+    dynamic data,
+  }) =>
+      _dio.patch<T>(_prefixed(path), data: data);
+
+  Future<Response<T>> delete<T>(String path) =>
+      _dio.delete<T>(_prefixed(path));
+}
