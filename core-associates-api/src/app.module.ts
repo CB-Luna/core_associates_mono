@@ -13,6 +13,7 @@ import { CasosLegalesModule } from './modules/casos-legales/casos-legales.module
 import { StorageModule } from './modules/storage/storage.module';
 import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
+import { MenuModule } from './modules/menu/menu.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ReportesModule } from './modules/reportes/reportes.module';
     StorageModule,
     NotificacionesModule,
     ReportesModule,
+    MenuModule,
   ],
 })
 export class AppModule {}

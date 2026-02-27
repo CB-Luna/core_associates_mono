@@ -180,6 +180,27 @@ async function main() {
   });
   console.log(`Promocion 3 created: ${promo3.titulo}`);
 
+  // Crear módulos de menú
+  const menuItems = [
+    { codigo: 'dashboard', titulo: 'Dashboard', ruta: '/dashboard', icono: 'LayoutDashboard', permisos: ['admin', 'operador', 'proveedor'], orden: 1 },
+    { codigo: 'asociados', titulo: 'Asociados', ruta: '/asociados', icono: 'Users', permisos: ['admin', 'operador'], orden: 2 },
+    { codigo: 'proveedores', titulo: 'Proveedores', ruta: '/proveedores', icono: 'Building2', permisos: ['admin', 'operador'], orden: 3 },
+    { codigo: 'promociones', titulo: 'Promociones', ruta: '/promociones', icono: 'Tag', permisos: ['admin', 'operador', 'proveedor'], orden: 4 },
+    { codigo: 'cupones', titulo: 'Cupones', ruta: '/cupones', icono: 'Ticket', permisos: ['admin', 'operador', 'proveedor'], orden: 5 },
+    { codigo: 'casos-legales', titulo: 'Casos Legales', ruta: '/casos-legales', icono: 'Scale', permisos: ['admin', 'operador'], orden: 6 },
+    { codigo: 'reportes', titulo: 'Reportes', ruta: '/reportes', icono: 'BarChart3', permisos: ['admin'], orden: 7 },
+    { codigo: 'configuracion', titulo: 'Configuración', ruta: '/configuracion', icono: 'Settings', permisos: ['admin'], orden: 8 },
+  ];
+
+  for (const item of menuItems) {
+    await prisma.moduloMenu.upsert({
+      where: { codigo: item.codigo },
+      update: { titulo: item.titulo, ruta: item.ruta, icono: item.icono, permisos: item.permisos, orden: item.orden },
+      create: item,
+    });
+  }
+  console.log(`Menu items created: ${menuItems.length}`);
+
   console.log('Seed completed successfully!');
 }
 

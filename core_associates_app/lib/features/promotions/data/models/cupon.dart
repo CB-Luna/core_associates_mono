@@ -39,6 +39,7 @@ class Cupon {
   final String id;
   final String codigo;
   final String qrPayload;
+  final String qrFirma;
   final String estado;
   final String fechaGeneracion;
   final String fechaVencimiento;
@@ -50,6 +51,7 @@ class Cupon {
     required this.id,
     required this.codigo,
     required this.qrPayload,
+    required this.qrFirma,
     required this.estado,
     required this.fechaGeneracion,
     required this.fechaVencimiento,
@@ -60,11 +62,17 @@ class Cupon {
 
   bool get isActive => estado == 'activo';
 
+  /// QR data for client-side rendering (same format as server QR)
+  String get qrData {
+    return '{"payload":$qrPayload,"firma":"$qrFirma"}';
+  }
+
   factory Cupon.fromJson(Map<String, dynamic> json) {
     return Cupon(
       id: json['id'] as String,
       codigo: json['codigo'] as String,
       qrPayload: json['qrPayload'] as String,
+      qrFirma: json['qrFirma'] as String? ?? '',
       estado: json['estado'] as String,
       fechaGeneracion: json['fechaGeneracion'] as String,
       fechaVencimiento: json['fechaVencimiento'] as String,

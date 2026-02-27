@@ -10,6 +10,8 @@ import '../features/home/presentation/screens/home_screen.dart';
 import '../features/promotions/presentation/screens/promotions_screen.dart';
 import '../features/legal_support/presentation/screens/legal_support_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
+import '../features/documents/presentation/screens/documents_screen.dart';
+import '../features/promotions/presentation/screens/coupon_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -40,6 +42,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final phone = state.extra as String? ?? '';
           return OtpScreen(phoneNumber: phone);
+        },
+      ),
+
+      // Standalone routes (outside bottom nav)
+      GoRoute(
+        path: '/documents',
+        builder: (context, state) => const DocumentsScreen(),
+      ),
+      GoRoute(
+        path: '/coupon/:id',
+        builder: (context, state) {
+          final cuponId = state.pathParameters['id']!;
+          return CouponDetailScreen(cuponId: cuponId);
         },
       ),
 

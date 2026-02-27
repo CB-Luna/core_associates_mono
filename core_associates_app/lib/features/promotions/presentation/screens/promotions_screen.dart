@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../shared/theme/app_theme.dart';
 import '../../data/models/promocion.dart';
@@ -92,7 +93,7 @@ class PromotionsScreen extends ConsumerWidget {
                 return ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   itemCount: promos.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) => _PromocionCard(
                     promocion: promos[index],
                     onGenerarCupon: () =>
@@ -158,6 +159,7 @@ class PromotionsScreen extends ConsumerWidget {
                       backgroundColor: AppColors.secondary,
                     ),
                   );
+                  context.push('/coupon/${cupon.id}');
                 }
               } catch (e) {
                 if (context.mounted) {

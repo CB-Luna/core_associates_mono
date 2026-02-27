@@ -61,7 +61,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              error: (_, __) => Text(
+              error: (_, _) => Text(
                 'Bienvenido',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
@@ -146,7 +146,7 @@ class HomeScreen extends ConsumerWidget {
                   child: CircularProgressIndicator(),
                 ),
               ),
-              error: (_, __) => _PromotionPlaceholder(),
+              error: (_, _) => _PromotionPlaceholder(),
             ),
           ],
         ),

@@ -163,7 +163,7 @@ class LegalSupportScreen extends ConsumerWidget {
               },
               loading: () =>
                   const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Text('Error al cargar casos'),
+              error: (_, _) => const Text('Error al cargar casos'),
             ),
           ],
         ),

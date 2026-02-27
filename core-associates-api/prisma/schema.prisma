@@ -102,7 +102,36 @@ enum EstadoUsuario {
   inactivo
 }
 
+enum TipoMenu {
+  enlace
+  seccion
+  separador
+}
+
 // ── MODELOS ──
+
+model ModuloMenu {
+  id        String    @id @default(uuid()) @db.Uuid
+  parentId  String?   @map("parent_id") @db.Uuid
+  codigo    String    @unique @db.VarChar(50)
+  titulo    String    @db.VarChar(100)
+  ruta      String?   @db.VarChar(200)
+  icono     String?   @db.VarChar(50) // Nombre de ícono Lucide
+  permisos  String[]  @default([]) // Roles con acceso: admin, operador, proveedor
+  orden     Int       @default(0)
+  tipo      TipoMenu  @default(enlace)
+  visible   Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // Self-referencial
+  parent    ModuloMenu?  @relation("MenuHierarchy", fields: [parentId], references: [id])
+  children  ModuloMenu[] @relation("MenuHierarchy")
+
+  @@index([parentId])
+  @@index([orden])
+  @@map("modulos_menu")
+}
 
 model Asociado {
   id               String          @id @default(uuid()) @db.Uuid

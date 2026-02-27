@@ -90,7 +90,7 @@ class ProfileScreen extends ConsumerWidget {
                       style: Theme.of(context).textTheme.titleLarge),
                 ],
               ),
-              error: (_, __) => Column(
+              error: (_, _) => Column(
                 children: [
                   CircleAvatar(
                     radius: 40,
@@ -125,7 +125,7 @@ class ProfileScreen extends ConsumerWidget {
             _ProfileMenuItem(
               icon: Icons.description_outlined,
               title: 'Mis Documentos',
-              onTap: () {},
+              onTap: () => context.push('/documents'),
             ),
             _ProfileMenuItem(
               icon: Icons.credit_card_outlined,

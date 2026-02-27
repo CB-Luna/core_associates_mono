@@ -1,6 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import { apiClient } from '@/lib/api-client';
+
+interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    email: string;
+    nombre: string;
+    rol: string;
+  };
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -14,21 +26,15 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`, {
+      const data = await apiClient<LoginResponse>('/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        requireAuth: false,
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || 'Credenciales inválidas');
-      }
-
-      const data = await res.json();
-      // TODO: Almacenar tokens y redirigir al dashboard
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
+      localStorage.setItem('user', JSON.stringify(data.user));
       window.location.href = '/dashboard';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión');

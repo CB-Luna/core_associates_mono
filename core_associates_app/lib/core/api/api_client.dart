@@ -101,4 +101,24 @@ class ApiClient {
 
   Future<Response<T>> delete<T>(String path) =>
       _dio.delete<T>(_prefixed(path));
+
+  Future<Response<T>> uploadFile<T>(
+    String path, {
+    required String filePath,
+    required String fieldName,
+    Map<String, dynamic>? fields,
+  }) async {
+    final formData = FormData.fromMap({
+      fieldName: await MultipartFile.fromFile(filePath),
+      if (fields != null) ...fields,
+    });
+    return _dio.post<T>(
+      _prefixed(path),
+      data: formData,
+      options: Options(
+        contentType: 'multipart/form-data',
+        receiveTimeout: const Duration(seconds: 60),
+      ),
+    );
+  }
 }

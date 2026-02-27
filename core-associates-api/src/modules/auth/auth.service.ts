@@ -74,7 +74,7 @@ export class AuthService {
   async loginAdmin(
     email: string,
     password: string,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  ) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { email },
     });
@@ -107,6 +107,12 @@ export class AuthService {
     return {
       accessToken: this.jwtService.sign(payload),
       refreshToken: this.jwtService.sign(payload, { expiresIn: '7d' }),
+      user: {
+        id: usuario.id,
+        email: usuario.email,
+        nombre: usuario.nombre,
+        rol: usuario.rol,
+      },
     };
   }
 
