@@ -6,7 +6,7 @@
 #   Redis:         6382 (host) → 6379 (container)
 #   MinIO API:     9002 (host) → 9000 (container)
 #   MinIO Console: 9003 (host) → 9001 (container)
-#   NestJS API:    3500 (host) → 3500 (container)
+#   NestJS API:    3501 (host) → 3501 (container)
 #   Next.js Web:   3600 (host) → 3000 (container)
 #   Nginx:         8580 (host) → 80 (container)
 #   pgAdmin:       5056 (host) → 80 (container)  ← 5055 usado por gen_portales
@@ -114,10 +114,10 @@ services:
     container_name: core_associates_api
     restart: unless-stopped
     ports:
-      - "3500:3500"
+      - "3501:3501"
     environment:
       NODE_ENV: development
-      PORT: 3500
+      PORT: 3501
       DATABASE_URL: postgresql://${DB_USER:-core_admin}:${DB_PASSWORD:-core_secret_2026}@postgres:5432/${DB_NAME:-core_associates_db}?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -162,8 +162,8 @@ services:
       - "3600:3000"
     environment:
       NODE_ENV: development
-      API_INTERNAL_URL: http://api:3500
-      NEXT_PUBLIC_API_URL: http://localhost:3500
+      API_INTERNAL_URL: http://api:3501
+      NEXT_PUBLIC_API_URL: http://localhost:3501
       NEXTAUTH_URL: http://localhost:3600
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-core_nextauth_secret_change_in_production}
       NEXT_PUBLIC_MINIO_URL: http://localhost:9002
