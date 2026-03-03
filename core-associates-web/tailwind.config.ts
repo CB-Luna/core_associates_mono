@@ -23,6 +23,26 @@ const config: Config = {
           950: '#172554',
         },
       },
+      animation: {
+        'drive-right': 'driveRight 12s linear infinite',
+        'drive-left': 'driveLeft 14s linear infinite',
+        'drive-right-slow': 'driveRight 18s linear infinite',
+        'twinkle': 'twinkle 3s ease-in-out infinite',
+      },
+      keyframes: {
+        driveRight: {
+          '0%': { transform: 'translateX(-100px)' },
+          '100%': { transform: 'translateX(700px)' },
+        },
+        driveLeft: {
+          '0%': { transform: 'translateX(100px)' },
+          '100%': { transform: 'translateX(-700px)' },
+        },
+        twinkle: {
+          '0%, 100%': { opacity: '0.3' },
+          '50%': { opacity: '0.8' },
+        },
+      },
     },
   },
   plugins: [],
