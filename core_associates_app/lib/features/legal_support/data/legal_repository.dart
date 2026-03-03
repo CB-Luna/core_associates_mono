@@ -19,13 +19,16 @@ class LegalRepository {
     String? descripcion,
     String? direccionAprox,
   }) async {
-    final response = await apiClient.post('/casos-legales', data: {
-      'tipoPercance': tipoPercance,
-      'latitud': latitud,
-      'longitud': longitud,
-      'descripcion': ?descripcion,
-      'direccionAprox': ?direccionAprox,
-    });
+    final response = await apiClient.post(
+      '/casos-legales',
+      data: {
+        'tipoPercance': tipoPercance,
+        'latitud': latitud,
+        'longitud': longitud,
+        'descripcion': ?descripcion,
+        'direccionAprox': ?direccionAprox,
+      },
+    );
     return CasoLegal.fromJson(response.data as Map<String, dynamic>);
   }
 

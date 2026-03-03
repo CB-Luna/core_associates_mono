@@ -22,10 +22,7 @@ class CuponProveedorResumen {
   final String razonSocial;
   final String tipo;
 
-  const CuponProveedorResumen({
-    required this.razonSocial,
-    required this.tipo,
-  });
+  const CuponProveedorResumen({required this.razonSocial, required this.tipo});
 
   factory CuponProveedorResumen.fromJson(Map<String, dynamic> json) {
     return CuponProveedorResumen(
@@ -78,9 +75,11 @@ class Cupon {
       fechaVencimiento: json['fechaVencimiento'] as String,
       fechaCanje: json['fechaCanje'] as String?,
       promocion: CuponPromocionResumen.fromJson(
-          json['promocion'] as Map<String, dynamic>),
+        json['promocion'] as Map<String, dynamic>,
+      ),
       proveedor: CuponProveedorResumen.fromJson(
-          json['proveedor'] as Map<String, dynamic>),
+        json['proveedor'] as Map<String, dynamic>,
+      ),
     );
   }
 }

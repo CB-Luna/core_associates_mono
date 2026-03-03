@@ -13,11 +13,7 @@ class AuthState {
     this.error,
   });
 
-  AuthState copyWith({
-    bool? isAuthenticated,
-    bool? isLoading,
-    String? error,
-  }) =>
+  AuthState copyWith({bool? isAuthenticated, bool? isLoading, String? error}) =>
       AuthState(
         isAuthenticated: isAuthenticated ?? this.isAuthenticated,
         isLoading: isLoading ?? this.isLoading,
@@ -25,8 +21,9 @@ class AuthState {
       );
 }
 
-final authStateProvider =
-    AsyncNotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
+final authStateProvider = AsyncNotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);
 
 class AuthNotifier extends AsyncNotifier<AuthState> {
   @override
@@ -42,7 +39,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<bool> verifyOtp(String phoneNumber, String otp) async {
-    state = const AsyncData(AuthState(isLoading: true));
+    state = const AsyncLoading();
     try {
       final repo = ref.read(authRepositoryProvider);
       await repo.verifyOtp(phoneNumber, otp);

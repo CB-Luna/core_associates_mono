@@ -14,32 +14,46 @@ class ApiClient {
   final SecureStorageService storage;
 
   ApiClient({required this.storage}) {
-    _dio = Dio(BaseOptions(
-      baseUrl: AppConstants.apiBaseUrl,
-      connectTimeout: AppConstants.connectionTimeout,
-      receiveTimeout: AppConstants.apiTimeout,
-      headers: {'Content-Type': 'application/json'},
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: AppConstants.apiBaseUrl,
+        connectTimeout: AppConstants.connectionTimeout,
+        receiveTimeout: AppConstants.apiTimeout,
+        headers: {'Content-Type': 'application/json'},
+      ),
+    );
 
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await storage.getAccessToken();
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        handler.next(options);
-      },
-      onError: (error, handler) async {
-        if (error.response?.statusCode == 401) {
-          final refreshed = await _refreshToken();
-          if (refreshed) {
-            final retryResponse = await _retry(error.requestOptions);
-            return handler.resolve(retryResponse);
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await storage.getAccessToken();
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
           }
-        }
-        handler.next(error);
-      },
-    ));
+          handler.next(options);
+        },
+        onError: (error, handler) async {
+          if (error.response?.statusCode == 401) {
+            final refreshed = await _refreshToken();
+            if (refreshed) {
+              final retryResponse = await _retry(error.requestOptions);
+              return handler.resolve(retryResponse);
+            } else {
+              // Notify that auth session expired — reject with clear error
+              handler.reject(
+                DioException(
+                  requestOptions: error.requestOptions,
+                  error: 'session_expired',
+                  type: DioExceptionType.unknown,
+                ),
+              );
+              return;
+            }
+          }
+          handler.next(error);
+        },
+      ),
+    );
   }
 
   Future<bool> _refreshToken() async {
@@ -78,29 +92,18 @@ class ApiClient {
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
-  }) =>
-      _dio.get<T>(_prefixed(path), queryParameters: queryParameters);
+  }) => _dio.get<T>(_prefixed(path), queryParameters: queryParameters);
 
-  Future<Response<T>> post<T>(
-    String path, {
-    dynamic data,
-  }) =>
+  Future<Response<T>> post<T>(String path, {dynamic data}) =>
       _dio.post<T>(_prefixed(path), data: data);
 
-  Future<Response<T>> put<T>(
-    String path, {
-    dynamic data,
-  }) =>
+  Future<Response<T>> put<T>(String path, {dynamic data}) =>
       _dio.put<T>(_prefixed(path), data: data);
 
-  Future<Response<T>> patch<T>(
-    String path, {
-    dynamic data,
-  }) =>
+  Future<Response<T>> patch<T>(String path, {dynamic data}) =>
       _dio.patch<T>(_prefixed(path), data: data);
 
-  Future<Response<T>> delete<T>(String path) =>
-      _dio.delete<T>(_prefixed(path));
+  Future<Response<T>> delete<T>(String path) => _dio.delete<T>(_prefixed(path));
 
   Future<Response<T>> uploadFile<T>(
     String path, {

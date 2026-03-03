@@ -8,15 +8,15 @@ import '../../data/promotions_repository.dart';
 const categoryMap = <String, String?>{
   'Todas': null,
   'Mecánica': 'taller',
-  'Refacciones': 'taller',
-  'Seguros': 'abogado',
+  'Seguros': 'seguros',
   'Servicios': 'otro',
   'Comida': 'comida',
 };
 
 final selectedCategoryProvider =
     NotifierProvider<SelectedCategoryNotifier, String>(
-        SelectedCategoryNotifier.new);
+      SelectedCategoryNotifier.new,
+    );
 
 class SelectedCategoryNotifier extends Notifier<String> {
   @override
@@ -34,7 +34,8 @@ final promocionesProvider = FutureProvider<List<Promocion>>((ref) async {
 
 final misCuponesProvider =
     AsyncNotifierProvider<MisCuponesNotifier, List<Cupon>>(
-        MisCuponesNotifier.new);
+      MisCuponesNotifier.new,
+    );
 
 class MisCuponesNotifier extends AsyncNotifier<List<Cupon>> {
   @override

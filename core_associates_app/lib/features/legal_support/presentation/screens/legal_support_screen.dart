@@ -22,16 +22,16 @@ class LegalSupportScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               'Soporte Legal',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
               'Asistencia en caso de percance vial',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
             ),
 
             const SizedBox(height: 24),
@@ -78,8 +78,8 @@ class LegalSupportScreen extends ConsumerWidget {
                   Text(
                     'Toca para reportar un percance',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -90,9 +90,9 @@ class LegalSupportScreen extends ConsumerWidget {
             // Info cards
             Text(
               'Cobertura incluida',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
 
@@ -119,9 +119,9 @@ class LegalSupportScreen extends ConsumerWidget {
             // Recent cases
             Text(
               'Mis Casos',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
 
@@ -138,14 +138,15 @@ class LegalSupportScreen extends ConsumerWidget {
                     ),
                     child: Column(
                       children: [
-                        Icon(Icons.folder_open_outlined,
-                            size: 40, color: AppColors.textSecondary),
+                        Icon(
+                          Icons.folder_open_outlined,
+                          size: 40,
+                          color: AppColors.textSecondary,
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           'No tienes casos registrados',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
+                          style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(color: AppColors.textSecondary),
                         ),
                       ],
@@ -154,15 +155,16 @@ class LegalSupportScreen extends ConsumerWidget {
                 }
                 return Column(
                   children: casos
-                      .map((c) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _CasoCard(caso: c),
-                          ))
+                      .map(
+                        (c) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _CasoCard(caso: c),
+                        ),
+                      )
                       .toList(),
                 );
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, _) => const Text('Error al cargar casos'),
             ),
           ],
@@ -190,9 +192,13 @@ class LegalSupportScreen extends ConsumerWidget {
                 initialValue: selectedTipo,
                 items: const [
                   DropdownMenuItem(
-                      value: 'accidente', child: Text('Accidente')),
+                    value: 'accidente',
+                    child: Text('Accidente'),
+                  ),
                   DropdownMenuItem(
-                      value: 'infraccion', child: Text('Infracción')),
+                    value: 'infraccion',
+                    child: Text('Infracción'),
+                  ),
                   DropdownMenuItem(value: 'robo', child: Text('Robo')),
                   DropdownMenuItem(value: 'asalto', child: Text('Asalto')),
                   DropdownMenuItem(value: 'otro', child: Text('Otro')),
@@ -200,8 +206,10 @@ class LegalSupportScreen extends ConsumerWidget {
                 onChanged: (v) => setState(() => selectedTipo = v!),
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -217,17 +225,20 @@ class LegalSupportScreen extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () {
+                descripcionController.dispose();
+                Navigator.pop(ctx);
+              },
               child: const Text('Cancelar'),
             ),
             FilledButton(
               onPressed: () async {
+                final desc = descripcionController.text;
+                descripcionController.dispose();
                 Navigator.pop(ctx);
-                await _reportarPercance(
-                    context, ref, selectedTipo, descripcionController.text);
+                await _reportarPercance(context, ref, selectedTipo, desc);
               },
-              style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.error),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.error),
               child: const Text('Enviar SOS'),
             ),
           ],
@@ -236,8 +247,12 @@ class LegalSupportScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _reportarPercance(BuildContext context, WidgetRef ref,
-      String tipo, String descripcion) async {
+  Future<void> _reportarPercance(
+    BuildContext context,
+    WidgetRef ref,
+    String tipo,
+    String descripcion,
+  ) async {
     try {
       // Get current location
       LocationPermission permission = await Geolocator.checkPermission();
@@ -252,8 +267,9 @@ class LegalSupportScreen extends ConsumerWidget {
           permission == LocationPermission.always) {
         try {
           final position = await Geolocator.getCurrentPosition(
-            locationSettings:
-                const LocationSettings(timeLimit: Duration(seconds: 10)),
+            locationSettings: const LocationSettings(
+              timeLimit: Duration(seconds: 10),
+            ),
           );
           lat = position.latitude;
           lng = position.longitude;
@@ -262,7 +278,9 @@ class LegalSupportScreen extends ConsumerWidget {
         }
       }
 
-      final caso = await ref.read(misCasosProvider.notifier).reportarPercance(
+      final caso = await ref
+          .read(misCasosProvider.notifier)
+          .reportarPercance(
             tipoPercance: tipo,
             latitud: lat,
             longitud: lng,
@@ -327,16 +345,16 @@ class _CoverageCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   description,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -394,35 +412,36 @@ class _CasoCard extends StatelessWidget {
               children: [
                 Text(
                   '${caso.tipoPercanceLabel} - ${caso.codigo}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: _estadoColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         caso.estadoLabel,
-                        style:
-                            Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: _estadoColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: _estadoColor,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       caso.prioridad.toUpperCase(),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),

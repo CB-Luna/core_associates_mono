@@ -58,14 +58,21 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           .read(authStateProvider.notifier)
           .verifyOtp(widget.phoneNumber, otp);
 
-      if (success && mounted) {
-        context.go('/home');
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Código incorrecto. Intenta de nuevo.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        _pinController.clear();
       }
+      // Navigation is handled by the router redirect when auth state changes
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Código incorrecto: $e'),
+            content: Text('Error de verificación: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -79,14 +86,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   Future<void> _resendOtp() async {
     if (_resendSeconds > 0) return;
     try {
-      await ref
-          .read(authStateProvider.notifier)
-          .sendOtp(widget.phoneNumber);
+      await ref.read(authStateProvider.notifier).sendOtp(widget.phoneNumber);
       _startResendTimer();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Código reenviado')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Código reenviado')));
       }
     } catch (e) {
       if (mounted) {
@@ -128,15 +133,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               Text(
                 'Verificación',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Ingresa el código de 6 dígitos enviado a\n$_maskedPhone',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
               ),
 
               const SizedBox(height: 40),
@@ -178,10 +183,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 child: _resendSeconds > 0
                     ? Text(
                         'Reenviar código en $_resendSeconds s',
-                        style:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       )
                     : TextButton(
                         onPressed: _resendOtp,

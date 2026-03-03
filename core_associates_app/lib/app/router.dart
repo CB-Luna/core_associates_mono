@@ -16,16 +16,26 @@ import '../features/promotions/presentation/screens/coupon_detail_screen.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Listenable that notifies GoRouter when auth state changes,
+/// without recreating the entire router instance.
+class _AuthChangeNotifier extends ChangeNotifier {
+  _AuthChangeNotifier(Ref ref) {
+    ref.listen(authStateProvider, (_, _) => notifyListeners());
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  final notifier = _AuthChangeNotifier(ref);
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/login',
+    refreshListenable: notifier,
     redirect: (context, state) {
+      final authState = ref.read(authStateProvider);
       final isLoggedIn = authState.value?.isAuthenticated ?? false;
-      final isOnLoginPage = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/otp';
+      final isOnLoginPage =
+          state.matchedLocation == '/login' || state.matchedLocation == '/otp';
 
       if (!isLoggedIn && !isOnLoginPage) return '/login';
       if (isLoggedIn && isOnLoginPage) return '/home';
@@ -33,10 +43,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       // Auth routes
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/otp',
         builder: (context, state) {
@@ -65,27 +72,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/home',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: HomeScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: HomeScreen()),
           ),
           GoRoute(
             path: '/promotions',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: PromotionsScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: PromotionsScreen()),
           ),
           GoRoute(
             path: '/legal',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: LegalSupportScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: LegalSupportScreen()),
           ),
           GoRoute(
             path: '/profile',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ProfileScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ProfileScreen()),
           ),
         ],
       ),

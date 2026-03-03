@@ -31,15 +31,15 @@ class HomeScreen extends ConsumerWidget {
                         ? 'Hola, ${asociado.nombre}'
                         : 'Bienvenido',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Core Associates',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -49,23 +49,23 @@ class HomeScreen extends ConsumerWidget {
                   Text(
                     'Bienvenido',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Core Associates',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
               error: (_, _) => Text(
                 'Bienvenido',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -78,9 +78,9 @@ class HomeScreen extends ConsumerWidget {
             // Quick actions
             Text(
               'Acceso Rápido',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
             Row(
@@ -90,7 +90,14 @@ class HomeScreen extends ConsumerWidget {
                     icon: Icons.qr_code_scanner,
                     label: 'Escanear QR',
                     color: AppColors.primary,
-                    onTap: () {},
+                    onTap: () {
+                      // TODO: Implement QR scanner
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Escáner QR próximamente'),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -99,7 +106,7 @@ class HomeScreen extends ConsumerWidget {
                     icon: Icons.description_outlined,
                     label: 'Documentos',
                     color: AppColors.secondary,
-                    onTap: () {},
+                    onTap: () => context.push('/documents'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -119,9 +126,9 @@ class HomeScreen extends ConsumerWidget {
             // Recent promotions
             Text(
               'Promociones Recientes',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
             promosAsync.when(
@@ -130,13 +137,15 @@ class HomeScreen extends ConsumerWidget {
                 final recent = promos.take(3).toList();
                 return Column(
                   children: recent
-                      .map((p) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _PromocionCard(
-                              promocion: p,
-                              onTap: () => context.go('/promotions'),
-                            ),
-                          ))
+                      .map(
+                        (p) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _PromocionCard(
+                            promocion: p,
+                            onTap: () => context.go('/promotions'),
+                          ),
+                        ),
+                      )
                       .toList(),
                 );
               },
@@ -162,8 +171,9 @@ class _MembershipCard extends ConsumerWidget {
 
     final idUnico = profileAsync.value?.idUnico ?? '---';
     final estado = profileAsync.value?.estado ?? '---';
-    final estadoLabel =
-        estado == 'activo' ? 'Membresía Activa' : 'Membresía: $estado';
+    final estadoLabel = estado == 'activo'
+        ? 'Membresía Activa'
+        : 'Membresía: $estado';
 
     return Container(
       width: double.infinity,
@@ -184,9 +194,9 @@ class _MembershipCard extends ConsumerWidget {
             children: [
               Text(
                 estadoLabel,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white70,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
               ),
               Icon(
                 estado == 'activo' ? Icons.verified : Icons.pending,
@@ -199,16 +209,16 @@ class _MembershipCard extends ConsumerWidget {
           Text(
             'Asociado #$idUnico',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             profileAsync.value?.telefono ?? '',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white70,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.white70),
           ),
         ],
       ),
@@ -248,9 +258,9 @@ class _QuickAction extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -291,9 +301,9 @@ class _PromocionCard extends StatelessWidget {
                 child: Text(
                   promocion.descuentoFormateado,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.secondary,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -305,8 +315,8 @@ class _PromocionCard extends StatelessWidget {
                   Text(
                     promocion.titulo,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      fontWeight: FontWeight.w600,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -314,8 +324,8 @@ class _PromocionCard extends StatelessWidget {
                   Text(
                     promocion.proveedor.razonSocial,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -349,9 +359,9 @@ class _PromotionPlaceholder extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Las promociones disponibles aparecerán aquí',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
             textAlign: TextAlign.center,
           ),
         ],
