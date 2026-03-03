@@ -11,12 +11,12 @@ import {
 const PIE_COLORS = ['#22c55e', '#eab308', '#ef4444', '#6b7280', '#8b5cf6'];
 
 interface DashboardMetrics {
-  asociados: { total: number; activos: number; pendientes: number; suspendidos: number };
-  proveedores: { total: number };
-  cupones: { mesCurrent: number };
-  casos: { abiertos: number };
+  asociados: { total: number; activos: number; pendientes: number; suspendidos: number; bajas: number; rechazados: number };
+  proveedores: { total: number; activos: number };
+  cupones: { delMes: number };
+  casosLegales: { abiertos: number };
   documentos: { pendientes: number };
-  trend: { month: string; count: number }[];
+  trend: { mes: string; asociados: number; cupones: number }[];
 }
 
 export default function ReportesPage() {
@@ -59,8 +59,8 @@ export default function ReportesPage() {
         cards={[
           { title: 'Asociados', value: metrics.asociados.total, color: 'blue' },
           { title: 'Proveedores', value: metrics.proveedores.total, color: 'purple' },
-          { title: 'Cupones (mes)', value: metrics.cupones.mesCurrent, color: 'green' },
-          { title: 'Casos abiertos', value: metrics.casos.abiertos, color: 'red' },
+          { title: 'Cupones (mes)', value: metrics.cupones.delMes, color: 'green' },
+          { title: 'Casos abiertos', value: metrics.casosLegales.abiertos, color: 'red' },
         ]}
       />
 
@@ -71,10 +71,10 @@ export default function ReportesPage() {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={metrics.trend}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
+              <XAxis dataKey="mes" />
               <YAxis allowDecimals={false} />
               <Tooltip />
-              <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="asociados" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -123,7 +123,7 @@ export default function ReportesPage() {
           </div>
           <div className="rounded-lg bg-gray-50 p-4">
             <p className="text-sm text-gray-500">Casos abiertos</p>
-            <p className="text-2xl font-bold text-red-600">{metrics.casos.abiertos}</p>
+            <p className="text-2xl font-bold text-red-600">{metrics.casosLegales.abiertos}</p>
           </div>
         </div>
       </div>
