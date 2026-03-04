@@ -180,6 +180,8 @@ async function main() {
   });
   console.log(`Promocion 3 created: ${promo3.titulo}`);
 
+  
+
   // Crear módulos de menú
   const menuItems = [
     { codigo: 'dashboard', titulo: 'Dashboard', ruta: '/dashboard', icono: 'LayoutDashboard', permisos: ['admin', 'operador', 'proveedor'], orden: 1 },

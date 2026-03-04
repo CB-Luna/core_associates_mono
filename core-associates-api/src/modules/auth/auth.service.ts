@@ -48,10 +48,7 @@ export class AuthService {
       asociado = await this.prisma.asociado.create({
         data: {
           idUnico,
-          nombre: '',
-          apellidoPat: '',
           telefono,
-          fechaNacimiento: new Date('2000-01-01'),
           estado: 'pendiente',
         },
       });

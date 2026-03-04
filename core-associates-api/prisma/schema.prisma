@@ -137,12 +137,12 @@ model ModuloMenu {
 model Asociado {
   id               String          @id @default(uuid()) @db.Uuid
   idUnico          String          @unique @map("id_unico") @db.VarChar(20)
-  nombre           String          @db.VarChar(100)
-  apellidoPat      String          @map("apellido_pat") @db.VarChar(100)
+  nombre           String?         @db.VarChar(100)
+  apellidoPat      String?         @map("apellido_pat") @db.VarChar(100)
   apellidoMat      String?         @map("apellido_mat") @db.VarChar(100)
   telefono         String          @unique @db.VarChar(15)
   email            String?         @db.VarChar(150)
-  fechaNacimiento  DateTime        @map("fecha_nacimiento") @db.Date
+  fechaNacimiento  DateTime?       @map("fecha_nacimiento") @db.Date
   fotoUrl          String?         @map("foto_url") @db.VarChar(500)
   estado           EstadoAsociado  @default(pendiente)
   fechaRegistro    DateTime        @default(now()) @map("fecha_registro")
