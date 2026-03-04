@@ -38,4 +38,12 @@ class LegalRepository {
         .map((c) => CasoLegal.fromJson(c as Map<String, dynamic>))
         .toList();
   }
+
+  Future<CasoLegal> getCasoDetail(String casoId) async {
+    final response = await apiClient.get('/casos-legales/mis-casos');
+    final casos = (response.data as List<dynamic>)
+        .map((c) => CasoLegal.fromJson(c as Map<String, dynamic>))
+        .toList();
+    return casos.firstWhere((c) => c.id == casoId);
+  }
 }

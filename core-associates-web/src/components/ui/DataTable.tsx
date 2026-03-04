@@ -17,6 +17,7 @@ interface DataTableProps<T> {
   totalPages?: number;
   total?: number;
   onPageChange?: (page: number) => void;
+  onRowClick?: (row: T) => void;
   emptyMessage?: string;
 }
 
@@ -28,6 +29,7 @@ export function DataTable<T>({
   totalPages = 1,
   total,
   onPageChange,
+  onRowClick,
   emptyMessage = 'No se encontraron registros',
 }: DataTableProps<T>) {
   const table = useReactTable({
@@ -79,7 +81,11 @@ export function DataTable<T>({
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                <tr
+                  key={row.id}
+                  className={`hover:bg-gray-50 transition-colors${onRowClick ? ' cursor-pointer' : ''}`}
+                  onClick={() => onRowClick?.(row.original)}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

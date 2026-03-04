@@ -118,15 +118,48 @@ export interface Cupon {
   proveedor?: Proveedor;
 }
 
+// NotaCaso
+export interface NotaCaso {
+  id: string;
+  contenido: string;
+  esPrivada: boolean;
+  createdAt: string;
+  autor?: {
+    nombre: string;
+    rol: string;
+  };
+}
+
 // CasoLegal
 export interface CasoLegal {
   id: string;
   codigo: string;
   tipoPercance: 'accidente' | 'infraccion' | 'robo' | 'asalto' | 'otro';
   descripcion: string | null;
+  latitud: number;
+  longitud: number;
+  direccionAprox: string | null;
   estado: 'abierto' | 'en_atencion' | 'escalado' | 'resuelto' | 'cerrado' | 'cancelado';
   prioridad: 'baja' | 'media' | 'alta' | 'urgente';
   fechaApertura: string;
+  fechaAsignacion: string | null;
+  fechaCierre: string | null;
+  asociadoId: string;
+  abogadoId: string | null;
+  asociado?: {
+    idUnico: string;
+    nombre: string;
+    apellidoPat: string;
+    telefono: string;
+  };
+  abogado?: {
+    razonSocial: string;
+    telefono?: string;
+  };
+  notas?: NotaCaso[];
+  _count?: {
+    notas: number;
+  };
 }
 
 // Dashboard Metrics

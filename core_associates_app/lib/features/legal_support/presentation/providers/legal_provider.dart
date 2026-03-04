@@ -5,7 +5,16 @@ import '../../data/legal_repository.dart';
 
 final misCasosProvider =
     AsyncNotifierProvider<MisCasosNotifier, List<CasoLegal>>(
-        MisCasosNotifier.new);
+      MisCasosNotifier.new,
+    );
+
+final casoDetailProvider = FutureProvider.family<CasoLegal, String>((
+  ref,
+  casoId,
+) async {
+  final repo = ref.watch(legalRepositoryProvider);
+  return repo.getCasoDetail(casoId);
+});
 
 class MisCasosNotifier extends AsyncNotifier<List<CasoLegal>> {
   @override

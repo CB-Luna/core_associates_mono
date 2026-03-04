@@ -6,6 +6,9 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateCasoLegalDto } from './dto/create-caso-legal.dto';
+import { CreateNotaCasoDto } from './dto/create-nota-caso.dto';
+import { UpdateEstadoCasoDto } from './dto/update-estado-caso.dto';
+import { AsignarAbogadoDto } from './dto/asignar-abogado.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Casos Legales')
@@ -56,8 +59,16 @@ export class CasosLegalesController {
   @UseGuards(RolesGuard)
   @Roles('admin', 'operador')
   @ApiOperation({ summary: 'Cambiar estado de caso' })
-  updateEstado(@Param('id') id: string, @Body('estado') estado: string) {
-    return this.casosLegalesService.updateEstado(id, estado);
+  updateEstado(@Param('id') id: string, @Body() dto: UpdateEstadoCasoDto) {
+    return this.casosLegalesService.updateEstado(id, dto.estado);
+  }
+
+  @Put(':id/asignar-abogado')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'operador')
+  @ApiOperation({ summary: 'Asignar abogado al caso' })
+  assignAbogado(@Param('id') id: string, @Body() dto: AsignarAbogadoDto) {
+    return this.casosLegalesService.assignAbogado(id, dto.abogadoId);
   }
 
   @Post(':id/notas')
@@ -67,8 +78,8 @@ export class CasosLegalesController {
   addNote(
     @Param('id') casoId: string,
     @CurrentUser('id') autorId: string,
-    @Body() body: { contenido: string; esPrivada?: boolean },
+    @Body() dto: CreateNotaCasoDto,
   ) {
-    return this.casosLegalesService.addNote(casoId, autorId, body.contenido, body.esPrivada);
+    return this.casosLegalesService.addNote(casoId, autorId, dto.contenido, dto.esPrivada);
   }
 }

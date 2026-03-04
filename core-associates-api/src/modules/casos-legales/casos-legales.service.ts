@@ -104,9 +104,24 @@ export class CasosLegalesService {
     return this.prisma.casoLegal.update({ where: { id }, data });
   }
 
+  async assignAbogado(id: string, abogadoId: string) {
+    return this.prisma.casoLegal.update({
+      where: { id },
+      data: {
+        abogadoId,
+        fechaAsignacion: new Date(),
+        estado: 'en_atencion',
+      },
+      include: {
+        abogado: { select: { razonSocial: true, telefono: true } },
+      },
+    });
+  }
+
   async addNote(casoId: string, autorId: string, contenido: string, esPrivada = false) {
     return this.prisma.notaCaso.create({
       data: { casoId, autorId, contenido, esPrivada },
+      include: { autor: { select: { nombre: true, rol: true } } },
     });
   }
 }

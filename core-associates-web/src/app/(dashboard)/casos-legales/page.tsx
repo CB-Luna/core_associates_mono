@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { type ColumnDef } from '@tanstack/react-table';
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
 import { DataTable } from '@/components/ui/DataTable';
@@ -10,9 +11,11 @@ import { Badge } from '@/components/ui/Badge';
 
 const estadoOptions = [
   { label: 'Abierto', value: 'abierto' },
-  { label: 'En proceso', value: 'en_proceso' },
+  { label: 'En atención', value: 'en_atencion' },
+  { label: 'Escalado', value: 'escalado' },
   { label: 'Resuelto', value: 'resuelto' },
   { label: 'Cerrado', value: 'cerrado' },
+  { label: 'Cancelado', value: 'cancelado' },
 ];
 
 const prioridadOptions = [
@@ -23,18 +26,22 @@ const prioridadOptions = [
 
 const estadoVariant: Record<string, any> = {
   abierto: 'danger',
-  en_proceso: 'warning',
+  en_atencion: 'warning',
+  escalado: 'secondary',
   resuelto: 'success',
   cerrado: 'default',
+  cancelado: 'default',
 };
 
 const prioridadVariant: Record<string, any> = {
+  urgente: 'danger',
   alta: 'danger',
   media: 'warning',
   baja: 'info',
 };
 
 export default function CasosLegalesPage() {
+  const router = useRouter();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -67,13 +74,13 @@ export default function CasosLegalesPage() {
   useEffect(() => {
     Promise.all([
       apiClient<PaginatedResponse<any>>('/casos-legales/admin/all?limit=1&estado=abierto'),
-      apiClient<PaginatedResponse<any>>('/casos-legales/admin/all?limit=1&estado=en_proceso'),
+      apiClient<PaginatedResponse<any>>('/casos-legales/admin/all?limit=1&estado=en_atencion'),
       apiClient<PaginatedResponse<any>>('/casos-legales/admin/all?limit=1&estado=resuelto'),
       apiClient<PaginatedResponse<any>>('/casos-legales/admin/all?limit=1'),
-    ]).then(([abiertos, enProceso, resueltos, all]) => {
+    ]).then(([abiertos, enAtencion, resueltos, all]) => {
       setStats({
         abiertos: abiertos.meta.total,
-        enProceso: enProceso.meta.total,
+        enProceso: enAtencion.meta.total,
         resueltos: resueltos.meta.total,
         total: all.meta.total,
       });
@@ -174,6 +181,7 @@ export default function CasosLegalesPage() {
           totalPages={totalPages}
           total={total}
           onPageChange={setPage}
+          onRowClick={(row: any) => router.push(`/casos-legales/${row.id}`)}
         />
       </div>
     </div>

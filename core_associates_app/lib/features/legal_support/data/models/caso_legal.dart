@@ -1,19 +1,55 @@
+class AutorNota {
+  final String nombre;
+  final String? rol;
+
+  const AutorNota({required this.nombre, this.rol});
+
+  factory AutorNota.fromJson(Map<String, dynamic> json) {
+    return AutorNota(
+      nombre: json['nombre'] as String,
+      rol: json['rol'] as String?,
+    );
+  }
+}
+
 class NotaCaso {
   final String id;
   final String contenido;
+  final bool esPrivada;
   final String createdAt;
+  final AutorNota? autor;
 
   const NotaCaso({
     required this.id,
     required this.contenido,
+    this.esPrivada = false,
     required this.createdAt,
+    this.autor,
   });
 
   factory NotaCaso.fromJson(Map<String, dynamic> json) {
     return NotaCaso(
       id: json['id'] as String,
       contenido: json['contenido'] as String,
+      esPrivada: json['esPrivada'] as bool? ?? false,
       createdAt: json['createdAt'] as String,
+      autor: json['autor'] != null
+          ? AutorNota.fromJson(json['autor'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+}
+
+class AbogadoInfo {
+  final String razonSocial;
+  final String? telefono;
+
+  const AbogadoInfo({required this.razonSocial, this.telefono});
+
+  factory AbogadoInfo.fromJson(Map<String, dynamic> json) {
+    return AbogadoInfo(
+      razonSocial: json['razonSocial'] as String,
+      telefono: json['telefono'] as String?,
     );
   }
 }
@@ -30,6 +66,7 @@ class CasoLegal {
   final String prioridad;
   final String fechaApertura;
   final String? fechaCierre;
+  final AbogadoInfo? abogado;
   final List<NotaCaso> notas;
 
   const CasoLegal({
@@ -44,6 +81,7 @@ class CasoLegal {
     required this.prioridad,
     required this.fechaApertura,
     this.fechaCierre,
+    this.abogado,
     this.notas = const [],
   });
 
@@ -94,7 +132,11 @@ class CasoLegal {
       prioridad: json['prioridad'] as String,
       fechaApertura: json['fechaApertura'] as String,
       fechaCierre: json['fechaCierre'] as String?,
-      notas: (json['notas'] as List<dynamic>?)
+      abogado: json['abogado'] != null
+          ? AbogadoInfo.fromJson(json['abogado'] as Map<String, dynamic>)
+          : null,
+      notas:
+          (json['notas'] as List<dynamic>?)
               ?.map((n) => NotaCaso.fromJson(n as Map<String, dynamic>))
               .toList() ??
           [],
