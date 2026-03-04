@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Car, FileText, Ticket } from 'lucide-react';
+import { ArrowLeft, Car, FileText, Ticket, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
-import type { Asociado } from '@/lib/api-types';
+import type { Asociado, Documento } from '@/lib/api-types';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
+import { DocumentViewer } from '@/components/documentos/DocumentViewer';
+import { RejectDocumentDialog } from '@/components/documentos/RejectDocumentDialog';
 
 export default function AsociadoDetailPage() {
   const params = useParams();
@@ -13,6 +15,11 @@ export default function AsociadoDetailPage() {
   const [asociado, setAsociado] = useState<Asociado | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerUrl, setViewerUrl] = useState('');
+  const [viewerTitle, setViewerTitle] = useState('');
+  const [rejectDialog, setRejectDialog] = useState<{ open: boolean; doc: Documento | null }>({ open: false, doc: null });
+  const [docUpdating, setDocUpdating] = useState<string | null>(null);
 
   useEffect(() => {
     apiClient<Asociado>(`/asociados/${params.id}`)
@@ -34,6 +41,61 @@ export default function AsociadoDetailPage() {
       console.error(err);
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleViewDocument = async (doc: Documento) => {
+    try {
+      const res = await apiClient<{ url: string }>(`/documentos/${doc.id}/url`);
+      setViewerUrl(res.url);
+      setViewerTitle(doc.tipo.replace(/_/g, ' '));
+      setViewerOpen(true);
+    } catch {
+      alert('No se pudo obtener el documento');
+    }
+  };
+
+  const handleApproveDocument = async (doc: Documento) => {
+    if (!asociado) return;
+    setDocUpdating(doc.id);
+    try {
+      await apiClient(`/documentos/${doc.id}/estado`, {
+        method: 'PUT',
+        body: JSON.stringify({ estado: 'aprobado' }),
+      });
+      setAsociado({
+        ...asociado,
+        documentos: asociado.documentos?.map((d) =>
+          d.id === doc.id ? { ...d, estado: 'aprobado' as const } : d
+        ),
+      });
+    } catch {
+      alert('Error al aprobar');
+    } finally {
+      setDocUpdating(null);
+    }
+  };
+
+  const handleRejectDocument = async (motivo: string) => {
+    if (!asociado || !rejectDialog.doc) return;
+    const doc = rejectDialog.doc;
+    setRejectDialog({ open: false, doc: null });
+    setDocUpdating(doc.id);
+    try {
+      await apiClient(`/documentos/${doc.id}/estado`, {
+        method: 'PUT',
+        body: JSON.stringify({ estado: 'rechazado', motivoRechazo: motivo }),
+      });
+      setAsociado({
+        ...asociado,
+        documentos: asociado.documentos?.map((d) =>
+          d.id === doc.id ? { ...d, estado: 'rechazado' as const, motivoRechazo: motivo } : d
+        ),
+      });
+    } catch {
+      alert('Error al rechazar');
+    } finally {
+      setDocUpdating(null);
     }
   };
 
@@ -171,7 +233,7 @@ export default function AsociadoDetailPage() {
               asociado.documentos.map((d) => (
                 <div key={d.id} className="rounded-lg bg-gray-50 p-3 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-900">{d.tipo.replace(/_/g, ' ')}</span>
+                    <span className="font-medium text-gray-900 capitalize">{d.tipo.replace(/_/g, ' ')}</span>
                     <Badge
                       variant={
                         d.estado === 'aprobado' ? 'success' : d.estado === 'rechazado' ? 'danger' : 'warning'
@@ -180,58 +242,33 @@ export default function AsociadoDetailPage() {
                       {d.estado}
                     </Badge>
                   </div>
+                  {d.estado === 'rechazado' && d.motivoRechazo && (
+                    <p className="mt-1 text-xs text-red-600">Motivo: {d.motivoRechazo}</p>
+                  )}
                   <div className="mt-2 flex gap-2">
                     <button
-                      onClick={async () => {
-                        try {
-                          const res = await apiClient<{ url: string }>(`/documentos/${d.id}/url`);
-                          window.open(res.url, '_blank');
-                        } catch { alert('No se pudo obtener el documento'); }
-                      }}
-                      className="text-xs text-blue-600 hover:underline"
+                      onClick={() => handleViewDocument(d)}
+                      className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
                     >
-                      Ver documento
+                      <Eye className="h-3 w-3" />
+                      Ver
                     </button>
                     {d.estado === 'pendiente' && (
                       <>
                         <button
-                          onClick={async () => {
-                            try {
-                              await apiClient(`/documentos/${d.id}/estado`, {
-                                method: 'PUT',
-                                body: JSON.stringify({ estado: 'aprobado' }),
-                              });
-                              setAsociado({
-                                ...asociado,
-                                documentos: asociado.documentos?.map((doc) =>
-                                  doc.id === d.id ? { ...doc, estado: 'aprobado' } : doc
-                                ),
-                              });
-                            } catch { alert('Error al aprobar'); }
-                          }}
-                          className="text-xs text-green-600 hover:underline"
+                          onClick={() => handleApproveDocument(d)}
+                          disabled={docUpdating === d.id}
+                          className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100 disabled:opacity-50"
                         >
+                          <CheckCircle className="h-3 w-3" />
                           Aprobar
                         </button>
                         <button
-                          onClick={async () => {
-                            const motivo = prompt('Motivo de rechazo:');
-                            if (!motivo) return;
-                            try {
-                              await apiClient(`/documentos/${d.id}/estado`, {
-                                method: 'PUT',
-                                body: JSON.stringify({ estado: 'rechazado', motivoRechazo: motivo }),
-                              });
-                              setAsociado({
-                                ...asociado,
-                                documentos: asociado.documentos?.map((doc) =>
-                                  doc.id === d.id ? { ...doc, estado: 'rechazado' } : doc
-                                ),
-                              });
-                            } catch { alert('Error al rechazar'); }
-                          }}
-                          className="text-xs text-red-600 hover:underline"
+                          onClick={() => setRejectDialog({ open: true, doc: d })}
+                          disabled={docUpdating === d.id}
+                          className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
                         >
+                          <XCircle className="h-3 w-3" />
                           Rechazar
                         </button>
                       </>
@@ -272,6 +309,20 @@ export default function AsociadoDetailPage() {
           </div>
         </div>
       )}
+
+      <DocumentViewer
+        open={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        imageUrl={viewerUrl}
+        title={viewerTitle}
+      />
+
+      <RejectDocumentDialog
+        open={rejectDialog.open}
+        onClose={() => setRejectDialog({ open: false, doc: null })}
+        onConfirm={handleRejectDocument}
+        documentType={rejectDialog.doc?.tipo || ''}
+      />
     </div>
   );
 }

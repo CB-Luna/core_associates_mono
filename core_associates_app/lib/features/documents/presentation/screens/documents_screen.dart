@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,7 +16,7 @@ const _requiredDocs = [
   {
     'tipo': 'tarjeta_circulacion',
     'label': 'Tarjeta de Circulación',
-    'icon': Icons.directions_car_outlined
+    'icon': Icons.directions_car_outlined,
   },
 ];
 
@@ -30,25 +32,31 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
   String? _uploadingTipo;
 
   Future<void> _pickAndUpload(String tipo) async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Cámara'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Galería'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
+    // Selfie siempre abre cámara directa
+    ImageSource? source;
+    if (tipo == 'selfie') {
+      source = ImageSource.camera;
+    } else {
+      source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        builder: (ctx) => SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Cámara'),
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Galería'),
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    }
 
     if (source == null) return;
 
@@ -56,13 +64,22 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
       source: source,
       imageQuality: 80,
       maxWidth: 1920,
+      preferredCameraDevice: tipo == 'selfie'
+          ? CameraDevice.front
+          : CameraDevice.rear,
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
+
+    // Preview antes de enviar
+    final confirmed = await _showPreviewDialog(picked.path, tipo);
+    if (confirmed != true || !mounted) return;
 
     setState(() => _uploadingTipo = tipo);
 
     try {
-      await ref.read(documentsProvider.notifier).uploadDocument(picked.path, tipo);
+      await ref
+          .read(documentsProvider.notifier)
+          .uploadDocument(picked.path, tipo);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -85,7 +102,78 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     }
   }
 
-  void _previewDocument(String docId) async {
+  Future<bool?> _showPreviewDialog(String filePath, String tipo) {
+    final label =
+        _requiredDocs.firstWhere(
+              (d) => d['tipo'] == tipo,
+              orElse: () => {'label': tipo},
+            )['label']
+            as String;
+
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Verificar $label',
+                style: Theme.of(
+                  ctx,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Verifica que la imagen sea clara y legible antes de enviar.',
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  ctx,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 350),
+                child: Image.file(File(filePath), fit: BoxFit.contain),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('Reintentar'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('Enviar'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _previewDocument(String docId, String label) async {
     try {
       final repo = ref.read(documentsRepositoryProvider);
       final url = await repo.getDocumentUrl(docId);
@@ -93,37 +181,51 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
 
       showDialog(
         context: context,
-        builder: (ctx) => Dialog(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppBar(
-                title: const Text('Vista previa'),
-                automaticallyImplyLeading: false,
-                actions: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    icon: const Icon(Icons.close),
+        builder: (ctx) => Dialog.fullscreen(
+          child: Scaffold(
+            backgroundColor: Colors.black,
+            appBar: AppBar(
+              title: Text(label),
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+            ),
+            body: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Center(
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (_, child, progress) {
+                    if (progress == null) return child;
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    );
+                  },
+                  errorBuilder: (_, _, _) => const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image, size: 64, color: Colors.grey),
+                      SizedBox(height: 12),
+                      Text(
+                        'No se pudo cargar la imagen',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              Image.network(
-                url,
-                height: 400,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const Padding(
-                  padding: EdgeInsets.all(40),
-                  child: Icon(Icons.broken_image, size: 64, color: Colors.grey),
                 ),
               ),
-            ],
+            ),
           ),
         ),
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -134,9 +236,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     final docsAsync = ref.watch(documentsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mis Documentos'),
-      ),
+      appBar: AppBar(title: const Text('Mis Documentos')),
       body: docsAsync.when(
         data: (docs) {
           return ListView(
@@ -144,10 +244,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
             children: [
               Text(
                 'Sube tus documentos para completar tu verificación',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: AppColors.textSecondary),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 20),
               for (final req in _requiredDocs) ...[
@@ -156,12 +255,13 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                   label: req['label'] as String,
                   icon: req['icon'] as IconData,
                   document: docs.cast<Documento?>().firstWhere(
-                        (d) => d?.tipo == req['tipo'],
-                        orElse: () => null,
-                      ),
+                    (d) => d?.tipo == req['tipo'],
+                    orElse: () => null,
+                  ),
                   isUploading: _uploadingTipo == req['tipo'],
                   onUpload: () => _pickAndUpload(req['tipo'] as String),
-                  onPreview: (id) => _previewDocument(id),
+                  onPreview: (id) =>
+                      _previewDocument(id, req['label'] as String),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -248,33 +348,40 @@ class _DocumentTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: (document != null
-                      ? _estadoColor(document!.estado)
-                      : AppColors.primary)
-                  .withValues(alpha: 0.1),
+              color:
+                  (document != null
+                          ? _estadoColor(document!.estado)
+                          : AppColors.primary)
+                      .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon,
-                color: document != null
-                    ? _estadoColor(document!.estado)
-                    : AppColors.primary),
+            child: Icon(
+              icon,
+              color: document != null
+                  ? _estadoColor(document!.estado)
+                  : AppColors.primary,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  label,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 2),
                 if (document != null) ...[
                   Row(
                     children: [
-                      Icon(_estadoIcon(document!.estado),
-                          size: 14, color: _estadoColor(document!.estado)),
+                      Icon(
+                        _estadoIcon(document!.estado),
+                        size: 14,
+                        color: _estadoColor(document!.estado),
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         document!.estado.toUpperCase(),
@@ -292,16 +399,17 @@ class _DocumentTile extends StatelessWidget {
                       child: Text(
                         document!.motivoRechazo!,
                         style: TextStyle(
-                            fontSize: 11, color: AppColors.error.withValues(alpha: 0.8)),
+                          fontSize: 11,
+                          color: AppColors.error.withValues(alpha: 0.8),
+                        ),
                       ),
                     ),
                 ] else
                   Text(
                     'No subido',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: AppColors.textSecondary),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
               ],
             ),
@@ -321,7 +429,7 @@ class _DocumentTile extends StatelessWidget {
                   onPressed: () => onPreview(document!.id),
                   tooltip: 'Ver',
                 ),
-                if (document!.estado == 'rechazado')
+                if (document!.estado != 'aprobado')
                   IconButton(
                     icon: const Icon(Icons.upload, size: 20),
                     onPressed: onUpload,
@@ -331,8 +439,11 @@ class _DocumentTile extends StatelessWidget {
             )
           else
             IconButton(
-              icon: const Icon(Icons.upload_file,
-                  color: AppColors.primary, size: 24),
+              icon: const Icon(
+                Icons.upload_file,
+                color: AppColors.primary,
+                size: 24,
+              ),
               onPressed: onUpload,
               tooltip: 'Subir',
             ),
