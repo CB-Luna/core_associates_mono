@@ -92,6 +92,7 @@ export interface Proveedor {
 // Promocion
 export interface Promocion {
   id: string;
+  proveedorId: string;
   titulo: string;
   descripcion: string;
   tipoDescuento: 'porcentaje' | 'monto_fijo';
@@ -103,17 +104,27 @@ export interface Promocion {
   imagenUrl: string | null;
   maxCupones: number | null;
   estado: 'activa' | 'pausada' | 'finalizada';
+  createdAt: string;
   proveedor?: Proveedor;
+  _count?: {
+    cupones: number;
+  };
 }
 
 // Cupon
 export interface Cupon {
   id: string;
   codigo: string;
+  asociadoId: string;
   estado: 'activo' | 'canjeado' | 'vencido' | 'cancelado';
   fechaGeneracion: string;
   fechaVencimiento: string;
   fechaCanje: string | null;
+  asociado?: {
+    idUnico: string;
+    nombre: string;
+    apellidoPat: string;
+  };
   promocion?: Promocion;
   proveedor?: Proveedor;
 }

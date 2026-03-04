@@ -7,6 +7,8 @@ import type { Promocion } from '@/lib/api-types';
 import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { Badge } from '@/components/ui/Badge';
+import { PromocionFormDialog } from '@/components/promociones/PromocionFormDialog';
+import { Pause, Play, StopCircle } from 'lucide-react';
 
 const estadoOptions = [
   { label: 'Activa', value: 'activa' },
@@ -15,13 +17,15 @@ const estadoOptions = [
 ];
 
 export default function PromocionesPage() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<Promocion[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editPromocion, setEditPromocion] = useState<Promocion | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -30,7 +34,7 @@ export default function PromocionesPage() {
       if (search) params.set('search', search);
       if (estadoFilter) params.set('estado', estadoFilter);
 
-      const res = await apiClient<PaginatedResponse<any>>(`/promociones/admin/all?${params}`);
+      const res = await apiClient<PaginatedResponse<Promocion>>(`/promociones/admin/all?${params}`);
       setData(res.data);
       setTotalPages(res.meta.totalPages);
       setTotal(res.meta.total);
@@ -45,7 +49,24 @@ export default function PromocionesPage() {
     fetchData();
   }, [fetchData]);
 
-  const columns: ColumnDef<any, any>[] = [
+  const handleEstadoChange = async (id: string, estado: string) => {
+    try {
+      await apiClient(`/promociones/${id}/estado`, {
+        method: 'PUT',
+        body: JSON.stringify({ estado }),
+      });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRowClick = (row: Promocion) => {
+    setEditPromocion(row);
+    setDialogOpen(true);
+  };
+
+  const columns: ColumnDef<Promocion, any>[] = [
     { accessorKey: 'titulo', header: 'Título' },
     {
       id: 'proveedor',
@@ -87,6 +108,44 @@ export default function PromocionesPage() {
         );
       },
     },
+    {
+      id: 'acciones',
+      header: '',
+      cell: ({ row }) => {
+        const p = row.original;
+        return (
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            {p.estado === 'activa' && (
+              <button
+                onClick={() => handleEstadoChange(p.id, 'pausada')}
+                title="Pausar"
+                className="rounded p-1 text-amber-600 hover:bg-amber-50"
+              >
+                <Pause className="h-4 w-4" />
+              </button>
+            )}
+            {p.estado === 'pausada' && (
+              <button
+                onClick={() => handleEstadoChange(p.id, 'activa')}
+                title="Activar"
+                className="rounded p-1 text-green-600 hover:bg-green-50"
+              >
+                <Play className="h-4 w-4" />
+              </button>
+            )}
+            {p.estado !== 'finalizada' && (
+              <button
+                onClick={() => handleEstadoChange(p.id, 'finalizada')}
+                title="Finalizar"
+                className="rounded p-1 text-gray-500 hover:bg-gray-100"
+              >
+                <StopCircle className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
   ];
 
   return (
@@ -101,6 +160,8 @@ export default function PromocionesPage() {
           filterOptions={estadoOptions}
           filterValue={estadoFilter}
           onFilterChange={(v) => { setEstadoFilter(v); setPage(1); }}
+          actionLabel="Nueva promoción"
+          onAction={() => { setEditPromocion(null); setDialogOpen(true); }}
         />
       </div>
 
@@ -113,8 +174,16 @@ export default function PromocionesPage() {
           totalPages={totalPages}
           total={total}
           onPageChange={setPage}
+          onRowClick={handleRowClick}
         />
       </div>
+
+      <PromocionFormDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSuccess={fetchData}
+        promocion={editPromocion}
+      />
     </div>
   );
 }

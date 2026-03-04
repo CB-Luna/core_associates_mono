@@ -20,11 +20,27 @@ class PromotionsScreen extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            child: Text(
-              'Promociones',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Promociones',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
+                ),
+                TextButton.icon(
+                  onPressed: () => context.push('/my-coupons'),
+                  icon: const Icon(
+                    Icons.confirmation_number_outlined,
+                    size: 18,
+                  ),
+                  label: const Text('Mis cupones'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 4),
@@ -32,9 +48,9 @@ class PromotionsScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               'Descuentos exclusivos para asociados',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
             ),
           ),
           const SizedBox(height: 16),
@@ -46,7 +62,13 @@ class PromotionsScreen extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
-                for (final cat in ['Todas', 'Mecánica', 'Comida', 'Seguros', 'Servicios'])
+                for (final cat in [
+                  'Todas',
+                  'Mecánica',
+                  'Comida',
+                  'Seguros',
+                  'Servicios',
+                ])
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: _CategoryChip(
@@ -75,15 +97,12 @@ class PromotionsScreen extends ConsumerWidget {
                         Icon(
                           Icons.local_offer_outlined,
                           size: 64,
-                          color:
-                              AppColors.textSecondary.withValues(alpha: 0.5),
+                          color: AppColors.textSecondary.withValues(alpha: 0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'Sin promociones disponibles',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(color: AppColors.textSecondary),
                         ),
                       ],
@@ -101,20 +120,23 @@ class PromotionsScreen extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline,
-                        size: 48, color: AppColors.error),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: AppColors.error,
+                    ),
                     const SizedBox(height: 12),
-                    Text('Error al cargar promociones',
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: AppColors.textSecondary)),
+                    Text(
+                      'Error al cargar promociones',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     TextButton(
                       onPressed: () => ref.invalidate(promocionesProvider),
@@ -131,7 +153,10 @@ class PromotionsScreen extends ConsumerWidget {
   }
 
   void _showGenerarCuponDialog(
-      BuildContext context, WidgetRef ref, Promocion promo) {
+    BuildContext context,
+    WidgetRef ref,
+    Promocion promo,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -214,10 +239,7 @@ class _PromocionCard extends StatelessWidget {
   final Promocion promocion;
   final VoidCallback onGenerarCupon;
 
-  const _PromocionCard({
-    required this.promocion,
-    required this.onGenerarCupon,
-  });
+  const _PromocionCard({required this.promocion, required this.onGenerarCupon});
 
   @override
   Widget build(BuildContext context) {
@@ -234,8 +256,10 @@ class _PromocionCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.secondary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -243,18 +267,18 @@ class _PromocionCard extends StatelessWidget {
                 child: Text(
                   promocion.descuentoFormateado,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.secondary,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: AppColors.secondary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   promocion.titulo,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -264,9 +288,9 @@ class _PromocionCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             promocion.descripcion,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -277,15 +301,17 @@ class _PromocionCard extends StatelessWidget {
               Text(
                 promocion.proveedor.razonSocial,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               FilledButton.tonal(
                 onPressed: onGenerarCupon,
                 style: FilledButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 0,
+                  ),
                   minimumSize: const Size(0, 32),
                 ),
                 child: const Text('Obtener cupón'),

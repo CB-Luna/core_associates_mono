@@ -12,6 +12,7 @@ import '../features/legal_support/presentation/screens/legal_support_screen.dart
 import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/documents/presentation/screens/documents_screen.dart';
 import '../features/promotions/presentation/screens/coupon_detail_screen.dart';
+import '../features/promotions/presentation/screens/my_coupons_screen.dart';
 import '../features/legal_support/presentation/screens/case_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -64,6 +65,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final cuponId = state.pathParameters['id']!;
           return CouponDetailScreen(cuponId: cuponId);
         },
+      ),
+      GoRoute(
+        path: '/my-coupons',
+        builder: (context, state) => const MyCouponsScreen(),
       ),
       GoRoute(
         path: '/legal/case/:id',
