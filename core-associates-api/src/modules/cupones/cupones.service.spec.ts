@@ -2,7 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { CuponesService } from './cupones.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { createHmac } from 'crypto';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 describe('CuponesService', () => {
   let service: CuponesService;
   let prisma: Record<string, any>;
@@ -128,7 +130,6 @@ describe('CuponesService', () => {
 
     it('should throw BadRequestException for already redeemed coupon', async () => {
       // Build a valid HMAC payload
-      const { createHmac } = require('crypto');
       const payloadObj = { codigo: 'CPN-001', promocionId: 'p1', asociadoId: 'a1', proveedorId: 'prov-1' };
       const payload = JSON.stringify(payloadObj);
       const firma = createHmac('sha256', 'core-associates-secret')
@@ -146,7 +147,6 @@ describe('CuponesService', () => {
     });
 
     it('should redeem a valid active coupon', async () => {
-      const { createHmac } = require('crypto');
       const payloadObj = { codigo: 'CPN-001', promocionId: 'p1', asociadoId: 'a1', proveedorId: 'prov-1' };
       const payload = JSON.stringify(payloadObj);
       const firma = createHmac('sha256', 'core-associates-secret')

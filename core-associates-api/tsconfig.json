@@ -19,6 +19,7 @@
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
+    "types": ["node", "jest", "express", "multer"],
     "paths": {
       "@/*": ["src/*"]
     }

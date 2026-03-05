@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
 
 describe('App (e2e)', () => {
@@ -32,7 +32,7 @@ describe('App (e2e)', () => {
       return request(app.getHttpServer())
         .post('/api/v1/auth/otp/send')
         .send({ telefono: '+525512345678' })
-        .expect((res) => {
+        .expect((res: request.Response) => {
           expect([200, 201]).toContain(res.status);
           expect(res.body.message).toBeDefined();
         });
@@ -49,7 +49,7 @@ describe('App (e2e)', () => {
       return request(app.getHttpServer())
         .post('/api/v1/auth/otp/verify')
         .send({ telefono: '+525512345678', otp: '000000' })
-        .expect((res) => {
+        .expect((res: request.Response) => {
           expect([200, 201]).toContain(res.status);
           expect(res.body.accessToken).toBeDefined();
           expect(res.body.refreshToken).toBeDefined();
@@ -76,7 +76,7 @@ describe('App (e2e)', () => {
       return request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({ email: 'noexiste@core.mx', password: 'password1234' })
-        .expect((res) => {
+        .expect((res: request.Response) => {
           expect([401, 404]).toContain(res.status);
         });
     });

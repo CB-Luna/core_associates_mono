@@ -6,31 +6,31 @@ import 'package:core_associates_app/features/home/presentation/screens/home_shel
 
 void main() {
   GoRouter _createRouter() => GoRouter(
-        initialLocation: '/home',
+    initialLocation: '/home',
+    routes: [
+      ShellRoute(
+        builder: (context, state, child) => HomeShell(child: child),
         routes: [
-          ShellRoute(
-            builder: (context, state, child) => HomeShell(child: child),
-            routes: [
-              GoRoute(
-                path: '/home',
-                builder: (_, __) => const Center(child: Text('Home Content')),
-              ),
-              GoRoute(
-                path: '/promotions',
-                builder: (_, __) => const Center(child: Text('Promotions')),
-              ),
-              GoRoute(
-                path: '/legal',
-                builder: (_, __) => const Center(child: Text('Legal')),
-              ),
-              GoRoute(
-                path: '/profile',
-                builder: (_, __) => const Center(child: Text('Profile')),
-              ),
-            ],
+          GoRoute(
+            path: '/home',
+            builder: (_, __) => const Center(child: Text('Home Content')),
+          ),
+          GoRoute(
+            path: '/promotions',
+            builder: (_, __) => const Center(child: Text('Promotions')),
+          ),
+          GoRoute(
+            path: '/legal',
+            builder: (_, __) => const Center(child: Text('Legal')),
+          ),
+          GoRoute(
+            path: '/profile',
+            builder: (_, __) => const Center(child: Text('Profile')),
           ),
         ],
-      );
+      ),
+    ],
+  );
 
   group('HomeShell', () {
     testWidgets('renders all four navigation tabs', (tester) async {

@@ -6,8 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
 
-final pushNotificationServiceProvider =
-    Provider<PushNotificationService>((ref) {
+final pushNotificationServiceProvider = Provider<PushNotificationService>((
+  ref,
+) {
   return PushNotificationService(apiClient: ref.watch(apiClientProvider));
 });
 
@@ -24,16 +25,12 @@ class PushNotificationService {
       FlutterLocalNotificationsPlugin();
 
   PushNotificationService({required ApiClient apiClient})
-      : _apiClient = apiClient;
+    : _apiClient = apiClient;
 
   /// Initialize push notifications & local notifications channel.
   Future<void> initialize() async {
     // Request permission (iOS + Android 13+)
-    await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    await _messaging.requestPermission(alert: true, badge: true, sound: true);
 
     // Android notification channel
     const androidChannel = AndroidNotificationChannel(
@@ -45,7 +42,8 @@ class PushNotificationService {
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(androidChannel);
 
     // Init local notifications
@@ -53,11 +51,10 @@ class PushNotificationService {
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(),
     );
-    await _localNotifications.initialize(initSettings);
+    await _localNotifications.initialize(settings: initSettings);
 
     // Register background handler
-    FirebaseMessaging.onBackgroundMessage(
-        firebaseMessagingBackgroundHandler);
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     // Foreground messages → show as local notification
     FirebaseMessaging.onMessage.listen(_showLocalNotification);
@@ -77,10 +74,10 @@ class PushNotificationService {
     if (notification == null) return;
 
     _localNotifications.show(
-      notification.hashCode,
-      notification.title,
-      notification.body,
-      const NotificationDetails(
+      id: notification.hashCode,
+      title: notification.title,
+      body: notification.body,
+      notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'core_associates_default',
           'Notificaciones',

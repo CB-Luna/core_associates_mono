@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, EstadoPromocion } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePromocionDto } from './dto/create-promocion.dto';
 
@@ -61,8 +62,8 @@ export class PromocionesService {
     const { page = 1, limit = 10, search, estado } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
-    if (estado) where.estado = estado;
+    const where: Prisma.PromocionWhereInput = {};
+    if (estado) where.estado = estado as EstadoPromocion;
     if (search) {
       where.OR = [
         { titulo: { contains: search, mode: 'insensitive' } },
@@ -113,7 +114,7 @@ export class PromocionesService {
     const promo = await this.prisma.promocion.findUnique({ where: { id } });
     if (!promo) throw new NotFoundException('Promoción no encontrada');
 
-    const data: any = { ...dto };
+    const data: Prisma.PromocionUpdateInput = { ...dto };
     if (dto.fechaInicio) data.fechaInicio = new Date(dto.fechaInicio);
     if (dto.fechaFin) data.fechaFin = new Date(dto.fechaFin);
 
@@ -126,7 +127,7 @@ export class PromocionesService {
   async updateEstado(id: string, estado: string) {
     return this.prisma.promocion.update({
       where: { id },
-      data: { estado: estado as any },
+      data: { estado: estado as EstadoPromocion },
     });
   }
 }

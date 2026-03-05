@@ -5,7 +5,6 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:core_associates_app/features/auth/presentation/screens/login_screen.dart';
 import 'package:core_associates_app/features/auth/data/auth_repository.dart';
-import 'package:core_associates_app/features/auth/presentation/providers/auth_provider.dart';
 import 'package:core_associates_app/core/api/api_client.dart';
 import 'package:core_associates_app/core/storage/secure_storage.dart';
 import '../helpers/mocks.dart';
@@ -29,9 +28,7 @@ void main() {
         apiClientProvider.overrideWithValue(mockApiClient),
         secureStorageProvider.overrideWithValue(mockStorage),
       ],
-      child: const MaterialApp(
-        home: LoginScreen(),
-      ),
+      child: const MaterialApp(home: LoginScreen()),
     );
   }
 
@@ -67,10 +64,7 @@ void main() {
 
       // The validation message 'Ingresa tu número de teléfono' appears
       // both as the title label and as error text — expect at least 2
-      expect(
-        find.text('Ingresa tu número de teléfono'),
-        findsAtLeast(2),
-      );
+      expect(find.text('Ingresa tu número de teléfono'), findsAtLeast(2));
     });
 
     testWidgets('validates short phone number', (tester) async {

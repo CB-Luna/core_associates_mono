@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { CasosLegalesService } from './casos-legales.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 describe('CasosLegalesService', () => {
   let service: CasosLegalesService;
   let prisma: Record<string, any>;

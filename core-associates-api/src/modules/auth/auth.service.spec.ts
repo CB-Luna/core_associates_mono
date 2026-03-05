@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { SmsService } from '../../common/sms/sms.service';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 describe('AuthService', () => {
   let service: AuthService;
   let prisma: Record<string, any>;
