@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.core_associates_app"
+    namespace = "mx.coreassociates.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,21 +20,50 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.core_associates_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "mx.coreassociates.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    flavorDimensions += "environment"
+
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "Core Associates Dev")
+        }
+        create("prod") {
+            dimension = "environment"
+            resValue("string", "app_name", "Core Associates")
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            // Configure via environment variables or local keystore.properties
+            val keystorePropertiesFile = rootProject.file("keystore.properties")
+            if (keystorePropertiesFile.exists()) {
+                val props = java.util.Properties()
+                props.load(keystorePropertiesFile.inputStream())
+                storeFile = file(props["storeFile"] as String)
+                storePassword = props["storePassword"] as String
+                keyAlias = props["keyAlias"] as String
+                keyPassword = props["keyPassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            val releaseConfig = signingConfigs.findByName("release")
+            signingConfig = if (releaseConfig?.storeFile != null) releaseConfig else signingConfigs.getByName("debug")
         }
     }
 }

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
+import { SmsService } from '../../common/sms/sms.service';
 import { RolUsuario, EstadoUsuario } from '@prisma/client';
 
 const OTP_TTL_SECONDS = 300; // 5 minutos
@@ -16,6 +17,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly redis: RedisService,
+    private readonly smsService: SmsService,
   ) {}
 
   // ── OTP para App Móvil ──
@@ -26,8 +28,7 @@ export class AuthService {
     // Almacenar OTP en Redis con expiración de 5 minutos
     await this.redis.set(`${OTP_KEY_PREFIX}${telefono}`, otp, OTP_TTL_SECONDS);
 
-    // TODO: Enviar OTP vía Twilio SMS (Ciclo 7)
-    console.log(`[DEV] OTP for ${telefono}: ${otp} (use 000000 to bypass)`);
+    await this.smsService.sendOtp(telefono, otp);
 
     return { message: 'OTP enviado correctamente' };
   }

@@ -1,9 +1,15 @@
 import 'dart:io' show Platform;
 
+import 'environment.dart';
+
 abstract class AppConstants {
   static const String appName = 'Core Associates';
 
   static String get apiBaseUrl {
+    // If API_URL is provided via --dart-define, use it
+    if (Environment.apiUrl.isNotEmpty) {
+      return Environment.apiUrl;
+    }
     const port = '3501';
     // Android emulator uses 10.0.2.2 to reach host localhost
     if (Platform.isAndroid) {

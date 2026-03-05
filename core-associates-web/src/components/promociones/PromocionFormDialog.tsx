@@ -1,9 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { X } from 'lucide-react';
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
 import type { Promocion, Proveedor } from '@/lib/api-types';
+
+const promocionSchema = z.object({
+  proveedorId: z.string().min(1, 'Selecciona un proveedor'),
+  titulo: z.string().min(1, 'Título requerido'),
+  descripcion: z.string().min(1, 'Descripción requerida'),
+  tipoDescuento: z.enum(['porcentaje', 'monto_fijo']),
+  valorDescuento: z.string().min(1, 'Valor requerido'),
+  fechaInicio: z.string().min(1, 'Fecha inicio requerida'),
+  fechaFin: z.string().min(1, 'Fecha fin requerida'),
+  vigenciaCupon: z.string().min(1, 'Vigencia requerida'),
+  terminos: z.string().optional(),
+  maxCupones: z.string().optional(),
+});
+
+type PromocionFormData = z.infer<typeof promocionSchema>;
 
 interface PromocionFormDialogProps {
   open: boolean;
@@ -12,42 +30,35 @@ interface PromocionFormDialogProps {
   promocion?: Promocion | null;
 }
 
-interface FormData {
-  proveedorId: string;
-  titulo: string;
-  descripcion: string;
-  tipoDescuento: 'porcentaje' | 'monto_fijo';
-  valorDescuento: string;
-  fechaInicio: string;
-  fechaFin: string;
-  vigenciaCupon: string;
-  terminos: string;
-  maxCupones: string;
-}
-
-const initialForm: FormData = {
-  proveedorId: '',
-  titulo: '',
-  descripcion: '',
-  tipoDescuento: 'porcentaje',
-  valorDescuento: '',
-  fechaInicio: '',
-  fechaFin: '',
-  vigenciaCupon: '',
-  terminos: '',
-  maxCupones: '',
-};
-
 function toDateInputValue(iso: string): string {
   return iso ? iso.substring(0, 10) : '';
 }
 
 export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: PromocionFormDialogProps) {
   const isEdit = !!promocion;
-  const [form, setForm] = useState<FormData>(initialForm);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [serverError, setServerError] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<PromocionFormData>({
+    resolver: zodResolver(promocionSchema),
+    defaultValues: {
+      proveedorId: '',
+      titulo: '',
+      descripcion: '',
+      tipoDescuento: 'porcentaje',
+      valorDescuento: '',
+      fechaInicio: '',
+      fechaFin: '',
+      vigenciaCupon: '',
+      terminos: '',
+      maxCupones: '',
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -58,7 +69,7 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
 
   useEffect(() => {
     if (open && promocion) {
-      setForm({
+      reset({
         proveedorId: promocion.proveedorId,
         titulo: promocion.titulo,
         descripcion: promocion.descripcion,
@@ -71,31 +82,25 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
         maxCupones: promocion.maxCupones ? String(promocion.maxCupones) : '',
       });
     } else if (open) {
-      setForm(initialForm);
+      reset();
     }
-    setError('');
-  }, [open, promocion]);
+    setServerError('');
+  }, [open, promocion, reset]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
+  const onSubmit = async (data: PromocionFormData) => {
+    setServerError('');
 
     const body = {
-      proveedorId: form.proveedorId,
-      titulo: form.titulo.trim(),
-      descripcion: form.descripcion.trim(),
-      tipoDescuento: form.tipoDescuento,
-      valorDescuento: Number(form.valorDescuento),
-      fechaInicio: new Date(form.fechaInicio).toISOString(),
-      fechaFin: new Date(form.fechaFin).toISOString(),
-      vigenciaCupon: Number(form.vigenciaCupon),
-      terminos: form.terminos.trim() || undefined,
-      maxCupones: form.maxCupones ? Number(form.maxCupones) : undefined,
+      proveedorId: data.proveedorId,
+      titulo: data.titulo.trim(),
+      descripcion: data.descripcion.trim(),
+      tipoDescuento: data.tipoDescuento,
+      valorDescuento: Number(data.valorDescuento),
+      fechaInicio: new Date(data.fechaInicio).toISOString(),
+      fechaFin: new Date(data.fechaFin).toISOString(),
+      vigenciaCupon: Number(data.vigenciaCupon),
+      terminos: data.terminos?.trim() || undefined,
+      maxCupones: data.maxCupones ? Number(data.maxCupones) : undefined,
     };
 
     try {
@@ -113,9 +118,7 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Error al guardar la promoción');
-    } finally {
-      setSaving(false);
+      setServerError(err?.message || 'Error al guardar la promoción');
     }
   };
 
@@ -136,19 +139,16 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
           </button>
         </div>
 
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
+        {serverError && (
+          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{serverError}</div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Proveedor */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor *</label>
             <select
-              name="proveedorId"
-              value={form.proveedorId}
-              onChange={handleChange}
-              required
+              {...register('proveedorId')}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             >
               <option value="">Seleccionar proveedor...</option>
@@ -158,6 +158,7 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
                 </option>
               ))}
             </select>
+            {errors.proveedorId && <p className="mt-1 text-xs text-red-500">{errors.proveedorId.message}</p>}
           </div>
 
           {/* Título */}
@@ -165,25 +166,21 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
             <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
             <input
               type="text"
-              name="titulo"
-              value={form.titulo}
-              onChange={handleChange}
-              required
+              {...register('titulo')}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
+            {errors.titulo && <p className="mt-1 text-xs text-red-500">{errors.titulo.message}</p>}
           </div>
 
           {/* Descripción */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Descripción *</label>
             <textarea
-              name="descripcion"
-              value={form.descripcion}
-              onChange={handleChange}
-              required
+              {...register('descripcion')}
               rows={3}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
+            {errors.descripcion && <p className="mt-1 text-xs text-red-500">{errors.descripcion.message}</p>}
           </div>
 
           {/* Tipo y Valor de descuento */}
@@ -191,10 +188,7 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de descuento *</label>
               <select
-                name="tipoDescuento"
-                value={form.tipoDescuento}
-                onChange={handleChange}
-                required
+                {...register('tipoDescuento')}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               >
                 <option value="porcentaje">Porcentaje (%)</option>
@@ -205,14 +199,12 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
               <label className="block text-sm font-medium text-gray-700 mb-1">Valor del descuento *</label>
               <input
                 type="number"
-                name="valorDescuento"
-                value={form.valorDescuento}
-                onChange={handleChange}
-                required
+                {...register('valorDescuento')}
                 min="0"
                 step="0.01"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
+              {errors.valorDescuento && <p className="mt-1 text-xs text-red-500">{errors.valorDescuento.message}</p>}
             </div>
           </div>
 
@@ -222,23 +214,19 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicio *</label>
               <input
                 type="date"
-                name="fechaInicio"
-                value={form.fechaInicio}
-                onChange={handleChange}
-                required
+                {...register('fechaInicio')}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
+              {errors.fechaInicio && <p className="mt-1 text-xs text-red-500">{errors.fechaInicio.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha fin *</label>
               <input
                 type="date"
-                name="fechaFin"
-                value={form.fechaFin}
-                onChange={handleChange}
-                required
+                {...register('fechaFin')}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
+              {errors.fechaFin && <p className="mt-1 text-xs text-red-500">{errors.fechaFin.message}</p>}
             </div>
           </div>
 
@@ -248,21 +236,17 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
               <label className="block text-sm font-medium text-gray-700 mb-1">Vigencia del cupón (horas) *</label>
               <input
                 type="number"
-                name="vigenciaCupon"
-                value={form.vigenciaCupon}
-                onChange={handleChange}
-                required
+                {...register('vigenciaCupon')}
                 min="1"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
+              {errors.vigenciaCupon && <p className="mt-1 text-xs text-red-500">{errors.vigenciaCupon.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Máx. cupones</label>
               <input
                 type="number"
-                name="maxCupones"
-                value={form.maxCupones}
-                onChange={handleChange}
+                {...register('maxCupones')}
                 min="1"
                 placeholder="Sin límite"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
@@ -274,9 +258,7 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Términos y condiciones</label>
             <textarea
-              name="terminos"
-              value={form.terminos}
-              onChange={handleChange}
+              {...register('terminos')}
               rows={2}
               placeholder="Opcional"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
@@ -294,10 +276,10 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={isSubmitting}
               className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
             >
-              {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear promoción'}
+              {isSubmitting ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear promoción'}
             </button>
           </div>
         </form>

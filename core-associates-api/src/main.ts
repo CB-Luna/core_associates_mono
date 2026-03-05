@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import helmet from 'helmet';
+import * as compression from 'compression';
 import { AppModule } from './app.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
@@ -8,7 +10,15 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log'],
+  });
+
+  // Security — HTTP headers
+  app.use(helmet());
+
+  // Performance — gzip compression
+  app.use(compression());
 
   // Global prefix
   app.setGlobalPrefix('api/v1');
@@ -55,8 +65,11 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3501;
   await app.listen(port);
-  console.log(`Core Associates API running on port ${port}`);
-  console.log(`Swagger docs: http://localhost:${port}/api/docs`);
+
+  const logger = new Logger('Bootstrap');
+  logger.log(`Core Associates API running on port ${port}`);
+  logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
+  logger.log(`Health check: http://localhost:${port}/api/v1/health`);
 }
 
 bootstrap();

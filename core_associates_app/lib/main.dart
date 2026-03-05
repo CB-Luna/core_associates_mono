@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -9,6 +10,15 @@ import 'shared/widgets/offline_banner.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('es_MX');
+
+  // Initialize Firebase if configured (google-services.json present)
+  try {
+    await Firebase.initializeApp();
+  } catch (_) {
+    // Firebase not configured yet — skip initialization
+    debugPrint('Firebase not configured — push notifications disabled');
+  }
+
   runApp(const ProviderScope(child: CoreAssociatesApp()));
 }
 

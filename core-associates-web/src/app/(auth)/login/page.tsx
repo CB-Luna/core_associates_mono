@@ -1,8 +1,18 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { LogIn, Loader2 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
+
+const loginSchema = z.object({
+  email: z.string().email('Correo electrónico inválido'),
+  password: z.string().min(8, 'Mínimo 8 caracteres'),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
 
 interface LoginResponse {
   accessToken: string;
@@ -46,39 +56,42 @@ const PRESET_USERS = [
 ] as const;
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState('');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
   const handleSelectUser = (user: (typeof PRESET_USERS)[number]) => {
     setSelectedUser(user.id);
-    setEmail(user.email);
-    setPassword(user.password);
-    setError('');
+    setValue('email', user.email);
+    setValue('password', user.password);
+    setServerError('');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  const onSubmit = async (data: LoginFormData) => {
+    setServerError('');
 
     try {
-      const data = await apiClient<LoginResponse>('/auth/login', {
+      const res = await apiClient<LoginResponse>('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(data),
         requireAuth: false,
       });
 
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('accessToken', res.accessToken);
+      localStorage.setItem('refreshToken', res.refreshToken);
+      localStorage.setItem('user', JSON.stringify(res.user));
       window.location.href = '/dashboard';
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar sesión');
-    } finally {
-      setLoading(false);
+      setServerError(err instanceof Error ? err.message : 'Error al iniciar sesión');
     }
   };
 
@@ -140,10 +153,10 @@ export default function LoginPage() {
       </div>
 
       {/* Login form */}
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {error && (
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+        {serverError && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-            {error}
+            {serverError}
           </div>
         )}
 
@@ -157,15 +170,15 @@ export default function LoginPage() {
           <input
             id="email"
             type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setSelectedUser(null);
-            }}
-            required
+            {...register('email', {
+              onChange: () => setSelectedUser(null),
+            })}
             className="mt-1.5 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             placeholder="tu@email.com"
           />
+          {errors.email && (
+            <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+          )}
         </div>
 
         <div>
@@ -178,24 +191,23 @@ export default function LoginPage() {
           <input
             id="password"
             type="password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setSelectedUser(null);
-            }}
-            required
-            minLength={8}
+            {...register('password', {
+              onChange: () => setSelectedUser(null),
+            })}
             className="mt-1.5 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
             placeholder="••••••••"
           />
+          {errors.password && (
+            <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
+          )}
         </div>
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={isSubmitting}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? (
+          {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Iniciando sesión...
