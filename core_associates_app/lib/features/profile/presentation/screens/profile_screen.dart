@@ -32,8 +32,7 @@ class ProfileScreen extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 40,
-                      backgroundColor:
-                          AppColors.primary.withValues(alpha: 0.1),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                       child: Text(
                         iniciales,
                         style: const TextStyle(
@@ -46,32 +45,27 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 12),
                     Text(
                       nombre,
-                      style:
-                          Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      estado == 'activo'
-                          ? 'Miembro activo'
-                          : 'Estado: $estado',
-                      style:
-                          Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: estado == 'activo'
-                                    ? AppColors.secondary
-                                    : AppColors.warning,
-                                fontWeight: FontWeight.w500,
-                              ),
+                      estado == 'activo' ? 'Miembro activo' : 'Estado: $estado',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: estado == 'activo'
+                            ? AppColors.secondary
+                            : AppColors.warning,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     if (idUnico.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
                         idUnico,
-                        style:
-                            Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ],
@@ -81,30 +75,34 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   CircleAvatar(
                     radius: 40,
-                    backgroundColor:
-                        AppColors.primary.withValues(alpha: 0.1),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                     child: const CircularProgressIndicator(),
                   ),
                   const SizedBox(height: 12),
-                  Text('Cargando...',
-                      style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Cargando...',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                 ],
               ),
               error: (_, _) => Column(
                 children: [
                   CircleAvatar(
                     radius: 40,
-                    backgroundColor:
-                        AppColors.primary.withValues(alpha: 0.1),
-                    child: const Icon(Icons.person,
-                        size: 40, color: AppColors.primary),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                    child: const Icon(
+                      Icons.person,
+                      size: 40,
+                      color: AppColors.primary,
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  Text('Asociado',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Asociado',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -115,12 +113,12 @@ class ProfileScreen extends ConsumerWidget {
             _ProfileMenuItem(
               icon: Icons.person_outline,
               title: 'Datos Personales',
-              onTap: () {},
+              onTap: () => context.push('/edit-profile'),
             ),
             _ProfileMenuItem(
               icon: Icons.directions_car_outlined,
               title: 'Mis Vehículos',
-              onTap: () {},
+              onTap: () => context.push('/vehicles'),
             ),
             _ProfileMenuItem(
               icon: Icons.description_outlined,
@@ -192,9 +190,9 @@ class ProfileScreen extends ConsumerWidget {
 
             Text(
               'Core Associates v1.0.0',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -227,10 +225,7 @@ class _ProfileMenuItem extends StatelessWidget {
         child: Icon(icon, color: AppColors.textPrimary, size: 22),
       ),
       title: Text(title),
-      trailing: const Icon(
-        Icons.chevron_right,
-        color: AppColors.textSecondary,
-      ),
+      trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
       contentPadding: EdgeInsets.zero,
     );
   }

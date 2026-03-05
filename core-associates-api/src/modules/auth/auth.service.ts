@@ -3,6 +3,10 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RedisService } from '../../common/redis/redis.service';
+
+const OTP_TTL_SECONDS = 300; // 5 minutos
+const OTP_KEY_PREFIX = 'otp:';
 
 @Injectable()
 export class AuthService {
@@ -10,16 +14,18 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly redis: RedisService,
   ) {}
 
   // ── OTP para App Móvil ──
 
   async sendOtp(telefono: string): Promise<{ message: string }> {
-    // Generar OTP de 6 dígitos
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // TODO: Almacenar OTP en Redis con expiración de 5 minutos
-    // TODO: Enviar OTP vía Twilio SMS
+    // Almacenar OTP en Redis con expiración de 5 minutos
+    await this.redis.set(`${OTP_KEY_PREFIX}${telefono}`, otp, OTP_TTL_SECONDS);
+
+    // TODO: Enviar OTP vía Twilio SMS (Ciclo 7)
     console.log(`[DEV] OTP for ${telefono}: ${otp} (use 000000 to bypass)`);
 
     return { message: 'OTP enviado correctamente' };
@@ -31,9 +37,15 @@ export class AuthService {
   ): Promise<{ accessToken: string; refreshToken: string }> {
     // DEV bypass: accept '000000' in non-production
     const isDev = this.configService.get<string>('NODE_ENV') !== 'production';
-    if (!isDev || otp !== '000000') {
-      // TODO: Verificar OTP desde Redis
-      // In production, validate against stored OTP
+    if (isDev && otp === '000000') {
+      // Bypass para desarrollo
+    } else {
+      // Verificar OTP desde Redis
+      const storedOtp = await this.redis.get(`${OTP_KEY_PREFIX}${telefono}`);
+      if (!storedOtp || storedOtp !== otp) {
+        throw new UnauthorizedException('OTP inválido o expirado');
+      }
+      await this.redis.del(`${OTP_KEY_PREFIX}${telefono}`);
     }
 
     // Buscar asociado, crear si no existe (first login auto-registers)

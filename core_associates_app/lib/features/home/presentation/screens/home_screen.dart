@@ -73,6 +73,11 @@ class HomeScreen extends ConsumerWidget {
             // Membership card
             _MembershipCard(),
 
+            const SizedBox(height: 16),
+
+            // KYC banner
+            _KycBanner(),
+
             const SizedBox(height: 24),
 
             // Quick actions
@@ -87,17 +92,10 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: _QuickAction(
-                    icon: Icons.qr_code_scanner,
-                    label: 'Escanear QR',
+                    icon: Icons.local_offer_outlined,
+                    label: 'Mis Cupones',
                     color: AppColors.primary,
-                    onTap: () {
-                      // TODO: Implement QR scanner
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Escáner QR próximamente'),
-                        ),
-                      );
-                    },
+                    onTap: () => context.push('/my-coupons'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -107,6 +105,19 @@ class HomeScreen extends ConsumerWidget {
                     label: 'Documentos',
                     color: AppColors.secondary,
                     onTap: () => context.push('/documents'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _QuickAction(
+                    icon: Icons.directions_car_outlined,
+                    label: 'Vehículos',
+                    color: AppColors.warning,
+                    onTap: () => context.push('/vehicles'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -169,22 +180,43 @@ class _MembershipCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
 
-    final idUnico = profileAsync.value?.idUnico ?? '---';
-    final estado = profileAsync.value?.estado ?? '---';
+    final asociado = profileAsync.value;
+    final idUnico = asociado?.idUnico ?? '---';
+    final nombre = asociado?.nombreCompleto ?? 'Asociado';
+    final estado = asociado?.estado ?? '---';
+    final telefono = asociado?.telefono ?? '';
     final estadoLabel = estado == 'activo'
         ? 'Membresía Activa'
+        : estado == 'pendiente'
+        ? 'Pendiente de aprobación'
         : 'Membresía: $estado';
+    final vehiculoPrincipal = asociado?.vehiculos
+        .where((v) => v.esPrincipal)
+        .firstOrNull;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark],
+        gradient: LinearGradient(
+          colors: estado == 'activo'
+              ? [AppColors.primary, AppColors.primaryDark]
+              : [const Color(0xFF64748B), const Color(0xFF475569)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color:
+                (estado == 'activo'
+                        ? AppColors.primary
+                        : const Color(0xFF64748B))
+                    .withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,22 +224,35 @@ class _MembershipCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                estadoLabel,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+              Row(
+                children: [
+                  Icon(
+                    estado == 'activo' ? Icons.verified : Icons.pending,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    estadoLabel,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                  ),
+                ],
               ),
-              Icon(
-                estado == 'activo' ? Icons.verified : Icons.pending,
-                color: Colors.white,
-                size: 20,
+              Text(
+                'CORE ASSOCIATES',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.white54,
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
-            'Asociado #$idUnico',
+            nombre,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -215,12 +260,125 @@ class _MembershipCard extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            profileAsync.value?.telefono ?? '',
+            'Asociado #$idUnico',
             style: Theme.of(
               context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+            ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(Icons.phone, size: 14, color: Colors.white54),
+              const SizedBox(width: 6),
+              Text(
+                telefono,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+              ),
+              if (vehiculoPrincipal != null) ...[
+                const SizedBox(width: 16),
+                const Icon(
+                  Icons.directions_car,
+                  size: 14,
+                  color: Colors.white54,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    '${vehiculoPrincipal.marca} ${vehiculoPrincipal.modelo} ${vehiculoPrincipal.anio}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _KycBanner extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
+    final asociado = profileAsync.value;
+
+    if (asociado == null || asociado.estado == 'activo') {
+      return const SizedBox.shrink();
+    }
+
+    final IconData icon;
+    final String title;
+    final String subtitle;
+    final Color color;
+
+    switch (asociado.estado) {
+      case 'pendiente':
+        icon = Icons.upload_file;
+        title = 'Completa tu expediente';
+        subtitle = 'Sube tus documentos para activar tu membresía';
+        color = AppColors.warning;
+      case 'rechazado':
+        icon = Icons.error_outline;
+        title = 'Documentos rechazados';
+        subtitle = 'Revisa y vuelve a subir los documentos indicados';
+        color = AppColors.error;
+      case 'suspendido':
+        icon = Icons.pause_circle_outline;
+        title = 'Membresía suspendida';
+        subtitle = 'Contacta a soporte para más información';
+        color = const Color(0xFF64748B);
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return GestureDetector(
+      onTap: asociado.estado == 'pendiente' || asociado.estado == 'rechazado'
+          ? () => context.push('/documents')
+          : null,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (asociado.estado == 'pendiente' ||
+                asociado.estado == 'rechazado')
+              Icon(Icons.chevron_right, color: color, size: 20),
+          ],
+        ),
       ),
     );
   }

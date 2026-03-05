@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { randomBytes, createHmac } from 'crypto';
 import * as QRCode from 'qrcode';
 
@@ -7,6 +8,8 @@ const HMAC_SECRET = 'core-associates-secret';
 
 @Injectable()
 export class CuponesService {
+  private readonly logger = new Logger(CuponesService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async generateCupon(asociadoId: string, promocionId: string) {
@@ -208,5 +211,20 @@ export class CuponesService {
       data,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async vencerCuponesExpirados() {
+    const result = await this.prisma.cupon.updateMany({
+      where: {
+        estado: 'activo',
+        fechaVencimiento: { lt: new Date() },
+      },
+      data: { estado: 'vencido' },
+    });
+
+    if (result.count > 0) {
+      this.logger.log(`Cupones vencidos automáticamente: ${result.count}`);
+    }
   }
 }

@@ -1,0 +1,433 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send } from 'lucide-react';
+import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import type { CasoLegal, NotaCaso, Proveedor } from '@/lib/api-types';
+import { Badge } from '@/components/ui/Badge';
+
+const estadoVariant: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'info' | 'secondary'> = {
+  abierto: 'danger',
+  en_atencion: 'warning',
+  escalado: 'secondary',
+  resuelto: 'success',
+  cerrado: 'default',
+  cancelado: 'default',
+};
+
+const prioridadVariant: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'info'> = {
+  urgente: 'danger',
+  alta: 'danger',
+  media: 'warning',
+  baja: 'info',
+};
+
+const estadoLabels: Record<string, string> = {
+  abierto: 'Abierto',
+  en_atencion: 'En atención',
+  escalado: 'Escalado',
+  resuelto: 'Resuelto',
+  cerrado: 'Cerrado',
+  cancelado: 'Cancelado',
+};
+
+const tipoPercanceLabels: Record<string, string> = {
+  accidente: 'Accidente',
+  infraccion: 'Infracción',
+  robo: 'Robo',
+  asalto: 'Asalto',
+  otro: 'Otro',
+};
+
+const estadoOptions = ['abierto', 'en_atencion', 'escalado', 'resuelto', 'cerrado', 'cancelado'];
+
+export default function CasoLegalDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const [caso, setCaso] = useState<CasoLegal | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [abogados, setAbogados] = useState<Proveedor[]>([]);
+  const [selectedAbogado, setSelectedAbogado] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [updatingEstado, setUpdatingEstado] = useState(false);
+
+  // Note form
+  const [notaContenido, setNotaContenido] = useState('');
+  const [notaPrivada, setNotaPrivada] = useState(false);
+  const [sendingNota, setSendingNota] = useState(false);
+
+  const fetchCaso = useCallback(async () => {
+    try {
+      const data = await apiClient<CasoLegal>(`/casos-legales/${params.id}`);
+      setCaso(data);
+      setSelectedAbogado(data.abogadoId || '');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchCaso();
+    apiClient<PaginatedResponse<Proveedor>>('/proveedores?tipo=abogado&limit=100')
+      .then((res) => setAbogados(res.data))
+      .catch(() => {});
+  }, [fetchCaso]);
+
+  const handleAsignarAbogado = async () => {
+    if (!selectedAbogado || !caso) return;
+    setAssigning(true);
+    try {
+      const updated = await apiClient<CasoLegal>(`/casos-legales/${caso.id}/asignar-abogado`, {
+        method: 'PUT',
+        body: JSON.stringify({ abogadoId: selectedAbogado }),
+      });
+      setCaso((prev) => prev ? { ...prev, ...updated } : prev);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleCambiarEstado = async (nuevoEstado: string) => {
+    if (!caso) return;
+    setUpdatingEstado(true);
+    try {
+      await apiClient(`/casos-legales/${caso.id}/estado`, {
+        method: 'PUT',
+        body: JSON.stringify({ estado: nuevoEstado }),
+      });
+      setCaso((prev) => prev ? { ...prev, estado: nuevoEstado as CasoLegal['estado'] } : prev);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUpdatingEstado(false);
+    }
+  };
+
+  const handleAddNota = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notaContenido.trim() || !caso) return;
+    setSendingNota(true);
+    try {
+      const nota = await apiClient<NotaCaso>(`/casos-legales/${caso.id}/notas`, {
+        method: 'POST',
+        body: JSON.stringify({ contenido: notaContenido, esPrivada: notaPrivada }),
+      });
+      setCaso((prev) =>
+        prev ? { ...prev, notas: [nota, ...(prev.notas || [])] } : prev,
+      );
+      setNotaContenido('');
+      setNotaPrivada(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSendingNota(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-primary-600" />
+      </div>
+    );
+  }
+
+  if (!caso) {
+    return <p className="text-gray-500">Caso no encontrado</p>;
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => router.back()}
+        className="mb-4 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Volver
+      </button>
+
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Caso {caso.codigo}
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            {tipoPercanceLabels[caso.tipoPercance] || caso.tipoPercance} &middot;{' '}
+            {new Date(caso.fechaApertura).toLocaleDateString('es-MX', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Badge variant={prioridadVariant[caso.prioridad] || 'default'} className="text-sm px-3 py-1">
+            {caso.prioridad}
+          </Badge>
+          <Badge variant={estadoVariant[caso.estado] || 'default'} className="text-sm px-3 py-1">
+            {estadoLabels[caso.estado] || caso.estado}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Estado actions */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {estadoOptions
+          .filter((e) => e !== caso.estado)
+          .map((e) => (
+            <button
+              key={e}
+              onClick={() => handleCambiarEstado(e)}
+              disabled={updatingEstado}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cambiar a {estadoLabels[e]}
+            </button>
+          ))}
+      </div>
+
+      {/* Main grid */}
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Left column - Info */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Description */}
+          {caso.descripcion && (
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <h3 className="text-sm font-semibold text-gray-900">Descripción</h3>
+              <p className="mt-2 text-sm text-gray-700">{caso.descripcion}</p>
+            </div>
+          )}
+
+          {/* Location */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <MapPin className="h-4 w-4" />
+              Ubicación
+            </h3>
+            <dl className="mt-3 space-y-2 text-sm">
+              {caso.direccionAprox && (
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Dirección</dt>
+                  <dd className="text-gray-900">{caso.direccionAprox}</dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt className="text-gray-500">Coordenadas</dt>
+                <dd className="text-gray-900">{caso.latitud}, {caso.longitud}</dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Notes */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <MessageSquare className="h-4 w-4" />
+              Notas ({caso.notas?.length || 0})
+            </h3>
+
+            {/* Add note form */}
+            <form onSubmit={handleAddNota} className="mt-4">
+              <textarea
+                value={notaContenido}
+                onChange={(e) => setNotaContenido(e.target.value)}
+                placeholder="Agregar una nota..."
+                rows={3}
+                className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <div className="mt-2 flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={notaPrivada}
+                    onChange={(e) => setNotaPrivada(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  Nota privada (no visible para el asociado)
+                </label>
+                <button
+                  type="submit"
+                  disabled={sendingNota || !notaContenido.trim()}
+                  className="flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  Enviar
+                </button>
+              </div>
+            </form>
+
+            {/* Notes list */}
+            <div className="mt-4 space-y-3">
+              {caso.notas && caso.notas.length > 0 ? (
+                caso.notas.map((nota) => (
+                  <div
+                    key={nota.id}
+                    className={`rounded-lg border p-3 text-sm ${
+                      nota.esPrivada
+                        ? 'border-yellow-200 bg-yellow-50'
+                        : 'border-gray-200 bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-900">
+                        {nota.autor?.nombre || 'Sistema'}
+                        {nota.autor?.rol && (
+                          <span className="ml-1.5 text-xs text-gray-500">({nota.autor.rol})</span>
+                        )}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {nota.esPrivada && (
+                          <span className="text-xs text-yellow-600">Privada</span>
+                        )}
+                        <span className="text-xs text-gray-400">
+                          {new Date(nota.createdAt).toLocaleDateString('es-MX', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="mt-1 text-gray-700">{nota.contenido}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-sm text-gray-400">Sin notas aún</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right column - Sidebar */}
+        <div className="space-y-6">
+          {/* Asociado info */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <User className="h-4 w-4" />
+              Asociado
+            </h3>
+            {caso.asociado ? (
+              <dl className="mt-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Nombre</dt>
+                  <dd className="text-gray-900">
+                    {caso.asociado.nombre} {caso.asociado.apellidoPat}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">ID</dt>
+                  <dd className="text-gray-900">{caso.asociado.idUnico}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Teléfono</dt>
+                  <dd className="text-gray-900">{caso.asociado.telefono}</dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="mt-2 text-sm text-gray-400">Sin datos</p>
+            )}
+          </div>
+
+          {/* Abogado assignment */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <Gavel className="h-4 w-4" />
+              Abogado asignado
+            </h3>
+            {caso.abogado ? (
+              <dl className="mt-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Nombre</dt>
+                  <dd className="text-gray-900">{caso.abogado.razonSocial}</dd>
+                </div>
+                {caso.abogado.telefono && (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-500">Teléfono</dt>
+                    <dd className="text-gray-900">{caso.abogado.telefono}</dd>
+                  </div>
+                )}
+                {caso.fechaAsignacion && (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-500">Asignado</dt>
+                    <dd className="text-gray-900">
+                      {new Date(caso.fechaAsignacion).toLocaleDateString('es-MX')}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            ) : (
+              <p className="mt-2 text-sm text-gray-400">Sin abogado asignado</p>
+            )}
+
+            <div className="mt-4">
+              <label className="block text-xs font-medium text-gray-600">
+                {caso.abogado ? 'Reasignar abogado' : 'Asignar abogado'}
+              </label>
+              <div className="mt-1 flex gap-2">
+                <select
+                  value={selectedAbogado}
+                  onChange={(e) => setSelectedAbogado(e.target.value)}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">Seleccionar...</option>
+                  {abogados.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.razonSocial}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleAsignarAbogado}
+                  disabled={assigning || !selectedAbogado || selectedAbogado === caso.abogadoId}
+                  className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {assigning ? '...' : 'Asignar'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Dates */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <Calendar className="h-4 w-4" />
+              Fechas
+            </h3>
+            <dl className="mt-3 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-gray-500">Apertura</dt>
+                <dd className="text-gray-900">
+                  {new Date(caso.fechaApertura).toLocaleDateString('es-MX')}
+                </dd>
+              </div>
+              {caso.fechaAsignacion && (
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Asignación</dt>
+                  <dd className="text-gray-900">
+                    {new Date(caso.fechaAsignacion).toLocaleDateString('es-MX')}
+                  </dd>
+                </div>
+              )}
+              {caso.fechaCierre && (
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Cierre</dt>
+                  <dd className="text-gray-900">
+                    {new Date(caso.fechaCierre).toLocaleDateString('es-MX')}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

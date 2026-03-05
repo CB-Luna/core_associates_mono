@@ -31,7 +31,19 @@ class ProfileRepository {
   }
 
   Future<Vehiculo> addVehiculo(Map<String, dynamic> data) async {
-    final response = await apiClient.post('/asociados/me/vehiculos', data: data);
+    final response = await apiClient.post(
+      '/asociados/me/vehiculos',
+      data: data,
+    );
     return Vehiculo.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<Vehiculo> updateVehiculo(String id, Map<String, dynamic> data) async {
+    final response = await apiClient.put('/vehiculos/$id', data: data);
+    return Vehiculo.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteVehiculo(String id) async {
+    await apiClient.delete('/vehiculos/$id');
   }
 }

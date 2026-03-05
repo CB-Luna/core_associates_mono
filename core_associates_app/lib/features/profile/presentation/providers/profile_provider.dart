@@ -4,8 +4,9 @@ import '../../data/models/asociado.dart';
 import '../../data/models/vehiculo.dart';
 import '../../data/profile_repository.dart';
 
-final profileProvider =
-    AsyncNotifierProvider<ProfileNotifier, Asociado?>(ProfileNotifier.new);
+final profileProvider = AsyncNotifierProvider<ProfileNotifier, Asociado?>(
+  ProfileNotifier.new,
+);
 
 class ProfileNotifier extends AsyncNotifier<Asociado?> {
   @override
@@ -35,7 +36,8 @@ class ProfileNotifier extends AsyncNotifier<Asociado?> {
 
 final vehiculosProvider =
     AsyncNotifierProvider<VehiculosNotifier, List<Vehiculo>>(
-        VehiculosNotifier.new);
+      VehiculosNotifier.new,
+    );
 
 class VehiculosNotifier extends AsyncNotifier<List<Vehiculo>> {
   @override
@@ -51,6 +53,18 @@ class VehiculosNotifier extends AsyncNotifier<List<Vehiculo>> {
   Future<void> addVehiculo(Map<String, dynamic> data) async {
     final repo = ref.read(profileRepositoryProvider);
     await repo.addVehiculo(data);
+    ref.invalidateSelf();
+  }
+
+  Future<void> updateVehiculo(String id, Map<String, dynamic> data) async {
+    final repo = ref.read(profileRepositoryProvider);
+    await repo.updateVehiculo(id, data);
+    ref.invalidateSelf();
+  }
+
+  Future<void> deleteVehiculo(String id) async {
+    final repo = ref.read(profileRepositoryProvider);
+    await repo.deleteVehiculo(id);
     ref.invalidateSelf();
   }
 }

@@ -14,6 +14,10 @@ import '../features/documents/presentation/screens/documents_screen.dart';
 import '../features/promotions/presentation/screens/coupon_detail_screen.dart';
 import '../features/promotions/presentation/screens/my_coupons_screen.dart';
 import '../features/legal_support/presentation/screens/case_detail_screen.dart';
+import '../features/profile/presentation/screens/edit_profile_screen.dart';
+import '../features/profile/presentation/screens/vehicles_screen.dart';
+import '../features/profile/presentation/screens/add_vehicle_screen.dart';
+import '../features/profile/data/models/vehiculo.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -75,6 +79,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final casoId = state.pathParameters['id']!;
           return CaseDetailScreen(casoId: casoId);
+        },
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/vehicles',
+        builder: (context, state) => const VehiclesScreen(),
+      ),
+      GoRoute(
+        path: '/vehicles/add',
+        builder: (context, state) => const AddVehicleScreen(),
+      ),
+      GoRoute(
+        path: '/vehicles/edit',
+        builder: (context, state) {
+          final vehiculo = state.extra as Vehiculo;
+          return AddVehicleScreen(vehiculo: vehiculo);
         },
       ),
 

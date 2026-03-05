@@ -2,6 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
+import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,6 +22,13 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   });
+
+  // Global exception filters (order matters: Prisma first, HTTP second)
+  app.useGlobalFilters(new PrismaExceptionFilter(), new HttpExceptionFilter());
+
+  // Global audit interceptor
+  const prisma = app.get(PrismaService);
+  app.useGlobalInterceptors(new AuditInterceptor(prisma));
 
   // Global validation pipe
   app.useGlobalPipes(
