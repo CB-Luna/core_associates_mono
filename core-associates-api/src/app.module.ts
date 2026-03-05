@@ -17,6 +17,7 @@ import { StorageModule } from './modules/storage/storage.module';
 import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
 import { MenuModule } from './modules/menu/menu.module';
+import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { MenuModule } from './modules/menu/menu.module';
     NotificacionesModule,
     ReportesModule,
     MenuModule,
+    AuditoriaModule,
   ],
   providers: [
     {

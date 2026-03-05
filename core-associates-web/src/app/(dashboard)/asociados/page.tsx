@@ -3,13 +3,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { type ColumnDef } from '@tanstack/react-table';
-import { Eye } from 'lucide-react';
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
 import type { Asociado } from '@/lib/api-types';
 import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
+import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
+import { Download, Printer, Eye } from 'lucide-react';
 
 const estadoOptions = [
   { label: 'Activo', value: 'activo' },
@@ -120,8 +121,16 @@ export default function AsociadosPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Asociados</h1>
-      <p className="mt-1 text-sm text-gray-600">Gestión de conductores asociados</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Asociados</h1>
+          <p className="mt-1 text-sm text-gray-600">Gestión de conductores asociados</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => exportToCSV(data.map(a => ({ id: a.idUnico, nombre: `${a.nombre} ${a.apellidoPat}`, telefono: a.telefono, estado: a.estado, registro: new Date(a.fechaRegistro).toLocaleDateString('es-MX') })), [{ key: 'id', header: 'ID' }, { key: 'nombre', header: 'Nombre' }, { key: 'telefono', header: 'Teléfono' }, { key: 'estado', header: 'Estado' }, { key: 'registro', header: 'Registro' }], 'asociados')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
+          <button onClick={() => exportToPrintPDF(data.map(a => ({ id: a.idUnico, nombre: `${a.nombre} ${a.apellidoPat}`, telefono: a.telefono, estado: a.estado, registro: new Date(a.fechaRegistro).toLocaleDateString('es-MX') })), [{ key: 'id', header: 'ID' }, { key: 'nombre', header: 'Nombre' }, { key: 'telefono', header: 'Teléfono' }, { key: 'estado', header: 'Estado' }, { key: 'registro', header: 'Registro' }], 'Reporte de Asociados')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Printer className="h-4 w-4" />PDF</button>
+        </div>
+      </div>
 
       <StatsCards
         className="mt-6"

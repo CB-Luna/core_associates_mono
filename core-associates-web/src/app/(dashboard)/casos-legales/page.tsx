@@ -8,6 +8,8 @@ import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
+import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
+import { Download, Printer } from 'lucide-react';
 
 const estadoOptions = [
   { label: 'Abierto', value: 'abierto' },
@@ -137,8 +139,16 @@ export default function CasosLegalesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Casos Legales</h1>
-      <p className="mt-1 text-sm text-gray-600">Gestión de percances y asistencia legal</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Casos Legales</h1>
+          <p className="mt-1 text-sm text-gray-600">Gestión de percances y asistencia legal</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => exportToCSV(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', tipo: c.tipoPercance, prioridad: c.prioridad, estado: c.estado, apertura: new Date(c.fechaApertura).toLocaleDateString('es-MX') })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'tipo', header: 'Tipo' }, { key: 'prioridad', header: 'Prioridad' }, { key: 'estado', header: 'Estado' }, { key: 'apertura', header: 'Apertura' }], 'casos-legales')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
+          <button onClick={() => exportToPrintPDF(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', tipo: c.tipoPercance, prioridad: c.prioridad, estado: c.estado, apertura: new Date(c.fechaApertura).toLocaleDateString('es-MX') })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'tipo', header: 'Tipo' }, { key: 'prioridad', header: 'Prioridad' }, { key: 'estado', header: 'Estado' }, { key: 'apertura', header: 'Apertura' }], 'Reporte de Casos Legales')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Printer className="h-4 w-4" />PDF</button>
+        </div>
+      </div>
 
       <StatsCards
         className="mt-6"

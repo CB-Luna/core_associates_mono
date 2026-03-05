@@ -1,9 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
+import { RolUsuario, EstadoUsuario } from '@prisma/client';
 
 const OTP_TTL_SECONDS = 300; // 5 minutos
 const OTP_KEY_PREFIX = 'otp:';
@@ -137,5 +138,98 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException('Token de refresh inválido');
     }
+  }
+
+  // ── Gestión de Usuarios CRM ──
+
+  async getUsers() {
+    return this.prisma.usuario.findMany({
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        rol: true,
+        estado: true,
+        ultimoAcceso: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createUser(data: {
+    email: string;
+    nombre: string;
+    password: string;
+    rol: string;
+  }) {
+    const existing = await this.prisma.usuario.findUnique({
+      where: { email: data.email },
+    });
+    if (existing) {
+      throw new ConflictException('Ya existe un usuario con ese email');
+    }
+
+    const passwordHash = await bcrypt.hash(data.password, 10);
+
+    const usuario = await this.prisma.usuario.create({
+      data: {
+        email: data.email,
+        nombre: data.nombre,
+        passwordHash,
+        rol: data.rol as RolUsuario,
+      },
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        rol: true,
+        estado: true,
+        createdAt: true,
+      },
+    });
+
+    return usuario;
+  }
+
+  async updateUser(id: string, data: {
+    email?: string;
+    nombre?: string;
+    rol?: string;
+    estado?: string;
+  }) {
+    const usuario = await this.prisma.usuario.findUnique({ where: { id } });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    return this.prisma.usuario.update({
+      where: { id },
+      data: {
+        ...(data.email && { email: data.email }),
+        ...(data.nombre && { nombre: data.nombre }),
+        ...(data.rol && { rol: data.rol as RolUsuario }),
+        ...(data.estado && { estado: data.estado as EstadoUsuario }),
+      },
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        rol: true,
+        estado: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async resetPassword(id: string, newPassword: string) {
+    const usuario = await this.prisma.usuario.findUnique({ where: { id } });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.usuario.update({
+      where: { id },
+      data: { passwordHash },
+    });
+
+    return { message: 'Contraseña actualizada correctamente' };
   }
 }

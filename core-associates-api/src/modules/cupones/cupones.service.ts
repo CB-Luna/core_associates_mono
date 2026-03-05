@@ -185,12 +185,21 @@ export class CuponesService {
   }
 
   // Admin: list all coupons with pagination
-  async findAll(query: { page?: number; limit?: number; estado?: string }) {
-    const { page = 1, limit = 10, estado } = query;
+  async findAll(query: { page?: number; limit?: number; estado?: string; search?: string }) {
+    const { page = 1, limit = 10, estado, search } = query;
     const skip = (page - 1) * limit;
 
     const where: any = {};
     if (estado) where.estado = estado;
+    if (search) {
+      where.OR = [
+        { codigo: { contains: search, mode: 'insensitive' } },
+        { asociado: { nombre: { contains: search, mode: 'insensitive' } } },
+        { asociado: { apellidoPat: { contains: search, mode: 'insensitive' } } },
+        { promocion: { titulo: { contains: search, mode: 'insensitive' } } },
+        { proveedor: { razonSocial: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.cupon.findMany({

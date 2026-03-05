@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Put, Param, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -6,7 +6,12 @@ import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { CreateUsuarioDto } from './dto/create-usuario.dto';
+import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Autenticación')
@@ -55,5 +60,45 @@ export class AuthController {
   @ApiOperation({ summary: 'Obtener datos del usuario autenticado' })
   getMe(@CurrentUser() user: any) {
     return user;
+  }
+
+  // ── Gestión de Usuarios CRM (solo admin) ──
+
+  @Get('users')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Listar usuarios del CRM' })
+  getUsers() {
+    return this.authService.getUsers();
+  }
+
+  @Post('register-admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Crear usuario del CRM' })
+  @ApiResponse({ status: 201, description: 'Usuario creado' })
+  createUser(@Body() dto: CreateUsuarioDto) {
+    return this.authService.createUser(dto);
+  }
+
+  @Put('users/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar usuario del CRM' })
+  updateUser(@Param('id') id: string, @Body() dto: UpdateUsuarioDto) {
+    return this.authService.updateUser(id, dto);
+  }
+
+  @Post('users/:id/reset-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Resetear contraseña de usuario' })
+  resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(id, dto.password);
   }
 }

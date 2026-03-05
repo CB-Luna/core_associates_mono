@@ -202,3 +202,58 @@ export interface DashboardMetrics {
     cupones: number;
   }[];
 }
+
+// Reporte avanzado con filtros
+export interface ReporteAvanzado {
+  periodo: { desde: string | null; hasta: string | null };
+  asociados: {
+    registrados: number;
+    porEstado: Record<string, number>;
+  };
+  cupones: {
+    generados: number;
+    porEstado: Record<string, number>;
+  };
+  casosLegales: {
+    porTipo: Record<string, number>;
+    porEstado: Record<string, number>;
+  };
+  documentos: {
+    porEstado: Record<string, number>;
+  };
+  trend: {
+    mes: string;
+    asociados: number;
+    cupones: number;
+    casos: number;
+  }[];
+}
+
+// Auditoría
+export interface AuditoriaRecord {
+  id: string;
+  accion: string;
+  entidad: string;
+  entidadId: string;
+  datosAnteriores: Record<string, unknown> | null;
+  datosNuevos: Record<string, unknown> | null;
+  ip: string | null;
+  createdAt: string;
+  usuario: {
+    id: string;
+    nombre: string;
+    email: string;
+    rol: string;
+  } | null;
+}
+
+// Usuario CRM
+export interface UsuarioCRM {
+  id: string;
+  email: string;
+  nombre: string;
+  rol: 'admin' | 'operador' | 'proveedor';
+  estado: 'activo' | 'inactivo';
+  ultimoAcceso: string | null;
+  createdAt: string;
+}
