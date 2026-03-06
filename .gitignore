@@ -28,6 +28,11 @@ logs/
 # ── Coverage ──
 coverage/
 
+# ── Playwright ──
+.auth/
+test-results/
+playwright-report/
+
 # ── Flutter ──
 core_associates_app/.dart_tool/
 core_associates_app/build/

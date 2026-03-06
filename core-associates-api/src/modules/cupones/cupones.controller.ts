@@ -44,6 +44,14 @@ export class CuponesController {
     return this.cuponesService.findAll({ ...query, estado });
   }
 
+  @Get('estadisticas')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'operador')
+  @ApiOperation({ summary: 'Estadísticas de cupones por estado' })
+  getEstadisticas() {
+    return this.cuponesService.getEstadisticas();
+  }
+
   @Get(':id/qr')
   @ApiOperation({ summary: 'Obtener QR del cupón como imagen PNG' })
   async getQrImage(

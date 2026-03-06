@@ -68,9 +68,61 @@ export function exportToPrintPDF(
     </body></html>`;
 
   const win = window.open('', '_blank');
-  if (win) {
-    win.document.write(html);
-    win.document.close();
-    win.print();
+  if (!win) {
+    alert('No se pudo abrir la ventana de impresión. Verifica que los popups estén permitidos.');
+    return;
   }
+  win.document.write(html);
+  win.document.close();
+  win.print();
+}
+
+/**
+ * Export data as a native PDF file using jsPDF.
+ */
+export async function exportToPDFNative(
+  data: Record<string, unknown>[],
+  columns: { key: string; header: string }[],
+  title: string,
+  filename: string,
+) {
+  const { default: jsPDF } = await import('jspdf');
+  await import('jspdf-autotable');
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  // Title
+  doc.setFontSize(16);
+  doc.setTextColor(30, 41, 59);
+  doc.text(title, 14, 18);
+
+  // Subtitle with date
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`, 14, 24);
+
+  // Table
+  const head = [columns.map((c) => c.header)];
+  const body = data.map((row) => columns.map((c) => {
+    const val = row[c.key];
+    return val == null ? '' : String(val);
+  }));
+
+  (doc as any).autoTable({
+    startY: 30,
+    head,
+    body,
+    theme: 'grid',
+    headStyles: {
+      fillColor: [59, 130, 246],
+      textColor: [255, 255, 255],
+      fontSize: 9,
+      fontStyle: 'bold',
+    },
+    bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    margin: { left: 14, right: 14 },
+  });
+
+  doc.save(`${filename}.pdf`);
 }

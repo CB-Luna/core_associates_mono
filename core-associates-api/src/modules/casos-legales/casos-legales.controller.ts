@@ -71,6 +71,14 @@ export class CasosLegalesController {
     return this.casosLegalesService.assignAbogado(id, dto.abogadoId);
   }
 
+  @Get(':id/notas')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'operador')
+  @ApiOperation({ summary: 'Listar notas del caso' })
+  getNotas(@Param('id') casoId: string) {
+    return this.casosLegalesService.getNotas(casoId);
+  }
+
   @Post(':id/notas')
   @UseGuards(RolesGuard)
   @Roles('admin', 'operador')

@@ -120,6 +120,8 @@ export interface Cupon {
   fechaGeneracion: string;
   fechaVencimiento: string;
   fechaCanje: string | null;
+  qrPayload?: string;
+  qrFirma?: string;
   asociado?: {
     idUnico: string;
     nombre: string;
@@ -226,6 +228,14 @@ export interface ReporteAvanzado {
     asociados: number;
     cupones: number;
     casos: number;
+  }[];
+  topProveedores: {
+    id: string;
+    razonSocial: string;
+    tipo: string;
+    cuponesEmitidos: number;
+    cuponesCanjeados: number;
+    promociones: number;
   }[];
 }
 

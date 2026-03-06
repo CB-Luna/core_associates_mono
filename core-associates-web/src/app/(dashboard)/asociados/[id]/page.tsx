@@ -8,10 +8,13 @@ import type { Asociado, Documento } from '@/lib/api-types';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
 import { DocumentViewer } from '@/components/documentos/DocumentViewer';
 import { RejectDocumentDialog } from '@/components/documentos/RejectDocumentDialog';
+import { usePermisos } from '@/lib/permisos';
 
 export default function AsociadoDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { puede } = usePermisos();
+  const id = typeof params.id === 'string' ? params.id : params.id?.[0] ?? '';
   const [asociado, setAsociado] = useState<Asociado | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -20,21 +23,25 @@ export default function AsociadoDetailPage() {
   const [viewerTitle, setViewerTitle] = useState('');
   const [rejectDialog, setRejectDialog] = useState<{ open: boolean; doc: Documento | null }>({ open: false, doc: null });
   const [docUpdating, setDocUpdating] = useState<string | null>(null);
+  const [suspendDialog, setSuspendDialog] = useState(false);
+  const [suspendMotivo, setSuspendMotivo] = useState('');
 
   useEffect(() => {
-    apiClient<Asociado>(`/asociados/${params.id}`)
+    apiClient<Asociado>(`/asociados/${id}`)
       .then(setAsociado)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [params.id]);
+  }, [id]);
 
-  const handleEstado = async (estado: string) => {
+  const handleEstado = async (estado: string, motivo?: string) => {
     if (!asociado) return;
     setUpdating(true);
     try {
+      const body: Record<string, string> = { estado };
+      if (motivo) body.motivo = motivo;
       await apiClient(`/asociados/${asociado.id}/estado`, {
         method: 'PUT',
-        body: JSON.stringify({ estado }),
+        body: JSON.stringify(body),
       });
       setAsociado({ ...asociado, estado: estado as any });
     } catch (err) {
@@ -42,6 +49,13 @@ export default function AsociadoDetailPage() {
     } finally {
       setUpdating(false);
     }
+  };
+
+  const handleSuspend = async () => {
+    if (!suspendMotivo.trim()) return;
+    await handleEstado('suspendido', suspendMotivo.trim());
+    setSuspendDialog(false);
+    setSuspendMotivo('');
   };
 
   const handleViewDocument = async (doc: Documento) => {
@@ -134,7 +148,7 @@ export default function AsociadoDetailPage() {
       </div>
 
       {/* Action buttons */}
-      {asociado.estado === 'pendiente' && (
+      {puede('aprobar:asociados') && asociado.estado === 'pendiente' && (
         <div className="mt-4 flex gap-3">
           <button
             onClick={() => handleEstado('activo')}
@@ -152,10 +166,10 @@ export default function AsociadoDetailPage() {
           </button>
         </div>
       )}
-      {asociado.estado === 'activo' && (
+      {puede('editar:asociados') && asociado.estado === 'activo' && (
         <div className="mt-4">
           <button
-            onClick={() => handleEstado('suspendido')}
+            onClick={() => setSuspendDialog(true)}
             disabled={updating}
             className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
           >
@@ -323,6 +337,40 @@ export default function AsociadoDetailPage() {
         onConfirm={handleRejectDocument}
         documentType={rejectDialog.doc?.tipo || ''}
       />
+
+      {/* Suspend dialog */}
+      {suspendDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900">Suspender Asociado</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Indica el motivo de la suspensión de {asociado.nombre} {asociado.apellidoPat}.
+            </p>
+            <textarea
+              value={suspendMotivo}
+              onChange={(e) => setSuspendMotivo(e.target.value)}
+              placeholder="Motivo de suspensión (requerido)"
+              rows={3}
+              className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+            />
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                onClick={() => { setSuspendDialog(false); setSuspendMotivo(''); }}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSuspend}
+                disabled={!suspendMotivo.trim() || updating}
+                className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+              >
+                Confirmar Suspensión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

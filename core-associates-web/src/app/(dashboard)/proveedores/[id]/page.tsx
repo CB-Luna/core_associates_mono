@@ -7,17 +7,20 @@ import { apiClient } from '@/lib/api-client';
 import type { Proveedor } from '@/lib/api-types';
 import { Badge, estadoProveedorVariant, tipoProveedorVariant } from '@/components/ui/Badge';
 import { ProveedorFormDialog } from '@/components/shared/ProveedorFormDialog';
+import { usePermisos } from '@/lib/permisos';
 
 export default function ProveedorDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { puede } = usePermisos();
+  const id = typeof params.id === 'string' ? params.id : params.id?.[0] ?? '';
   const [proveedor, setProveedor] = useState<Proveedor | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
 
   const fetchData = () => {
     setLoading(true);
-    apiClient<Proveedor>(`/proveedores/${params.id}`)
+    apiClient<Proveedor>(`/proveedores/${id}`)
       .then(setProveedor)
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -25,7 +28,7 @@ export default function ProveedorDetailPage() {
 
   useEffect(() => {
     fetchData();
-  }, [params.id]);
+  }, [id]);
 
   if (loading) {
     return (
@@ -58,13 +61,15 @@ export default function ProveedorDetailPage() {
             <Badge variant={estadoProveedorVariant[proveedor.estado]}>{proveedor.estado}</Badge>
           </div>
         </div>
-        <button
-          onClick={() => setEditing(true)}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          <Pencil className="h-4 w-4" />
-          Editar
-        </button>
+        {puede('editar:proveedores') && (
+          <button
+            onClick={() => setEditing(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Pencil className="h-4 w-4" />
+            Editar
+          </button>
+        )}
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">

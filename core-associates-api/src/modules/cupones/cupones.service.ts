@@ -236,4 +236,15 @@ export class CuponesService {
       this.logger.log(`Cupones vencidos automáticamente: ${result.count}`);
     }
   }
+
+  async getEstadisticas() {
+    const [activos, canjeados, vencidos, total] = await Promise.all([
+      this.prisma.cupon.count({ where: { estado: 'activo' } }),
+      this.prisma.cupon.count({ where: { estado: 'canjeado' } }),
+      this.prisma.cupon.count({ where: { estado: 'vencido' } }),
+      this.prisma.cupon.count(),
+    ]);
+
+    return { activos, canjeados, vencidos, total };
+  }
 }

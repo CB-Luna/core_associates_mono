@@ -86,6 +86,7 @@ export class ReportesService {
       casosPorEstado,
       docsPorEstado,
       trendMensual,
+      topProveedores,
     ] = await Promise.all([
       this.prisma.asociado.count({ where: { fechaRegistro: dateFilter } }),
       this.prisma.asociado.groupBy({
@@ -115,6 +116,25 @@ export class ReportesService {
         where: { createdAt: dateFilter },
       }),
       this.getMonthlyTrend(desde, hasta),
+      this.prisma.proveedor.findMany({
+        where: { estado: 'activo' },
+        select: {
+          id: true,
+          razonSocial: true,
+          tipo: true,
+          _count: {
+            select: {
+              cuponesEmitidos: dateFilter ? { where: { createdAt: dateFilter } } : true,
+              cuponesCanjeados: dateFilter
+                ? { where: { fechaCanje: dateFilter } }
+                : true,
+              promociones: true,
+            },
+          },
+        },
+        orderBy: { cuponesEmitidos: { _count: 'desc' } },
+        take: 10,
+      }),
     ]);
 
     return {
@@ -138,6 +158,14 @@ export class ReportesService {
         porEstado: this.groupToMap(docsPorEstado),
       },
       trend: trendMensual,
+      topProveedores: topProveedores.map((p) => ({
+        id: p.id,
+        razonSocial: p.razonSocial,
+        tipo: p.tipo,
+        cuponesEmitidos: p._count.cuponesEmitidos,
+        cuponesCanjeados: p._count.cuponesCanjeados,
+        promociones: p._count.promociones,
+      })),
     };
   }
 

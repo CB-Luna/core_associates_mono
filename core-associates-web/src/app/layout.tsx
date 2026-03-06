@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ClientProviders } from '@/app/client-providers';
 
 export const metadata: Metadata = {
   title: 'Core Associates - CRM',
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="min-h-screen bg-gray-50 antialiased dark:bg-gray-900 dark:text-gray-100">
-        {children}
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );

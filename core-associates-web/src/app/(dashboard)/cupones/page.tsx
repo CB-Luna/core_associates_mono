@@ -7,8 +7,10 @@ import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
-import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
-import { Download, Printer, X } from 'lucide-react';
+import { exportToCSV, exportToPDFNative } from '@/lib/export-utils';
+import { Download, FileDown, X, QrCode } from 'lucide-react';
+import { QRDisplay } from '@/components/ui/QRDisplay';
+import type { Proveedor } from '@/lib/api-types';
 
 const estadoOptions = [
   { label: 'Activo', value: 'activo' },
@@ -34,6 +36,12 @@ export default function CuponesPage() {
   const [search, setSearch] = useState('');
   const [selectedCupon, setSelectedCupon] = useState<any | null>(null);
 
+  // Advanced filters
+  const [proveedorFilter, setProveedorFilter] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+
   // Stats
   const [stats, setStats] = useState({ activos: 0, canjeados: 0, vencidos: 0, total: 0 });
 
@@ -43,6 +51,9 @@ export default function CuponesPage() {
       const params = new URLSearchParams({ page: String(page), limit: '10' });
       if (estadoFilter) params.set('estado', estadoFilter);
       if (search) params.set('search', search);
+      if (proveedorFilter) params.set('proveedorId', proveedorFilter);
+      if (fechaDesde) params.set('desde', fechaDesde);
+      if (fechaHasta) params.set('hasta', fechaHasta);
 
       const res = await apiClient<PaginatedResponse<any>>(`/cupones/admin/all?${params}`);
       setData(res.data);
@@ -53,7 +64,7 @@ export default function CuponesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, estadoFilter, search]);
+  }, [page, estadoFilter, search, proveedorFilter, fechaDesde, fechaHasta]);
 
   useEffect(() => {
     // Fetch stats per estado
@@ -70,6 +81,11 @@ export default function CuponesPage() {
         total: all.meta.total,
       });
     }).catch(() => {});
+
+    // Fetch proveedores for filter
+    apiClient<PaginatedResponse<Proveedor>>('/proveedores?limit=200')
+      .then((res) => setProveedores(res.data))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -120,7 +136,7 @@ export default function CuponesPage() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => exportToCSV(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', promocion: c.promocion?.titulo || '', proveedor: c.proveedor?.razonSocial || '', vencimiento: new Date(c.fechaVencimiento).toLocaleDateString('es-MX'), estado: c.estado })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'promocion', header: 'Promoción' }, { key: 'proveedor', header: 'Proveedor' }, { key: 'vencimiento', header: 'Vencimiento' }, { key: 'estado', header: 'Estado' }], 'cupones')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
-          <button onClick={() => exportToPrintPDF(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', promocion: c.promocion?.titulo || '', proveedor: c.proveedor?.razonSocial || '', vencimiento: new Date(c.fechaVencimiento).toLocaleDateString('es-MX'), estado: c.estado })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'promocion', header: 'Promoción' }, { key: 'proveedor', header: 'Proveedor' }, { key: 'vencimiento', header: 'Vencimiento' }, { key: 'estado', header: 'Estado' }], 'Reporte de Cupones')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Printer className="h-4 w-4" />PDF</button>
+          <button onClick={() => exportToPDFNative(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', promocion: c.promocion?.titulo || '', proveedor: c.proveedor?.razonSocial || '', vencimiento: new Date(c.fechaVencimiento).toLocaleDateString('es-MX'), estado: c.estado })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'promocion', header: 'Promoción' }, { key: 'proveedor', header: 'Proveedor' }, { key: 'vencimiento', header: 'Vencimiento' }, { key: 'estado', header: 'Estado' }], 'Reporte de Cupones', 'cupones')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><FileDown className="h-4 w-4" />PDF</button>
         </div>
       </div>
 
@@ -142,6 +158,49 @@ export default function CuponesPage() {
           filterValue={estadoFilter}
           onFilterChange={(v) => { setEstadoFilter(v); setPage(1); }}
         />
+
+        {/* Advanced filters row */}
+        <div className="mt-3 flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-500">Proveedor</label>
+            <select
+              value={proveedorFilter}
+              onChange={(e) => { setProveedorFilter(e.target.value); setPage(1); }}
+              className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Todos</option>
+              {proveedores.map((p) => (
+                <option key={p.id} value={p.id}>{p.razonSocial}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500">Desde</label>
+            <input
+              type="date"
+              value={fechaDesde}
+              onChange={(e) => { setFechaDesde(e.target.value); setPage(1); }}
+              className="mt-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500">Hasta</label>
+            <input
+              type="date"
+              value={fechaHasta}
+              onChange={(e) => { setFechaHasta(e.target.value); setPage(1); }}
+              className="mt-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          {(proveedorFilter || fechaDesde || fechaHasta) && (
+            <button
+              onClick={() => { setProveedorFilter(''); setFechaDesde(''); setFechaHasta(''); setPage(1); }}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mt-4">
@@ -175,7 +234,20 @@ export default function CuponesPage() {
               <DetailRow label="Fecha Generación" value={selectedCupon.fechaGeneracion ? new Date(selectedCupon.fechaGeneracion).toLocaleString('es-MX') : '—'} />
               <DetailRow label="Fecha Vencimiento" value={selectedCupon.fechaVencimiento ? new Date(selectedCupon.fechaVencimiento).toLocaleString('es-MX') : '—'} />
               {selectedCupon.fechaCanje && <DetailRow label="Fecha Canje" value={new Date(selectedCupon.fechaCanje).toLocaleString('es-MX')} />}
-              {selectedCupon.qrPayload && <DetailRow label="QR Payload" value={<span className="break-all font-mono text-xs">{selectedCupon.qrPayload}</span>} />}
+              {selectedCupon.qrPayload && (
+                <div className="mt-4 flex flex-col items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 py-4">
+                  <QRDisplay value={selectedCupon.qrPayload} size={160} />
+                  <span className="mt-1 max-w-full break-all px-4 text-center font-mono text-xs text-gray-400">{selectedCupon.qrPayload}</span>
+                </div>
+              )}
+              {!selectedCupon.qrPayload && selectedCupon.codigo && (
+                <div className="mt-4 flex flex-col items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 py-4">
+                  <QRDisplay value={selectedCupon.codigo} size={160} />
+                  <span className="mt-1 flex items-center gap-1 text-xs text-gray-400">
+                    <QrCode className="h-3.5 w-3.5" /> Código del cupón
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

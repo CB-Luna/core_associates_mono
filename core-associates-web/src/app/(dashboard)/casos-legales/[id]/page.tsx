@@ -6,6 +6,12 @@ import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send } from 'l
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
 import type { CasoLegal, NotaCaso, Proveedor } from '@/lib/api-types';
 import { Badge } from '@/components/ui/Badge';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
+import dynamic from 'next/dynamic';
+import { usePermisos } from '@/lib/permisos';
+
+const MapView = dynamic(() => import('@/components/ui/MapView').then((m) => m.MapView), { ssr: false });
 
 const estadoVariant: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'info' | 'secondary'> = {
   abierto: 'danger',
@@ -45,6 +51,8 @@ const estadoOptions = ['abierto', 'en_atencion', 'escalado', 'resuelto', 'cerrad
 export default function CasoLegalDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { puede } = usePermisos();
+  const id = typeof params.id === 'string' ? params.id : params.id?.[0] ?? '';
   const [caso, setCaso] = useState<CasoLegal | null>(null);
   const [loading, setLoading] = useState(true);
   const [abogados, setAbogados] = useState<Proveedor[]>([]);
@@ -57,9 +65,17 @@ export default function CasoLegalDetailPage() {
   const [notaPrivada, setNotaPrivada] = useState(false);
   const [sendingNota, setSendingNota] = useState(false);
 
+  // Confirm dialog
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingEstado, setPendingEstado] = useState('');
+  const { toast } = useToast();
+
+  // Prioridad
+  const [updatingPrioridad, setUpdatingPrioridad] = useState(false);
+
   const fetchCaso = useCallback(async () => {
     try {
-      const data = await apiClient<CasoLegal>(`/casos-legales/${params.id}`);
+      const data = await apiClient<CasoLegal>(`/casos-legales/${id}`);
       setCaso(data);
       setSelectedAbogado(data.abogadoId || '');
     } catch (err) {
@@ -67,7 +83,7 @@ export default function CasoLegalDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [params.id]);
+  }, [id]);
 
   useEffect(() => {
     fetchCaso();
@@ -101,10 +117,31 @@ export default function CasoLegalDetailPage() {
         body: JSON.stringify({ estado: nuevoEstado }),
       });
       setCaso((prev) => prev ? { ...prev, estado: nuevoEstado as CasoLegal['estado'] } : prev);
+      toast('success', 'Estado actualizado', `Cambió a ${estadoLabels[nuevoEstado]}`);
     } catch (err) {
       console.error(err);
+      toast('error', 'Error al cambiar estado');
     } finally {
       setUpdatingEstado(false);
+      setConfirmOpen(false);
+    }
+  };
+
+  const handleCambiarPrioridad = async (nuevaPrioridad: string) => {
+    if (!caso) return;
+    setUpdatingPrioridad(true);
+    try {
+      await apiClient(`/casos-legales/${caso.id}/prioridad`, {
+        method: 'PUT',
+        body: JSON.stringify({ prioridad: nuevaPrioridad }),
+      });
+      setCaso((prev) => prev ? { ...prev, prioridad: nuevaPrioridad as CasoLegal['prioridad'] } : prev);
+      toast('success', 'Prioridad actualizada', `Cambió a ${nuevaPrioridad}`);
+    } catch (err) {
+      console.error(err);
+      toast('error', 'Error al cambiar prioridad');
+    } finally {
+      setUpdatingPrioridad(false);
     }
   };
 
@@ -179,20 +216,46 @@ export default function CasoLegalDetailPage() {
       </div>
 
       {/* Estado actions */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {estadoOptions
-          .filter((e) => e !== caso.estado)
-          .map((e) => (
-            <button
-              key={e}
-              onClick={() => handleCambiarEstado(e)}
-              disabled={updatingEstado}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
-              Cambiar a {estadoLabels[e]}
-            </button>
-          ))}
+      {puede('cambiar:estado-caso') && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {estadoOptions
+            .filter((e) => e !== caso.estado)
+            .map((e) => (
+              <button
+                key={e}
+                onClick={() => { setPendingEstado(e); setConfirmOpen(true); }}
+                disabled={updatingEstado}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cambiar a {estadoLabels[e]}
+              </button>
+            ))}
+        </div>
+      )}
+
+      {/* Prioridad */}
+      {puede('cambiar:prioridad-caso') && (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-500">Prioridad:</span>
+        {(['baja', 'media', 'alta', 'urgente'] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => handleCambiarPrioridad(p)}
+            disabled={updatingPrioridad || caso.prioridad === p}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-40 ${
+              caso.prioridad === p
+                ? p === 'urgente' ? 'bg-red-100 text-red-700 ring-1 ring-red-300'
+                : p === 'alta' ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-300'
+                : p === 'media' ? 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-300'
+                : 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {p}
+          </button>
+        ))}
       </div>
+      )}
 
       {/* Main grid */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -224,6 +287,15 @@ export default function CasoLegalDetailPage() {
                 <dd className="text-gray-900">{caso.latitud}, {caso.longitud}</dd>
               </div>
             </dl>
+            {caso.latitud && caso.longitud && (
+              <div className="mt-3">
+                <MapView
+                  markers={[{ lat: caso.latitud, lng: caso.longitud, label: caso.codigo || 'Ubicación', color: 'red' }]}
+                  zoom={15}
+                  height="220px"
+                />
+              </div>
+            )}
           </div>
 
           {/* Notes */}
@@ -428,6 +500,17 @@ export default function CasoLegalDetailPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Cambiar estado"
+        message={`¿Confirmas cambiar el estado del caso a "${estadoLabels[pendingEstado] || pendingEstado}"?`}
+        variant={pendingEstado === 'cancelado' ? 'danger' : 'warning'}
+        confirmLabel="Sí, cambiar"
+        loading={updatingEstado}
+        onConfirm={() => handleCambiarEstado(pendingEstado)}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

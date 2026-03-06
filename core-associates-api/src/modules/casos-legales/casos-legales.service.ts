@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCasoLegalDto } from './dto/create-caso-legal.dto';
 import { TipoPercance } from '@prisma/client';
@@ -105,6 +105,12 @@ export class CasosLegalesService {
   }
 
   async assignAbogado(id: string, abogadoId: string) {
+    const proveedor = await this.prisma.proveedor.findUnique({ where: { id: abogadoId } });
+    if (!proveedor) throw new NotFoundException('Proveedor no encontrado');
+    if (proveedor.tipo !== 'abogado') {
+      throw new BadRequestException('Solo proveedores de tipo abogado pueden ser asignados');
+    }
+
     return this.prisma.casoLegal.update({
       where: { id },
       data: {
@@ -121,6 +127,17 @@ export class CasosLegalesService {
   async addNote(casoId: string, autorId: string, contenido: string, esPrivada = false) {
     return this.prisma.notaCaso.create({
       data: { casoId, autorId, contenido, esPrivada },
+      include: { autor: { select: { nombre: true, rol: true } } },
+    });
+  }
+
+  async getNotas(casoId: string) {
+    const caso = await this.prisma.casoLegal.findUnique({ where: { id: casoId } });
+    if (!caso) throw new NotFoundException('Caso no encontrado');
+
+    return this.prisma.notaCaso.findMany({
+      where: { casoId },
+      orderBy: { createdAt: 'desc' },
       include: { autor: { select: { nombre: true, rol: true } } },
     });
   }

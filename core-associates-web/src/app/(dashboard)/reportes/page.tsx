@@ -4,11 +4,14 @@ import { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { type ReporteAvanzado } from '@/lib/api-types';
 import { StatsCards } from '@/components/ui/StatsCards';
-import { Download } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell, LineChart, Line, Area, AreaChart,
 } from 'recharts';
+import { Trophy, Store } from 'lucide-react';
+import { usePermisos } from '@/lib/permisos';
+import { exportToPDFNative } from '@/lib/export-utils';
 
 const PIE_COLORS = ['#22c55e', '#3b82f6', '#eab308', '#ef4444', '#8b5cf6', '#6b7280'];
 
@@ -51,6 +54,7 @@ function getDefaultDates() {
 
 export default function ReportesPage() {
   const defaults = getDefaultDates();
+  const { puede } = usePermisos();
   const [desde, setDesde] = useState(defaults.desde);
   const [hasta, setHasta] = useState(defaults.hasta);
   const [reporte, setReporte] = useState<ReporteAvanzado | null>(null);
@@ -88,6 +92,27 @@ export default function ReportesPage() {
     URL.revokeObjectURL(url);
   };
 
+  const exportPDF = async () => {
+    if (!reporte) return;
+    const data = reporte.trend.map((t) => ({
+      mes: t.mes,
+      asociados: t.asociados,
+      cupones: t.cupones,
+      casos: t.casos,
+    }));
+    await exportToPDFNative(
+      data,
+      [
+        { key: 'mes', header: 'Mes' },
+        { key: 'asociados', header: 'Asociados' },
+        { key: 'cupones', header: 'Cupones' },
+        { key: 'casos', header: 'Casos' },
+      ],
+      'Reporte Avanzado',
+      `reporte-${desde}-${hasta}`,
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -119,13 +144,24 @@ export default function ReportesPage() {
           <h1 className="text-2xl font-bold text-gray-900">Reportes Avanzados</h1>
           <p className="mt-1 text-sm text-gray-600">Análisis detallado con filtros por período</p>
         </div>
-        <button
-          onClick={exportCSV}
-          className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-        >
-          <Download className="h-4 w-4" />
-          Exportar CSV
-        </button>
+        {puede('exportar:reportes') && (
+          <div className="flex gap-2">
+            <button
+              onClick={exportCSV}
+              className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            >
+              <Download className="h-4 w-4" />
+              CSV
+            </button>
+            <button
+              onClick={exportPDF}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <FileText className="h-4 w-4" />
+              PDF
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Date Filters */}
@@ -343,6 +379,83 @@ export default function ReportesPage() {
           </div>
         </div>
       </div>
+
+      {/* Top Proveedores */}
+      {reporte.topProveedores && reporte.topProveedores.length > 0 && (
+        <div className="mt-6 rounded-xl border bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-amber-500" />
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">Top Proveedores</h3>
+              <p className="text-xs text-gray-500">Proveedores con mayor actividad de cupones en el período</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Bar Chart */}
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={reporte.topProveedores.slice(0, 7)}
+                layout="vertical"
+                barGap={4}
+                margin={{ left: 10 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis
+                  dataKey="razonSocial"
+                  type="category"
+                  width={120}
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" iconSize={8} />
+                <Bar dataKey="cuponesEmitidos" name="Emitidos" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={14} />
+                <Bar dataKey="cuponesCanjeados" name="Canjeados" fill="#22c55e" radius={[0, 4, 4, 0]} barSize={14} />
+              </BarChart>
+            </ResponsiveContainer>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-xs font-medium uppercase text-gray-500">
+                    <th className="pb-2 pr-4">#</th>
+                    <th className="pb-2 pr-4">Proveedor</th>
+                    <th className="pb-2 pr-4">Tipo</th>
+                    <th className="pb-2 pr-4 text-right">Emitidos</th>
+                    <th className="pb-2 pr-4 text-right">Canjeados</th>
+                    <th className="pb-2 text-right">Promos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reporte.topProveedores.map((p, i) => (
+                    <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-2 pr-4">
+                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i < 3 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {i + 1}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 font-medium text-gray-900">{p.razonSocial}</td>
+                      <td className="py-2 pr-4">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                          <Store className="h-3 w-3" />
+                          {p.tipo}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 text-right font-semibold text-blue-600">{p.cuponesEmitidos}</td>
+                      <td className="py-2 pr-4 text-right font-semibold text-green-600">{p.cuponesCanjeados}</td>
+                      <td className="py-2 text-right text-gray-600">{p.promociones}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
