@@ -20,6 +20,11 @@ CMD ["npm", "run", "dev"]
 FROM base AS builder
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Build args para variables NEXT_PUBLIC_* (se inyectan en build-time)
+ARG NEXT_PUBLIC_API_URL=http://localhost:3501
+ARG NEXT_PUBLIC_MINIO_URL=http://localhost:9002
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_MINIO_URL=$NEXT_PUBLIC_MINIO_URL
 RUN npm run build
 
 # ── Etapa de producción ──

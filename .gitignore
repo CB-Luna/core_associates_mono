@@ -46,6 +46,17 @@ core_associates_app/pubspec.lock
 # ── Prisma ──
 core-associates-api/prisma/*.db
 
+# ── TypeScript build cache ──
+*.tsbuildinfo
+
+# ── Compilados de e2e tests (se regeneran con tsc) ──
+core-associates-api/test/**/*.js
+core-associates-api/test/**/*.js.map
+core-associates-api/test/**/*.d.ts
+
 # ── Generated ──
 *.freezed.dart
 *.g.dart
+
+# ── Scripts locales ──
+*.ps1
