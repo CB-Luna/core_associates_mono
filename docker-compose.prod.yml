@@ -211,16 +211,16 @@ services:
           memory: 512M
 
   # ──────────────────────────────────────────────
-  # REVERSE PROXY - Nginx (puertos estandar)
-  # Unico servicio expuesto a Internet
+  # REVERSE PROXY - Nginx
+  # Detras de Nginx Proxy Manager (NPM) que maneja :80/:443 y SSL
+  # NPM proxea al puerto 8580 → nuestro Nginx aplica rate-limiting y headers
   # ──────────────────────────────────────────────
   nginx:
     image: nginx:alpine
     container_name: core_associates_nginx
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "0.0.0.0:8580:80"
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
