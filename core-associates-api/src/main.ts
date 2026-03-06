@@ -26,8 +26,9 @@ async function bootstrap() {
   // CORS
   app.enableCors({
     origin: [
-      'http://localhost:3600', // Next.js CRM
-      'http://localhost:8580', // Nginx Gateway
+      'http://localhost:3600',          // Next.js CRM local
+      'http://localhost:8580',          // Nginx Gateway local
+      'http://216.250.125.239:8580',    // Nginx Gateway producción
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
