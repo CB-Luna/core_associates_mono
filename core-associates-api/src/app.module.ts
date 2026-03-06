@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { configValidationSchema } from './common/config/config-validation';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { SmsModule } from './common/sms/sms.module';
@@ -25,11 +26,13 @@ import { HealthModule } from './modules/health/health.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validationSchema: configValidationSchema,
+      validationOptions: { abortEarly: false },
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{
       ttl: 60000,   // 1 minuto
-      limit: 30,    // 30 requests por minuto por IP
+      limit: 60,    // 60 requests por minuto por IP
     }]),
     PrismaModule,
     RedisModule,

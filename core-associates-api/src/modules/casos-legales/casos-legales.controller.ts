@@ -9,7 +9,7 @@ import { CreateCasoLegalDto } from './dto/create-caso-legal.dto';
 import { CreateNotaCasoDto } from './dto/create-nota-caso.dto';
 import { UpdateEstadoCasoDto } from './dto/update-estado-caso.dto';
 import { AsignarAbogadoDto } from './dto/asignar-abogado.dto';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { CasosLegalesQueryDto } from './dto/casos-legales-query.dto';
 
 @ApiTags('Casos Legales')
 @ApiBearerAuth()
@@ -37,14 +37,8 @@ export class CasosLegalesController {
   @UseGuards(RolesGuard)
   @Roles('admin', 'operador')
   @ApiOperation({ summary: 'Listar todos los casos (admin)' })
-  @ApiQuery({ name: 'estado', required: false })
-  @ApiQuery({ name: 'prioridad', required: false })
-  findAll(
-    @Query() query: PaginationQueryDto,
-    @Query('estado') estado?: string,
-    @Query('prioridad') prioridad?: string,
-  ) {
-    return this.casosLegalesService.findAll({ ...query, estado, prioridad });
+  findAll(@Query() query: CasosLegalesQueryDto) {
+    return this.casosLegalesService.findAll(query);
   }
 
   @Get(':id')

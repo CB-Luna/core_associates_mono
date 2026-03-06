@@ -83,7 +83,7 @@ export default function CuponesPage() {
     }).catch(() => {});
 
     // Fetch proveedores for filter
-    apiClient<PaginatedResponse<Proveedor>>('/proveedores?limit=200')
+    apiClient<PaginatedResponse<Proveedor>>('/proveedores?limit=100')
       .then((res) => setProveedores(res.data))
       .catch(() => {});
   }, []);

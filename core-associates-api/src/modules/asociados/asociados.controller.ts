@@ -8,7 +8,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UpdateAsociadoDto } from './dto/update-asociado.dto';
 import { CreateVehiculoDto } from './dto/create-vehiculo.dto';
 import { UpdateEstadoDto } from './dto/update-estado.dto';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { AsociadosQueryDto } from './dto/asociados-query.dto';
 
 @ApiTags('Asociados')
 @ApiBearerAuth()
@@ -55,12 +55,8 @@ export class AsociadosController {
   @UseGuards(RolesGuard)
   @Roles('admin', 'operador')
   @ApiOperation({ summary: 'Listar asociados (admin)' })
-  @ApiQuery({ name: 'estado', required: false })
-  findAll(
-    @Query() query: PaginationQueryDto,
-    @Query('estado') estado?: string,
-  ) {
-    return this.asociadosService.findAll({ ...query, estado });
+  findAll(@Query() query: AsociadosQueryDto) {
+    return this.asociadosService.findAll(query);
   }
 
   @Get(':id')

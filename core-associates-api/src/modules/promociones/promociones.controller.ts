@@ -5,7 +5,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreatePromocionDto } from './dto/create-promocion.dto';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PromocionesQueryDto } from './dto/promociones-query.dto';
 
 @ApiTags('Promociones')
 @ApiBearerAuth()
@@ -25,12 +25,8 @@ export class PromocionesController {
   @UseGuards(RolesGuard)
   @Roles('admin', 'operador')
   @ApiOperation({ summary: 'Listar todas las promociones (admin)' })
-  @ApiQuery({ name: 'estado', required: false })
-  findAll(
-    @Query() query: PaginationQueryDto,
-    @Query('estado') estado?: string,
-  ) {
-    return this.promocionesService.findAll({ ...query, estado });
+  findAll(@Query() query: PromocionesQueryDto) {
+    return this.promocionesService.findAll(query);
   }
 
   @Get(':id')

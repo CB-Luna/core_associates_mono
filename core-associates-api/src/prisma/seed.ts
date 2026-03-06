@@ -191,7 +191,7 @@ async function main() {
     { codigo: 'cupones', titulo: 'Cupones', ruta: '/cupones', icono: 'Ticket', permisos: ['admin', 'operador', 'proveedor'], orden: 5 },
     { codigo: 'casos-legales', titulo: 'Casos Legales', ruta: '/casos-legales', icono: 'Scale', permisos: ['admin', 'operador'], orden: 6 },
     { codigo: 'reportes', titulo: 'Reportes', ruta: '/reportes', icono: 'BarChart3', permisos: ['admin'], orden: 7 },
-    { codigo: 'configuracion', titulo: 'Configuración', ruta: '/configuracion', icono: 'Settings', permisos: ['admin'], orden: 8 },
+    { codigo: 'configuracion', titulo: 'Configuraci\u00f3n', ruta: '/configuracion', icono: 'Settings', permisos: ['admin'], orden: 8 },
   ];
 
   for (const item of menuItems) {

@@ -8,7 +8,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateCuponDto } from './dto/create-cupon.dto';
 import { ValidateCuponDto } from './dto/validate-cupon.dto';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { CuponesQueryDto } from './dto/cupones-query.dto';
 
 @ApiTags('Cupones')
 @ApiBearerAuth()
@@ -36,12 +36,8 @@ export class CuponesController {
   @UseGuards(RolesGuard)
   @Roles('admin', 'operador')
   @ApiOperation({ summary: 'Listar todos los cupones (admin)' })
-  @ApiQuery({ name: 'estado', required: false })
-  findAll(
-    @Query() query: PaginationQueryDto,
-    @Query('estado') estado?: string,
-  ) {
-    return this.cuponesService.findAll({ ...query, estado });
+  findAll(@Query() query: CuponesQueryDto) {
+    return this.cuponesService.findAll(query);
   }
 
   @Get('estadisticas')

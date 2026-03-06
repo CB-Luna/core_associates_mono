@@ -1,10 +1,13 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCasoLegalDto } from './dto/create-caso-legal.dto';
 import { TipoPercance } from '@prisma/client';
 
 @Injectable()
 export class CasosLegalesService {
+  private readonly logger = new Logger(CasosLegalesService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async createCaso(asociadoId: string, dto: CreateCasoLegalDto) {
@@ -140,5 +143,34 @@ export class CasosLegalesService {
       orderBy: { createdAt: 'desc' },
       include: { autor: { select: { nombre: true, rol: true } } },
     });
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_8AM)
+  async resumenDiarioCasos() {
+    const ayer = new Date();
+    ayer.setDate(ayer.getDate() - 1);
+    ayer.setHours(0, 0, 0, 0);
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const [nuevos, enAtencion, resueltos, totalAbiertos] = await Promise.all([
+      this.prisma.casoLegal.count({
+        where: { createdAt: { gte: ayer, lt: hoy } },
+      }),
+      this.prisma.casoLegal.count({
+        where: { estado: 'en_atencion' },
+      }),
+      this.prisma.casoLegal.count({
+        where: { estado: 'resuelto', fechaCierre: { gte: ayer, lt: hoy } },
+      }),
+      this.prisma.casoLegal.count({
+        where: { estado: { in: ['abierto', 'en_atencion', 'escalado'] } },
+      }),
+    ]);
+
+    this.logger.log(
+      `[Resumen diario] Nuevos: ${nuevos} | En atención: ${enAtencion} | Resueltos ayer: ${resueltos} | Total abiertos: ${totalAbiertos}`,
+    );
   }
 }

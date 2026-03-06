@@ -6,7 +6,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateProveedorDto } from './dto/create-proveedor.dto';
 import { UpdateProveedorDto } from './dto/update-proveedor.dto';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ProveedoresQueryDto } from './dto/proveedores-query.dto';
 
 @ApiTags('Proveedores')
 @ApiBearerAuth()
@@ -18,12 +18,8 @@ export class ProveedoresController {
 
   @Get()
   @ApiOperation({ summary: 'Listar proveedores' })
-  @ApiQuery({ name: 'tipo', required: false })
-  findAll(
-    @Query() query: PaginationQueryDto,
-    @Query('tipo') tipo?: string,
-  ) {
-    return this.proveedoresService.findAll({ ...query, tipo });
+  findAll(@Query() query: ProveedoresQueryDto) {
+    return this.proveedoresService.findAll(query);
   }
 
   @Get(':id')
