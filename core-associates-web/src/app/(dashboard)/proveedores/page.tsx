@@ -55,8 +55,12 @@ export default function ProveedoresPage() {
   }, [fetchData]);
 
   const columns: ColumnDef<Proveedor, any>[] = [
-    { accessorKey: 'idUnico', header: 'ID' },
-    { accessorKey: 'razonSocial', header: 'Razón Social' },
+    { accessorKey: 'idUnico', header: 'ID', cell: ({ getValue }) => (
+      <span className="font-mono text-xs text-gray-400">{getValue() as string}</span>
+    ) },
+    { accessorKey: 'razonSocial', header: 'Razón Social', cell: ({ getValue }) => (
+      <span className="font-medium text-gray-900">{getValue() as string}</span>
+    ) },
     {
       accessorKey: 'tipo',
       header: 'Tipo',
@@ -88,10 +92,10 @@ export default function ProveedoresPage() {
       cell: ({ row }) => (
         <button
           onClick={() => router.push(`/proveedores/${row.original.id}`)}
-          className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800"
+          title="Ver detalle"
+          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
         >
           <Eye className="h-4 w-4" />
-          Ver
         </button>
       ),
     },

@@ -9,7 +9,7 @@ import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
 import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
-import { Download, Printer } from 'lucide-react';
+import { Download, Printer, Eye } from 'lucide-react';
 
 const estadoOptions = [
   { label: 'Abierto', value: 'abierto' },
@@ -94,16 +94,22 @@ export default function CasosLegalesPage() {
   }, [fetchData]);
 
   const columns: ColumnDef<any, any>[] = [
-    { accessorKey: 'codigo', header: 'Código' },
+    { accessorKey: 'codigo', header: 'Código', cell: ({ getValue }) => (
+      <span className="font-mono text-xs text-gray-400">{getValue() as string}</span>
+    ) },
     {
       id: 'asociado',
       header: 'Asociado',
       cell: ({ row }) => {
         const a = row.original.asociado;
-        return a ? `${a.nombre} ${a.apellidoPat}` : '—';
+        return a ? (
+          <span className="font-medium text-gray-900">{`${a.nombre} ${a.apellidoPat}`}</span>
+        ) : <span className="text-gray-400">—</span>;
       },
     },
-    { accessorKey: 'tipoPercance', header: 'Tipo' },
+    { accessorKey: 'tipoPercance', header: 'Tipo', cell: ({ getValue }) => (
+      <span className="capitalize">{getValue() as string}</span>
+    ) },
     {
       accessorKey: 'prioridad',
       header: 'Prioridad',
@@ -134,6 +140,19 @@ export default function CasosLegalesPage() {
         const estado = getValue() as string;
         return <Badge variant={estadoVariant[estado] || 'default'}>{estado}</Badge>;
       },
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); router.push(`/casos-legales/${row.original.id}`); }}
+          title="Ver detalle"
+          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
+        >
+          <Eye className="h-4 w-4" />
+        </button>
+      ),
     },
   ];
 

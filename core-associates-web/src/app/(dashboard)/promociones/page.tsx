@@ -67,7 +67,9 @@ export default function PromocionesPage() {
   };
 
   const columns: ColumnDef<Promocion, any>[] = [
-    { accessorKey: 'titulo', header: 'Título' },
+    { accessorKey: 'titulo', header: 'Título', cell: ({ getValue }) => (
+      <span className="font-medium text-gray-900">{getValue() as string}</span>
+    ) },
     {
       id: 'proveedor',
       header: 'Proveedor',
@@ -78,9 +80,11 @@ export default function PromocionesPage() {
       header: 'Descuento',
       cell: ({ row }) => {
         const p = row.original;
-        return p.tipoDescuento === 'porcentaje'
-          ? `${p.valorDescuento}%`
-          : `$${p.valorDescuento}`;
+        return (
+          <span className="font-semibold text-green-700">
+            {p.tipoDescuento === 'porcentaje' ? `${p.valorDescuento}%` : `$${p.valorDescuento}`}
+          </span>
+        );
       },
     },
     {
@@ -114,12 +118,12 @@ export default function PromocionesPage() {
       cell: ({ row }) => {
         const p = row.original;
         return (
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
             {p.estado === 'activa' && (
               <button
                 onClick={() => handleEstadoChange(p.id, 'pausada')}
                 title="Pausar"
-                className="rounded p-1 text-amber-600 hover:bg-amber-50"
+                className="rounded-lg p-1.5 text-amber-500 transition-colors hover:bg-amber-50"
               >
                 <Pause className="h-4 w-4" />
               </button>
@@ -128,7 +132,7 @@ export default function PromocionesPage() {
               <button
                 onClick={() => handleEstadoChange(p.id, 'activa')}
                 title="Activar"
-                className="rounded p-1 text-green-600 hover:bg-green-50"
+                className="rounded-lg p-1.5 text-green-500 transition-colors hover:bg-green-50"
               >
                 <Play className="h-4 w-4" />
               </button>
@@ -137,7 +141,7 @@ export default function PromocionesPage() {
               <button
                 onClick={() => handleEstadoChange(p.id, 'finalizada')}
                 title="Finalizar"
-                className="rounded p-1 text-gray-500 hover:bg-gray-100"
+                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100"
               >
                 <StopCircle className="h-4 w-4" />
               </button>

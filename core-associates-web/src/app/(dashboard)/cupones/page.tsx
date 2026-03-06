@@ -8,7 +8,7 @@ import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
 import { exportToCSV, exportToPDFNative } from '@/lib/export-utils';
-import { Download, FileDown, X, QrCode } from 'lucide-react';
+import { Download, FileDown, X, QrCode, Eye } from 'lucide-react';
 import { QRDisplay } from '@/components/ui/QRDisplay';
 import type { Proveedor } from '@/lib/api-types';
 
@@ -93,19 +93,23 @@ export default function CuponesPage() {
   }, [fetchData]);
 
   const columns: ColumnDef<any, any>[] = [
-    { accessorKey: 'codigo', header: 'Código' },
+    { accessorKey: 'codigo', header: 'Código', cell: ({ getValue }) => (
+      <span className="font-mono text-xs text-gray-400">{getValue() as string}</span>
+    ) },
     {
       id: 'asociado',
       header: 'Asociado',
       cell: ({ row }) => {
         const a = row.original.asociado;
-        return a ? `${a.nombre} ${a.apellidoPat}` : '—';
+        return a ? (
+          <span className="font-medium text-gray-900">{`${a.nombre} ${a.apellidoPat}`}</span>
+        ) : <span className="text-gray-400">—</span>;
       },
     },
     {
       id: 'promocion',
       header: 'Promoción',
-      cell: ({ row }) => row.original.promocion?.titulo || '—',
+      cell: ({ row }) => row.original.promocion?.titulo || <span className="text-gray-400">—</span>,
     },
     {
       id: 'proveedor',
@@ -124,6 +128,19 @@ export default function CuponesPage() {
         const estado = getValue() as string;
         return <Badge variant={estadoVariant[estado] || 'default'}>{estado}</Badge>;
       },
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); setSelectedCupon(row.original); }}
+          title="Ver detalle"
+          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
+        >
+          <Eye className="h-4 w-4" />
+        </button>
+      ),
     },
   ];
 

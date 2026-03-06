@@ -17,6 +17,7 @@ import {
   Settings,
   FileText,
   HelpCircle,
+  MapPinned,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -32,6 +33,7 @@ const iconMap: Record<string, LucideIcon> = {
   Settings,
   FileText,
   HelpCircle,
+  MapPinned,
 };
 
 function getIcon(iconName: string | null): LucideIcon {

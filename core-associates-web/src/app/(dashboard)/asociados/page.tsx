@@ -77,13 +77,19 @@ export default function AsociadosPage() {
   };
 
   const columns: ColumnDef<Asociado, any>[] = [
-    { accessorKey: 'idUnico', header: 'ID' },
+    { accessorKey: 'idUnico', header: 'ID', cell: ({ getValue }) => (
+      <span className="font-mono text-xs text-gray-400">{getValue() as string}</span>
+    ) },
     {
       id: 'nombre',
       header: 'Nombre',
       cell: ({ row }) => {
         const a = row.original;
-        return `${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''}`.trim();
+        return (
+          <span className="font-medium text-gray-900">
+            {`${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''}`.trim()}
+          </span>
+        );
       },
     },
     { accessorKey: 'telefono', header: 'Teléfono' },
@@ -110,10 +116,10 @@ export default function AsociadosPage() {
       cell: ({ row }) => (
         <button
           onClick={() => router.push(`/asociados/${row.original.id}`)}
-          className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800"
+          title="Ver detalle"
+          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
         >
           <Eye className="h-4 w-4" />
-          Ver
         </button>
       ),
     },

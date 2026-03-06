@@ -103,14 +103,15 @@ export function DataTable<T>({
         <table className="min-w-full">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} className="border-b border-gray-200 bg-gray-50/80">
+              <tr key={headerGroup.id} className="border-b-2 border-gray-200 bg-gray-50">
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
+                  const isActions = header.id === 'actions' || header.id === 'acciones';
                   return (
                     <th
                       key={header.id}
-                      className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 ${canSort ? 'cursor-pointer select-none hover:text-gray-700' : ''}`}
+                      className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 ${isActions ? 'text-right' : 'text-left'} ${canSort ? 'cursor-pointer select-none hover:text-gray-700' : ''}`}
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       <div className="flex items-center gap-1.5">
@@ -148,12 +149,12 @@ export function DataTable<T>({
                 <tr
                   key={row.id}
                   className={`border-b border-gray-100 transition-colors last:border-0 ${
-                    idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'
-                  } ${onRowClick ? 'cursor-pointer hover:bg-primary-50/60' : 'hover:bg-gray-50'}`}
+                    idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                  } ${onRowClick ? 'cursor-pointer border-l-2 border-l-transparent hover:border-l-primary-500 hover:bg-primary-50/50' : 'hover:bg-gray-50'}`}
                   onClick={() => onRowClick?.(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                    <td key={cell.id} className={`whitespace-nowrap px-4 py-3 text-sm text-gray-700 ${cell.column.id === 'actions' || cell.column.id === 'acciones' ? 'text-right' : ''}`}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
