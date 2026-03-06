@@ -14,7 +14,7 @@ echo "  Core Associates API - Starting..."
 echo "================================================"
 
 echo "[1/4] Verificando dependencias..."
-npm ci --ignore-scripts 2>/dev/null && npx prisma generate || true
+npm ci 2>/dev/null && npx prisma generate || true
 
 echo "[2/4] Esperando a que la base de datos esté lista..."
 sleep 2
