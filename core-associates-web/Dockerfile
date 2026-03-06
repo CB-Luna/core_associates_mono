@@ -25,7 +25,7 @@ ARG NEXT_PUBLIC_API_URL=http://localhost:3501
 ARG NEXT_PUBLIC_MINIO_URL=http://localhost:9002
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_MINIO_URL=$NEXT_PUBLIC_MINIO_URL
-RUN npm run build
+RUN npm run build && mkdir -p public
 
 # ── Etapa de producción ──
 FROM node:20-alpine AS production
