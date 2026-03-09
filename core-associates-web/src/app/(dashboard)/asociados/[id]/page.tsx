@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Car, FileText, Ticket, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Car, FileText, Ticket, Eye, CheckCircle, XCircle, MessageSquare, Clock, Send, User } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
-import type { Asociado, Documento } from '@/lib/api-types';
+import type { Asociado, Documento, NotaAsociado } from '@/lib/api-types';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
 import { DocumentViewer } from '@/components/documentos/DocumentViewer';
 import { RejectDocumentDialog } from '@/components/documentos/RejectDocumentDialog';
@@ -25,6 +25,11 @@ export default function AsociadoDetailPage() {
   const [docUpdating, setDocUpdating] = useState<string | null>(null);
   const [suspendDialog, setSuspendDialog] = useState(false);
   const [suspendMotivo, setSuspendMotivo] = useState('');
+  const [notas, setNotas] = useState<NotaAsociado[]>([]);
+  const [notasLoading, setNotasLoading] = useState(true);
+  const [nuevaNota, setNuevaNota] = useState('');
+  const [enviandoNota, setEnviandoNota] = useState(false);
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     apiClient<Asociado>(`/asociados/${id}`)
@@ -32,6 +37,34 @@ export default function AsociadoDetailPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    apiClient<NotaAsociado[]>(`/asociados/${id}/notas`)
+      .then(setNotas)
+      .catch(console.error)
+      .finally(() => setNotasLoading(false));
+    apiClient<{ url: string | null }>(`/asociados/${id}/foto`)
+      .then((res) => setFotoUrl(res.url))
+      .catch(() => {});
+  }, [id]);
+
+  const handleCrearNota = async () => {
+    if (!nuevaNota.trim()) return;
+    setEnviandoNota(true);
+    try {
+      const nota = await apiClient<NotaAsociado>(`/asociados/${id}/notas`, {
+        method: 'POST',
+        body: JSON.stringify({ contenido: nuevaNota.trim() }),
+      });
+      setNotas((prev) => [nota, ...prev]);
+      setNuevaNota('');
+    } catch {
+      alert('Error al guardar nota');
+    } finally {
+      setEnviandoNota(false);
+    }
+  };
 
   const handleEstado = async (estado: string, motivo?: string) => {
     if (!asociado) return;
@@ -44,6 +77,10 @@ export default function AsociadoDetailPage() {
         body: JSON.stringify(body),
       });
       setAsociado({ ...asociado, estado: estado as any });
+      // Refrescar timeline (el cambio de estado genera una nota automática)
+      apiClient<NotaAsociado[]>(`/asociados/${asociado.id}/notas`)
+        .then(setNotas)
+        .catch(console.error);
     } catch (err) {
       console.error(err);
     } finally {
@@ -136,16 +173,36 @@ export default function AsociadoDetailPage() {
       </button>
 
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {asociado.nombre} {asociado.apellidoPat} {asociado.apellidoMat || ''}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">{asociado.idUnico} &middot; {asociado.telefono}</p>
+        <div className="flex items-center gap-4">
+          {fotoUrl ? (
+            <img src={fotoUrl} alt="Foto" className="h-14 w-14 rounded-full object-cover border-2 border-gray-200" />
+          ) : (
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-100 text-primary-700 font-bold text-lg">
+              {asociado.nombre?.[0]?.toUpperCase() ?? ''}{asociado.apellidoPat?.[0]?.toUpperCase() ?? ''}
+            </div>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {asociado.nombre} {asociado.apellidoPat} {asociado.apellidoMat || ''}
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">{asociado.idUnico} &middot; {asociado.telefono}</p>
+          </div>
         </div>
         <Badge variant={estadoAsociadoVariant[asociado.estado]} className="text-sm px-3 py-1">
           {asociado.estado}
         </Badge>
       </div>
+
+      {/* Motivo de rechazo / suspensión */}
+      {asociado.motivoRechazo && (asociado.estado === 'rechazado' || asociado.estado === 'suspendido') && (
+        <div className={`mt-3 rounded-lg border px-4 py-3 text-sm ${
+          asociado.estado === 'rechazado'
+            ? 'border-red-200 bg-red-50 text-red-800'
+            : 'border-orange-200 bg-orange-50 text-orange-800'
+        }`}>
+          <span className="font-semibold">Motivo:</span> {asociado.motivoRechazo}
+        </div>
+      )}
 
       {/* Action buttons */}
       {puede('aprobar:asociados') && asociado.estado === 'pendiente' && (
@@ -323,6 +380,95 @@ export default function AsociadoDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Timeline / Notas internas */}
+      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+          <Clock className="h-4 w-4" />
+          Timeline / Notas Internas
+        </h3>
+
+        {/* Nueva nota */}
+        <div className="mt-4 flex gap-2">
+          <textarea
+            value={nuevaNota}
+            onChange={(e) => setNuevaNota(e.target.value)}
+            placeholder="Agregar nota interna..."
+            rows={2}
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          />
+          <button
+            onClick={handleCrearNota}
+            disabled={!nuevaNota.trim() || enviandoNota}
+            className="self-end rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Lista de notas */}
+        <div className="mt-4 space-y-3">
+          {notasLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-primary-600" />
+            </div>
+          ) : notas.length === 0 ? (
+            <p className="text-sm text-gray-400">Sin actividad registrada</p>
+          ) : (
+            notas.map((nota) => (
+              <div
+                key={nota.id}
+                className={`relative rounded-lg border p-3 text-sm ${
+                  nota.tipo === 'cambio_estado'
+                    ? 'border-blue-200 bg-blue-50'
+                    : 'border-gray-200 bg-gray-50'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    {nota.tipo === 'cambio_estado' ? (
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                        <Clock className="h-3.5 w-3.5" />
+                      </span>
+                    ) : (
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-gray-600">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                      </span>
+                    )}
+                    <span className="font-medium text-gray-900">
+                      {nota.autor?.nombre || 'Sistema'}
+                    </span>
+                    {nota.autor?.rol && (
+                      <Badge variant="default" className="text-xs">
+                        {nota.autor.rol}
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="whitespace-nowrap text-xs text-gray-400">
+                    {new Date(nota.createdAt).toLocaleString('es-MX', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+                {nota.tipo === 'cambio_estado' && nota.metadatos && (
+                  <p className="mt-1 text-xs text-blue-700">
+                    Estado: <span className="font-semibold">{nota.metadatos.estadoAnterior}</span>{' '}
+                    → <span className="font-semibold">{nota.metadatos.estadoNuevo}</span>
+                    {nota.metadatos.motivo && (
+                      <span className="ml-1 text-blue-600">— {nota.metadatos.motivo}</span>
+                    )}
+                  </p>
+                )}
+                <p className="mt-1 text-gray-700">{nota.contenido}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
 
       <DocumentViewer
         open={viewerOpen}

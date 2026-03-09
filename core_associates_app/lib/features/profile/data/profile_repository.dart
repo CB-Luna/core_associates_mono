@@ -46,4 +46,19 @@ class ProfileRepository {
   Future<void> deleteVehiculo(String id) async {
     await apiClient.delete('/vehiculos/$id');
   }
+
+  Future<Asociado> uploadFoto(String filePath) async {
+    final response = await apiClient.uploadFile(
+      '/asociados/me/foto',
+      filePath: filePath,
+      fieldName: 'file',
+    );
+    return Asociado.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<String?> getFotoUrl() async {
+    final response = await apiClient.get('/asociados/me/foto');
+    final data = response.data as Map<String, dynamic>;
+    return data['url'] as String?;
+  }
 }

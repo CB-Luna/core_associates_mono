@@ -144,6 +144,7 @@ model Asociado {
   fechaNacimiento  DateTime?       @map("fecha_nacimiento") @db.Date
   fotoUrl          String?         @map("foto_url") @db.VarChar(500)
   estado           EstadoAsociado  @default(pendiente)
+  motivoRechazo    String?         @map("motivo_rechazo")
   fechaRegistro    DateTime        @default(now()) @map("fecha_registro")
   fechaAprobacion  DateTime?       @map("fecha_aprobacion")
   aprobadoPorId    String?         @map("aprobado_por") @db.Uuid
@@ -157,6 +158,7 @@ model Asociado {
   cupones          Cupon[]
   casosLegales     CasoLegal[]
   dispositivos     DispositivoToken[]
+  notas            NotaAsociado[]
 
   @@index([estado])
   @@index([telefono])
@@ -342,6 +344,7 @@ model Usuario {
   asociadosAprobados   Asociado[]  @relation("AprobadorAsociado")
   documentosRevisados  Documento[] @relation("RevisadorDocumento")
   notasCaso            NotaCaso[]
+  notasAsociado        NotaAsociado[]
   auditorias           Auditoria[]
 
   @@map("usuarios")
@@ -379,4 +382,37 @@ model DispositivoToken {
   @@unique([asociadoId, token])
   @@index([asociadoId])
   @@map("dispositivos_token")
+}
+
+model NotaAsociado {
+  id           String   @id @default(uuid()) @db.Uuid
+  asociadoId   String   @map("asociado_id") @db.Uuid
+  autorId      String   @map("autor_id") @db.Uuid
+  contenido    String
+  tipo         String   @default("nota") @db.VarChar(30) // nota | cambio_estado
+  metadatos    Json?    // Para cambio_estado: { estadoAnterior, estadoNuevo, motivo }
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relaciones
+  asociado     Asociado @relation(fields: [asociadoId], references: [id], onDelete: Cascade)
+  autor        Usuario  @relation(fields: [autorId], references: [id])
+
+  @@index([asociadoId])
+  @@map("notas_asociado")
+}
+
+model ResumenDiario {
+  id                    String   @id @default(uuid()) @db.Uuid
+  fecha                 DateTime @unique @db.Date
+  casosNuevos           Int      @default(0) @map("casos_nuevos")
+  casosEnAtencion       Int      @default(0) @map("casos_en_atencion")
+  casosResueltos        Int      @default(0) @map("casos_resueltos")
+  casosTotalAbiertos    Int      @default(0) @map("casos_total_abiertos")
+  asociadosRegistrados  Int      @default(0) @map("asociados_registrados")
+  cuponesGenerados      Int      @default(0) @map("cupones_generados")
+  cuponesCanjeados      Int      @default(0) @map("cupones_canjeados")
+  docsPendientes        Int      @default(0) @map("docs_pendientes")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@map("resumenes_diarios")
 }

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CuponesService } from './cupones.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { createHmac } from 'crypto';
@@ -28,6 +29,7 @@ describe('CuponesService', () => {
       providers: [
         CuponesService,
         { provide: PrismaService, useValue: prisma },
+        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('test-hmac-secret') } },
       ],
     }).compile();
 
@@ -132,7 +134,7 @@ describe('CuponesService', () => {
       // Build a valid HMAC payload
       const payloadObj = { codigo: 'CPN-001', promocionId: 'p1', asociadoId: 'a1', proveedorId: 'prov-1' };
       const payload = JSON.stringify(payloadObj);
-      const firma = createHmac('sha256', 'core-associates-secret')
+      const firma = createHmac('sha256', 'test-hmac-secret')
         .update(payload).digest('hex').substring(0, 128);
 
       prisma.cupon.findUnique.mockResolvedValue({
@@ -149,7 +151,7 @@ describe('CuponesService', () => {
     it('should redeem a valid active coupon', async () => {
       const payloadObj = { codigo: 'CPN-001', promocionId: 'p1', asociadoId: 'a1', proveedorId: 'prov-1' };
       const payload = JSON.stringify(payloadObj);
-      const firma = createHmac('sha256', 'core-associates-secret')
+      const firma = createHmac('sha256', 'test-hmac-secret')
         .update(payload).digest('hex').substring(0, 128);
 
       prisma.cupon.findUnique.mockResolvedValue({

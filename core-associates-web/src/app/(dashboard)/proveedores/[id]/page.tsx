@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Tag, Ticket, Pencil } from 'lucide-react';
+import { ArrowLeft, Tag, Ticket, Pencil, Trash2, MapPin } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import type { Proveedor } from '@/lib/api-types';
 import { Badge, estadoProveedorVariant, tipoProveedorVariant } from '@/components/ui/Badge';
 import { ProveedorFormDialog } from '@/components/shared/ProveedorFormDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { MapView } from '@/components/ui/MapView';
 import { usePermisos } from '@/lib/permisos';
 
 export default function ProveedorDetailPage() {
@@ -17,6 +19,8 @@ export default function ProveedorDetailPage() {
   const [proveedor, setProveedor] = useState<Proveedor | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = () => {
     setLoading(true);
@@ -29,6 +33,18 @@ export default function ProveedorDetailPage() {
   useEffect(() => {
     fetchData();
   }, [id]);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await apiClient(`/proveedores/${id}`, { method: 'DELETE' });
+      router.push('/proveedores');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar');
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -62,13 +78,24 @@ export default function ProveedorDetailPage() {
           </div>
         </div>
         {puede('editar:proveedores') && (
-          <button
-            onClick={() => setEditing(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <Pencil className="h-4 w-4" />
-            Editar
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setEditing(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <Pencil className="h-4 w-4" />
+              Editar
+            </button>
+            {puede('eliminar:proveedores') && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Eliminar
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -155,6 +182,38 @@ export default function ProveedorDetailPage() {
           }}
         />
       )}
+
+      {/* Map */}
+      {proveedor.latitud && proveedor.longitud && (
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+            <MapPin className="h-4 w-4" />
+            Ubicación
+          </h3>
+          <div className="mt-3">
+            <MapView
+              markers={[{
+                lat: proveedor.latitud,
+                lng: proveedor.longitud,
+                label: proveedor.razonSocial,
+                popup: proveedor.direccion || undefined,
+              }]}
+              height="300px"
+            />
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Eliminar proveedor"
+        message={`¿Estás seguro de eliminar a "${proveedor.razonSocial}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }

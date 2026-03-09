@@ -1,5 +1,5 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuditoriaService } from './auditoria.service';
 import { AuditoriaQueryDto } from './dto/auditoria-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -16,6 +16,9 @@ export class AuditoriaController {
   @Get()
   @Roles('admin')
   @ApiOperation({ summary: 'Listar registros de auditoría con filtros' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de registros de auditoría' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo admin' })
   findAll(@Query() query: AuditoriaQueryDto) {
     return this.auditoriaService.findAll({
       page: query.page ?? 1,

@@ -124,6 +124,7 @@ services:
       mc mb --ignore-existing coreminio/core-associates-providers;
       mc mb --ignore-existing coreminio/core-associates-promotions;
       mc mb --ignore-existing coreminio/core-associates-legal;
+      mc mb --ignore-existing coreminio/core-associates-photos;
       mc anonymous set download coreminio/core-associates-providers;
       mc anonymous set download coreminio/core-associates-promotions;
       echo 'Buckets creados y configurados exitosamente';
@@ -164,7 +165,8 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
-      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
+      FIREBASE_SERVICE_ACCOUNT_BASE64: ${FIREBASE_SERVICE_ACCOUNT_BASE64:-}
     depends_on:
       postgres:
         condition: service_healthy

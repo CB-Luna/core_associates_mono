@@ -9,6 +9,7 @@ interface JwtPayload {
   email?: string;
   telefono?: string;
   rol?: string;
+  proveedorId?: string;
   tipo: 'usuario' | 'asociado';
 }
 
@@ -33,7 +34,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       if (!usuario || usuario.estado !== 'activo') {
         throw new UnauthorizedException('Usuario no autorizado');
       }
-      return { id: usuario.id, email: usuario.email, rol: usuario.rol, tipo: 'usuario' };
+      return {
+        id: usuario.id,
+        email: usuario.email,
+        rol: usuario.rol,
+        tipo: 'usuario',
+        ...(usuario.proveedorId && { proveedorId: usuario.proveedorId }),
+      };
     }
 
     if (payload.tipo === 'asociado') {

@@ -24,6 +24,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Enviar OTP por SMS' })
   @ApiResponse({ status: 200, description: 'OTP enviado correctamente' })
+  @ApiResponse({ status: 400, description: 'Teléfono inválido' })
+  @ApiResponse({ status: 429, description: 'Demasiados intentos' })
   sendOtp(@Body() dto: SendOtpDto) {
     return this.authService.sendOtp(dto.telefono);
   }
@@ -32,7 +34,9 @@ export class AuthController {
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verificar OTP y obtener JWT' })
-  @ApiResponse({ status: 200, description: 'Autenticación exitosa' })
+  @ApiResponse({ status: 200, description: 'Autenticación exitosa — retorna accessToken y refreshToken' })
+  @ApiResponse({ status: 400, description: 'OTP inválido o expirado' })
+  @ApiResponse({ status: 429, description: 'Demasiados intentos' })
   verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyOtp(dto.telefono, dto.otp);
   }
@@ -41,7 +45,9 @@ export class AuthController {
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login admin/operador (email + contraseña)' })
-  @ApiResponse({ status: 200, description: 'Login exitoso' })
+  @ApiResponse({ status: 200, description: 'Login exitoso — retorna accessToken y refreshToken' })
+  @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
+  @ApiResponse({ status: 429, description: 'Demasiados intentos' })
   login(@Body() dto: LoginDto) {
     return this.authService.loginAdmin(dto.email, dto.password);
   }
@@ -50,6 +56,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Renovar access token' })
   @ApiResponse({ status: 200, description: 'Token renovado' })
+  @ApiResponse({ status: 401, description: 'Refresh token inválido o expirado' })
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refreshToken(dto.refreshToken);
   }
@@ -58,6 +65,8 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obtener datos del usuario autenticado' })
+  @ApiResponse({ status: 200, description: 'Datos del usuario actual' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
   getMe(@CurrentUser() user: any) {
     return user;
   }
@@ -69,6 +78,9 @@ export class AuthController {
   @Roles('admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Listar usuarios del CRM' })
+  @ApiResponse({ status: 200, description: 'Lista de usuarios' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo admin' })
   getUsers() {
     return this.authService.getUsers();
   }
@@ -79,6 +91,9 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear usuario del CRM' })
   @ApiResponse({ status: 201, description: 'Usuario creado' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o email duplicado' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo admin' })
   createUser(@Body() dto: CreateUsuarioDto) {
     return this.authService.createUser(dto);
   }
@@ -88,6 +103,11 @@ export class AuthController {
   @Roles('admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Actualizar usuario del CRM' })
+  @ApiResponse({ status: 200, description: 'Usuario actualizado' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo admin' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   updateUser(@Param('id') id: string, @Body() dto: UpdateUsuarioDto) {
     return this.authService.updateUser(id, dto);
   }
@@ -98,6 +118,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Resetear contraseña de usuario' })
+  @ApiResponse({ status: 200, description: 'Contraseña actualizada' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo admin' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(id, dto.password);
   }

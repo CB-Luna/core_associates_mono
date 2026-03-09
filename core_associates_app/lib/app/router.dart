@@ -7,6 +7,7 @@ import '../features/auth/presentation/screens/login_screen.dart';
 import '../features/auth/presentation/screens/otp_screen.dart';
 import '../features/home/presentation/screens/home_shell.dart';
 import '../features/home/presentation/screens/home_screen.dart';
+import '../features/home/presentation/screens/account_blocked_screen.dart';
 import '../features/promotions/presentation/screens/promotions_screen.dart';
 import '../features/legal_support/presentation/screens/legal_support_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
@@ -42,9 +43,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = authState.value?.isAuthenticated ?? false;
       final isOnLoginPage =
           state.matchedLocation == '/login' || state.matchedLocation == '/otp';
+      final isOnBlockedPage = state.matchedLocation == '/blocked';
 
       if (!isLoggedIn && !isOnLoginPage) return '/login';
-      if (isLoggedIn && isOnLoginPage) return '/home';
+      if (isLoggedIn && isOnLoginPage) {
+        final estado = authState.value?.asociadoEstado;
+        if (estado == 'rechazado' || estado == 'suspendido') return '/blocked';
+        return '/home';
+      }
+
+      // Prevent blocked users from accessing main app
+      if (isLoggedIn && !isOnBlockedPage) {
+        final estado = authState.value?.asociadoEstado;
+        if (estado == 'rechazado' || estado == 'suspendido') return '/blocked';
+      }
+
       return null;
     },
     routes: [
@@ -55,6 +68,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final phone = state.extra as String? ?? '';
           return OtpScreen(phoneNumber: phone);
+        },
+      ),
+
+      // Blocked account screen
+      GoRoute(
+        path: '/blocked',
+        builder: (context, state) {
+          final authState = ref.read(authStateProvider);
+          final estado = authState.value?.asociadoEstado ?? 'suspendido';
+          final motivo = authState.value?.motivoRechazo;
+          return AccountBlockedScreen(estado: estado, motivo: motivo);
         },
       ),
 

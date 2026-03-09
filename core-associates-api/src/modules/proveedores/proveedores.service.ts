@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProveedorDto } from './dto/create-proveedor.dto';
 import { UpdateProveedorDto } from './dto/update-proveedor.dto';
@@ -88,5 +88,27 @@ export class ProveedoresService {
       where: { id },
       data: dto,
     });
+  }
+
+  async remove(id: string) {
+    const proveedor = await this.prisma.proveedor.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { cuponesEmitidos: true, promociones: true } },
+      },
+    });
+
+    if (!proveedor) {
+      throw new NotFoundException('Proveedor no encontrado');
+    }
+
+    if (proveedor._count.cuponesEmitidos > 0 || proveedor._count.promociones > 0) {
+      throw new ConflictException(
+        'No se puede eliminar un proveedor con cupones o promociones asociadas. Desactívelo en su lugar.',
+      );
+    }
+
+    await this.prisma.proveedor.delete({ where: { id } });
+    return { message: 'Proveedor eliminado correctamente' };
   }
 }

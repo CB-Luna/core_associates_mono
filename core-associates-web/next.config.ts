@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
         port: '9002',
         pathname: '/core-associates-**',
       },
+      {
+        protocol: 'http',
+        hostname: 'minio',
+        port: '9000',
+        pathname: '/core-associates-**',
+      },
     ],
   },
   async headers() {

@@ -21,6 +21,7 @@ const PERMISOS: Record<string, Rol[]> = {
   'aprobar:asociados': ['admin', 'operador'],
   'editar:proveedores': ['admin'],
   'crear:proveedores': ['admin'],
+  'eliminar:proveedores': ['admin'],
   'editar:promociones': ['admin', 'operador', 'proveedor'],
   'crear:promociones': ['admin', 'operador', 'proveedor'],
   'asignar:abogado': ['admin', 'operador'],

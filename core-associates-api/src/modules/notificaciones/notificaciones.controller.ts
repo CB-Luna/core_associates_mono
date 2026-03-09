@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -17,6 +17,9 @@ export class NotificacionesController {
 
   @Post('register-token')
   @ApiOperation({ summary: 'Registrar token FCM del dispositivo' })
+  @ApiResponse({ status: 201, description: 'Token registrado' })
+  @ApiResponse({ status: 400, description: 'Token inválido' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
   registerToken(
     @CurrentUser('id') asociadoId: string,
     @Body() dto: RegisterTokenDto,
@@ -26,6 +29,8 @@ export class NotificacionesController {
 
   @Delete('remove-token')
   @ApiOperation({ summary: 'Desactivar token FCM' })
+  @ApiResponse({ status: 200, description: 'Token desactivado' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
   removeToken(
     @CurrentUser('id') asociadoId: string,
     @Body('token') token: string,
@@ -37,6 +42,10 @@ export class NotificacionesController {
   @UseGuards(RolesGuard)
   @Roles('admin', 'operador')
   @ApiOperation({ summary: 'Enviar notificación a un asociado (admin/operador)' })
+  @ApiResponse({ status: 200, description: 'Notificación enviada' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo admin/operador' })
   send(@Body() dto: SendNotificationDto) {
     return this.notificacionesService.send(dto);
   }

@@ -1,12 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { StorageService } from '../storage/storage.service';
 import { UpdateAsociadoDto } from './dto/update-asociado.dto';
 import { CreateVehiculoDto } from './dto/create-vehiculo.dto';
+import { CreateNotaAsociadoDto } from './dto/create-nota-asociado.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+
+const BUCKET_FOTOS = 'core-associates-photos';
 
 @Injectable()
 export class AsociadosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificaciones: NotificacionesService,
+    private readonly storage: StorageService,
+  ) {}
 
   async getMyProfile(asociadoId: string) {
     const asociado = await this.prisma.asociado.findUnique({
@@ -145,21 +154,125 @@ export class AsociadosService {
     return asociado;
   }
 
-  async updateEstado(id: string, estado: string, usuarioId: string) {
+  async updateEstado(id: string, estado: string, usuarioId: string, motivo?: string) {
     const asociado = await this.prisma.asociado.findUnique({ where: { id } });
     if (!asociado) {
       throw new NotFoundException('Asociado no encontrado');
     }
 
+    const estadoAnterior = asociado.estado;
+
     const data: any = { estado };
     if (estado === 'activo') {
       data.fechaAprobacion = new Date();
       data.aprobadoPorId = usuarioId;
+      data.motivoRechazo = null; // Limpiar motivo previo
+    }
+    if ((estado === 'rechazado' || estado === 'suspendido') && motivo) {
+      data.motivoRechazo = motivo;
     }
 
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.asociado.update({ where: { id }, data }),
+      this.prisma.notaAsociado.create({
+        data: {
+          asociadoId: id,
+          autorId: usuarioId,
+          contenido: `Estado cambiado de "${estadoAnterior}" a "${estado}"${motivo ? `. Motivo: ${motivo}` : ''}`,
+          tipo: 'cambio_estado',
+          metadatos: { estadoAnterior, estadoNuevo: estado, motivo: motivo || null },
+        },
+      }),
+    ]);
+
+    // Notificación al asociado sobre cambio de estado
+    const mensajes: Record<string, string> = {
+      activo: 'Tu membresía ha sido aprobada. ¡Bienvenido a Core Associates!',
+      rechazado: `Tu solicitud de membresía fue rechazada. Motivo: ${motivo || 'No especificado'}`,
+      suspendido: `Tu membresía ha sido suspendida. Motivo: ${motivo || 'No especificado'}`,
+      baja: 'Tu membresía ha sido dada de baja.',
+    };
+
+    if (mensajes[estado]) {
+      this.notificaciones.sendPush(
+        id,
+        'Actualización de membresía',
+        mensajes[estado],
+        { tipo: 'estado_asociado', estado },
+      ).catch(() => {}); // fire-and-forget
+    }
+
+    return updated;
+  }
+
+  // ── Foto de perfil ──
+
+  async uploadFoto(asociadoId: string, file: Express.Multer.File) {
+    const asociado = await this.prisma.asociado.findUnique({ where: { id: asociadoId } });
+    if (!asociado) {
+      throw new NotFoundException('Asociado no encontrado');
+    }
+
+    // Eliminar foto anterior si existe
+    if (asociado.fotoUrl) {
+      await this.storage.deleteFile(BUCKET_FOTOS, asociado.fotoUrl).catch(() => {});
+    }
+
+    const ext = file.originalname.split('.').pop() || 'jpg';
+    const s3Key = `${asociadoId}/foto/${Date.now()}.${ext}`;
+    await this.storage.uploadFile(BUCKET_FOTOS, s3Key, file.buffer, file.mimetype);
+
     return this.prisma.asociado.update({
-      where: { id },
-      data,
+      where: { id: asociadoId },
+      data: { fotoUrl: s3Key },
+    });
+  }
+
+  async getFotoUrl(asociadoId: string) {
+    const asociado = await this.prisma.asociado.findUnique({ where: { id: asociadoId } });
+    if (!asociado) {
+      throw new NotFoundException('Asociado no encontrado');
+    }
+    if (!asociado.fotoUrl) {
+      return { url: null };
+    }
+    const url = await this.storage.getPresignedUrl(BUCKET_FOTOS, asociado.fotoUrl);
+    return { url };
+  }
+
+  // ── Notas del asociado ──
+
+  async getNotas(asociadoId: string) {
+    const asociado = await this.prisma.asociado.findUnique({ where: { id: asociadoId } });
+    if (!asociado) {
+      throw new NotFoundException('Asociado no encontrado');
+    }
+
+    return this.prisma.notaAsociado.findMany({
+      where: { asociadoId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        autor: { select: { id: true, nombre: true, rol: true } },
+      },
+    });
+  }
+
+  async createNota(asociadoId: string, autorId: string, dto: CreateNotaAsociadoDto) {
+    const asociado = await this.prisma.asociado.findUnique({ where: { id: asociadoId } });
+    if (!asociado) {
+      throw new NotFoundException('Asociado no encontrado');
+    }
+
+    return this.prisma.notaAsociado.create({
+      data: {
+        asociadoId,
+        autorId,
+        contenido: dto.contenido,
+        tipo: dto.tipo || 'nota',
+      },
+      include: {
+        autor: { select: { id: true, nombre: true, rol: true } },
+      },
     });
   }
 }

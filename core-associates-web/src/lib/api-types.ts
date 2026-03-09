@@ -18,6 +18,7 @@ export interface User {
   email: string;
   nombre: string;
   rol: 'admin' | 'operador' | 'proveedor';
+  proveedorId?: string;
 }
 
 // Asociado
@@ -32,6 +33,7 @@ export interface Asociado {
   fechaNacimiento: string;
   fotoUrl: string | null;
   estado: 'pendiente' | 'activo' | 'suspendido' | 'baja' | 'rechazado';
+  motivoRechazo: string | null;
   fechaRegistro: string;
   fechaAprobacion: string | null;
   createdAt: string;
@@ -76,10 +78,13 @@ export interface Proveedor {
   razonSocial: string;
   tipo: 'abogado' | 'comida' | 'taller' | 'lavado' | 'capacitacion' | 'otro';
   direccion: string | null;
+  latitud: number | null;
+  longitud: number | null;
   telefono: string | null;
   email: string | null;
   contactoNombre: string | null;
   estado: 'activo' | 'inactivo';
+  logotipoUrl: string | null;
   createdAt: string;
   promociones?: Promocion[];
   _count?: {
@@ -131,13 +136,30 @@ export interface Cupon {
   proveedor?: Proveedor;
 }
 
+// NotaAsociado
+export interface NotaAsociado {
+  id: string;
+  contenido: string;
+  tipo: 'nota' | 'cambio_estado';
+  metadatos: Record<string, string> | null;
+  createdAt: string;
+  autor?: {
+    id: string;
+    nombre: string;
+    rol: string;
+  };
+}
+
 // NotaCaso
 export interface NotaCaso {
   id: string;
+  casoId: string;
+  autorId: string;
   contenido: string;
   esPrivada: boolean;
   createdAt: string;
   autor?: {
+    id: string;
     nombre: string;
     rol: string;
   };
@@ -236,6 +258,17 @@ export interface ReporteAvanzado {
     cuponesEmitidos: number;
     cuponesCanjeados: number;
     promociones: number;
+  }[];
+  tiempoResolucionCasos: {
+    mes: string;
+    diasPromedio: number;
+    casosResueltos: number;
+  }[];
+  tasaAprobacion: {
+    mes: string;
+    tasa: number;
+    aprobados: number;
+    registrados: number;
   }[];
 }
 

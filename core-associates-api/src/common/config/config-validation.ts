@@ -32,8 +32,9 @@ export const configValidationSchema = Joi.object({
   TWILIO_AUTH_TOKEN: Joi.string().optional().allow(''),
   TWILIO_PHONE_NUMBER: Joi.string().optional().allow(''),
 
-  // FCM (opcional en dev)
-  FCM_SERVER_KEY: Joi.string().optional().allow(''),
+  // Firebase (opcional en dev — necesario en producción para push notifications)
+  GOOGLE_APPLICATION_CREDENTIALS: Joi.string().optional().allow(''),
+  FIREBASE_SERVICE_ACCOUNT_BASE64: Joi.string().optional().allow(''),
 
   // Cupones
   HMAC_SECRET: Joi.string().optional().default('secret'),

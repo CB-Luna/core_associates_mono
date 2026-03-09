@@ -3,6 +3,7 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DocumentosService } from './documentos.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 describe('DocumentosService', () => {
@@ -38,11 +39,16 @@ describe('DocumentosService', () => {
       getPresignedUrl: jest.fn().mockResolvedValue('https://minio/presigned-url'),
     };
 
+    const notificaciones = {
+      sendPush: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DocumentosService,
         { provide: PrismaService, useValue: prisma },
         { provide: StorageService, useValue: storage },
+        { provide: NotificacionesService, useValue: notificaciones },
       ],
     }).compile();
 

@@ -9,9 +9,33 @@ import '../providers/profile_provider.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
+  Widget _buildAvatar(String iniciales, AsyncValue<String?> fotoUrlAsync) {
+    final fotoUrl = fotoUrlAsync.value;
+    if (fotoUrl != null && fotoUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: 40,
+        backgroundImage: NetworkImage(fotoUrl),
+        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+      );
+    }
+    return CircleAvatar(
+      radius: 40,
+      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+      child: Text(
+        iniciales,
+        style: const TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
+    final fotoUrlAsync = ref.watch(fotoUrlProvider);
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -30,18 +54,7 @@ class ProfileScreen extends ConsumerWidget {
 
                 return Column(
                   children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                      child: Text(
-                        iniciales,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
+                    _buildAvatar(iniciales, fotoUrlAsync),
                     const SizedBox(height: 12),
                     Text(
                       nombre,

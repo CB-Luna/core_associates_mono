@@ -8,7 +8,8 @@ import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { Badge } from '@/components/ui/Badge';
 import { PromocionFormDialog } from '@/components/promociones/PromocionFormDialog';
-import { Pause, Play, StopCircle, Percent, DollarSign, Calendar, Tag } from 'lucide-react';
+import { usePermisos } from '@/lib/permisos';
+import { Pause, Play, StopCircle, Percent, DollarSign, Calendar, Tag, ImageIcon } from 'lucide-react';
 
 const estadoOptions = [
   { label: 'Activa', value: 'activa' },
@@ -16,7 +17,32 @@ const estadoOptions = [
   { label: 'Finalizada', value: 'finalizada' },
 ];
 
+function PromocionThumbnail({ promocionId, imagenUrl }: { promocionId: string; imagenUrl: string | null }) {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!imagenUrl) return;
+    apiClient<string>(`/promociones/${promocionId}/imagen`)
+      .then(setSrc)
+      .catch(() => {});
+  }, [promocionId, imagenUrl]);
+
+  if (src) {
+    return (
+      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg">
+        <img src={src} alt="" className="h-full w-full object-cover" />
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+      {imagenUrl ? <ImageIcon className="h-4 w-4" /> : <Tag className="h-4 w-4" />}
+    </div>
+  );
+}
+
 export default function PromocionesPage() {
+  const { esProveedor } = usePermisos();
   const [data, setData] = useState<Promocion[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -34,7 +60,8 @@ export default function PromocionesPage() {
       if (search) params.set('search', search);
       if (estadoFilter) params.set('estado', estadoFilter);
 
-      const res = await apiClient<PaginatedResponse<Promocion>>(`/promociones/admin/all?${params}`);
+      const endpoint = esProveedor ? '/promociones/mis-promociones' : '/promociones/admin/all';
+      const res = await apiClient<PaginatedResponse<Promocion>>(`${endpoint}?${params}`);
       setData(res.data);
       setTotalPages(res.meta.totalPages);
       setTotal(res.meta.total);
@@ -43,7 +70,7 @@ export default function PromocionesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, estadoFilter]);
+  }, [page, search, estadoFilter, esProveedor]);
 
   useEffect(() => {
     fetchData();
@@ -51,7 +78,10 @@ export default function PromocionesPage() {
 
   const handleEstadoChange = async (id: string, estado: string) => {
     try {
-      await apiClient(`/promociones/${id}/estado`, {
+      const endpoint = esProveedor
+        ? `/promociones/mis-promociones/${id}/estado`
+        : `/promociones/${id}/estado`;
+      await apiClient(endpoint, {
         method: 'PUT',
         body: JSON.stringify({ estado }),
       });
@@ -74,9 +104,7 @@ export default function PromocionesPage() {
         const p = row.original;
         return (
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
-              <Tag className="h-4 w-4" />
-            </div>
+            <PromocionThumbnail promocionId={p.id} imagenUrl={p.imagenUrl} />
             <div className="min-w-0">
               <p className="truncate font-semibold text-gray-900">{p.titulo}</p>
               <p className="truncate text-[11px] text-gray-400">{p.proveedor?.razonSocial || '—'}</p>

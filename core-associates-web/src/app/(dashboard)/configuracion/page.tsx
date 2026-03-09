@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { apiClient } from '@/lib/api-client';
 import { type ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/DataTable';
@@ -8,6 +11,27 @@ import { Badge } from '@/components/ui/Badge';
 import { type UsuarioCRM, type AuditoriaRecord } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
 import { Pencil, KeyRound, Power, Shield, Users } from 'lucide-react';
+
+const createUserSchema = z.object({
+  nombre: z.string().min(2, 'Mínimo 2 caracteres'),
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Mínimo 6 caracteres'),
+  rol: z.enum(['operador', 'admin']),
+});
+
+const editUserSchema = z.object({
+  nombre: z.string().min(2, 'Mínimo 2 caracteres'),
+  email: z.string().email('Email inválido'),
+  rol: z.enum(['operador', 'admin']),
+});
+
+const resetPasswordSchema = z.object({
+  password: z.string().min(6, 'Mínimo 6 caracteres'),
+});
+
+type CreateUserData = z.infer<typeof createUserSchema>;
+type EditUserData = z.infer<typeof editUserSchema>;
+type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 
 interface SystemInfo {
   apiVersion: string;
@@ -21,18 +45,27 @@ export default function ConfiguracionPage() {
   const [loading, setLoading] = useState(true);
   const [sysInfo, setSysInfo] = useState<SystemInfo | null>(null);
 
-  // Create user form
+  // Form panels
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ email: '', nombre: '', password: '', rol: 'operador' });
+  const [editingUser, setEditingUser] = useState<UsuarioCRM | null>(null);
+  const [resetUserId, setResetUserId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Edit mode
-  const [editingUser, setEditingUser] = useState<UsuarioCRM | null>(null);
-  const [editForm, setEditForm] = useState({ email: '', nombre: '', rol: '' });
+  // RHF forms
+  const createForm = useForm<CreateUserData>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: { nombre: '', email: '', password: '', rol: 'operador' },
+  });
 
-  // Reset password
-  const [resetUserId, setResetUserId] = useState<string | null>(null);
-  const [newPassword, setNewPassword] = useState('');
+  const editForm = useForm<EditUserData>({
+    resolver: zodResolver(editUserSchema),
+    defaultValues: { nombre: '', email: '', rol: 'operador' },
+  });
+
+  const resetForm = useForm<ResetPasswordData>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: '' },
+  });
 
   // Auditoría state
   const [auditLogs, setAuditLogs] = useState<AuditoriaRecord[]>([]);
@@ -81,16 +114,15 @@ export default function ConfiguracionPage() {
     if (activeTab === 'auditoria') fetchAuditLogs();
   }, [activeTab, fetchAuditLogs]);
 
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateUser = async (data: CreateUserData) => {
     setSaving(true);
     try {
       await apiClient('/auth/register-admin', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify(data),
       });
       setShowForm(false);
-      setForm({ email: '', nombre: '', password: '', rol: 'operador' });
+      createForm.reset();
       fetchUsers();
     } catch (err) {
       console.error(err);
@@ -100,14 +132,13 @@ export default function ConfiguracionPage() {
     }
   };
 
-  const handleEditUser = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEditUser = async (data: EditUserData) => {
     if (!editingUser) return;
     setSaving(true);
     try {
       await apiClient(`/auth/users/${editingUser.id}`, {
         method: 'PUT',
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(data),
       });
       setEditingUser(null);
       fetchUsers();
@@ -133,17 +164,16 @@ export default function ConfiguracionPage() {
     }
   };
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleResetPassword = async (data: ResetPasswordData) => {
     if (!resetUserId) return;
     setSaving(true);
     try {
       await apiClient(`/auth/users/${resetUserId}/reset-password`, {
         method: 'POST',
-        body: JSON.stringify({ password: newPassword }),
+        body: JSON.stringify(data),
       });
       setResetUserId(null);
-      setNewPassword('');
+      resetForm.reset();
       alert('Contraseña actualizada correctamente');
     } catch (err) {
       console.error(err);
@@ -155,7 +185,7 @@ export default function ConfiguracionPage() {
 
   const openEdit = (user: UsuarioCRM) => {
     setEditingUser(user);
-    setEditForm({ email: user.email, nombre: user.nombre, rol: user.rol });
+    editForm.reset({ email: user.email, nombre: user.nombre, rol: user.rol as 'operador' | 'admin' });
     setShowForm(false);
     setResetUserId(null);
   };
@@ -312,24 +342,27 @@ export default function ConfiguracionPage() {
 
           {/* Create form */}
           {showForm && (
-            <form onSubmit={handleCreateUser} className="mt-4 rounded-xl border bg-white p-6 shadow-sm">
+            <form onSubmit={createForm.handleSubmit(handleCreateUser)} className="mt-4 rounded-xl border bg-white p-6 shadow-sm">
               <h4 className="mb-4 text-sm font-semibold text-gray-700">Crear nuevo usuario</h4>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Nombre</label>
-                  <input type="text" required value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <input type="text" {...createForm.register('nombre')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  {createForm.formState.errors.nombre && <p className="mt-1 text-xs text-red-600">{createForm.formState.errors.nombre.message}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <input type="email" {...createForm.register('email')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  {createForm.formState.errors.email && <p className="mt-1 text-xs text-red-600">{createForm.formState.errors.email.message}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Contraseña</label>
-                  <input type="password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <input type="password" {...createForm.register('password')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  {createForm.formState.errors.password && <p className="mt-1 text-xs text-red-600">{createForm.formState.errors.password.message}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Rol</label>
-                  <select value={form.rol} onChange={(e) => setForm({ ...form, rol: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <select {...createForm.register('rol')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <option value="operador">Operador</option>
                     <option value="admin">Administrador</option>
                   </select>
@@ -345,7 +378,7 @@ export default function ConfiguracionPage() {
 
           {/* Edit form */}
           {editingUser && (
-            <form onSubmit={handleEditUser} className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-6 shadow-sm">
+            <form onSubmit={editForm.handleSubmit(handleEditUser)} className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h4 className="text-sm font-semibold text-blue-800">Editando: {editingUser.nombre}</h4>
                 <button type="button" onClick={() => setEditingUser(null)} className="text-sm text-gray-500 hover:text-gray-700">Cancelar</button>
@@ -353,15 +386,17 @@ export default function ConfiguracionPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Nombre</label>
-                  <input type="text" required value={editForm.nombre} onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <input type="text" {...editForm.register('nombre')} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  {editForm.formState.errors.nombre && <p className="mt-1 text-xs text-red-600">{editForm.formState.errors.nombre.message}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <input type="email" required value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <input type="email" {...editForm.register('email')} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  {editForm.formState.errors.email && <p className="mt-1 text-xs text-red-600">{editForm.formState.errors.email.message}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Rol</label>
-                  <select value={editForm.rol} onChange={(e) => setEditForm({ ...editForm, rol: e.target.value })} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <select {...editForm.register('rol')} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <option value="operador">Operador</option>
                     <option value="admin">Administrador</option>
                   </select>
@@ -377,14 +412,15 @@ export default function ConfiguracionPage() {
 
           {/* Reset password form */}
           {resetUserId && (
-            <form onSubmit={handleResetPassword} className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-6 shadow-sm">
+            <form onSubmit={resetForm.handleSubmit(handleResetPassword)} className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h4 className="text-sm font-semibold text-orange-800">Resetear contraseña</h4>
-                <button type="button" onClick={() => { setResetUserId(null); setNewPassword(''); }} className="text-sm text-gray-500 hover:text-gray-700">Cancelar</button>
+                <button type="button" onClick={() => { setResetUserId(null); resetForm.reset(); }} className="text-sm text-gray-500 hover:text-gray-700">Cancelar</button>
               </div>
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <input type="password" required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Nueva contraseña (mín. 6 caracteres)" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500" />
+                  <input type="password" {...resetForm.register('password')} placeholder="Nueva contraseña (mín. 6 caracteres)" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500" />
+                  {resetForm.formState.errors.password && <p className="mt-1 text-xs text-red-600">{resetForm.formState.errors.password.message}</p>}
                 </div>
                 <button type="submit" disabled={saving} className="rounded-lg bg-orange-600 px-6 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50">
                   {saving ? 'Guardando...' : 'Resetear'}

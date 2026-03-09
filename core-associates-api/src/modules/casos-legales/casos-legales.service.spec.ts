@@ -20,6 +20,9 @@ describe('CasosLegalesService', () => {
       notaCaso: {
         create: jest.fn(),
       },
+      proveedor: {
+        findUnique: jest.fn(),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -213,6 +216,7 @@ describe('CasosLegalesService', () => {
 
   describe('assignAbogado', () => {
     it('should assign abogado and set en_atencion', async () => {
+      prisma.proveedor.findUnique.mockResolvedValue({ id: 'abg-1', tipo: 'abogado' });
       prisma.casoLegal.update.mockResolvedValue({
         id: 'c1',
         abogadoId: 'abg-1',
@@ -230,6 +234,11 @@ describe('CasosLegalesService', () => {
         include: expect.any(Object),
       });
       expect(result.estado).toBe('en_atencion');
+    });
+
+    it('should throw NotFoundException if proveedor not found', async () => {
+      prisma.proveedor.findUnique.mockResolvedValue(null);
+      await expect(service.assignAbogado('c1', 'bad-id')).rejects.toThrow(NotFoundException);
     });
   });
 

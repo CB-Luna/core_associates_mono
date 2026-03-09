@@ -8,6 +8,11 @@ final profileProvider = AsyncNotifierProvider<ProfileNotifier, Asociado?>(
   ProfileNotifier.new,
 );
 
+final fotoUrlProvider = FutureProvider<String?>((ref) async {
+  final repo = ref.watch(profileRepositoryProvider);
+  return repo.getFotoUrl();
+});
+
 class ProfileNotifier extends AsyncNotifier<Asociado?> {
   @override
   Future<Asociado?> build() async {
@@ -30,6 +35,12 @@ class ProfileNotifier extends AsyncNotifier<Asociado?> {
   Future<void> updateProfile(Map<String, dynamic> data) async {
     final repo = ref.read(profileRepositoryProvider);
     final updated = await repo.updateMyProfile(data);
+    state = AsyncData(updated);
+  }
+
+  Future<void> uploadFoto(String filePath) async {
+    final repo = ref.read(profileRepositoryProvider);
+    final updated = await repo.uploadFoto(filePath);
     state = AsyncData(updated);
   }
 }

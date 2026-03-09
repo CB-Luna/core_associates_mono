@@ -2,11 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { AsociadosService } from './asociados.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { StorageService } from '../storage/storage.service';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 describe('AsociadosService', () => {
   let service: AsociadosService;
   let prisma: Record<string, any>;
+  let storage: Record<string, jest.Mock>;
 
   const mockAsociado = {
     id: 'uuid-1',
@@ -17,6 +20,7 @@ describe('AsociadosService', () => {
     telefono: '5512345678',
     email: 'juan@example.com',
     estado: 'pendiente',
+    fotoUrl: null as string | null,
     fechaRegistro: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -35,12 +39,29 @@ describe('AsociadosService', () => {
         create: jest.fn(),
         updateMany: jest.fn(),
       },
+      notaAsociado: {
+        create: jest.fn(),
+        findMany: jest.fn(),
+      },
+      $transaction: jest.fn((args: any[]) => Promise.resolve(args.map(() => ({})))),
+    };
+
+    storage = {
+      uploadFile: jest.fn().mockResolvedValue(undefined),
+      getPresignedUrl: jest.fn().mockResolvedValue('https://minio/presigned-url'),
+      deleteFile: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const notificaciones = {
+      sendPush: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AsociadosService,
         { provide: PrismaService, useValue: prisma },
+        { provide: NotificacionesService, useValue: notificaciones },
+        { provide: StorageService, useValue: storage },
       ],
     }).compile();
 
@@ -122,31 +143,28 @@ describe('AsociadosService', () => {
   });
 
   describe('updateEstado', () => {
-    it('should update estado to activo with fechaAprobacion', async () => {
+    it('should update estado to activo via $transaction with nota', async () => {
       prisma.asociado.findUnique.mockResolvedValue(mockAsociado);
-      prisma.asociado.update.mockResolvedValue({ ...mockAsociado, estado: 'activo' });
+      prisma.$transaction.mockResolvedValue([
+        { ...mockAsociado, estado: 'activo', fechaAprobacion: new Date() },
+        { id: 'nota-1' },
+      ]);
 
       const result = await service.updateEstado('uuid-1', 'activo', 'admin-id');
-      expect(prisma.asociado.update).toHaveBeenCalledWith({
-        where: { id: 'uuid-1' },
-        data: expect.objectContaining({
-          estado: 'activo',
-          fechaAprobacion: expect.any(Date),
-          aprobadoPorId: 'admin-id',
-        }),
-      });
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       expect(result.estado).toBe('activo');
     });
 
-    it('should update estado to suspendido without fechaAprobacion', async () => {
-      prisma.asociado.findUnique.mockResolvedValue({ ...mockAsociado, estado: 'activo' });
-      prisma.asociado.update.mockResolvedValue({ ...mockAsociado, estado: 'suspendido' });
+    it('should include motivoRechazo for rechazado', async () => {
+      prisma.asociado.findUnique.mockResolvedValue(mockAsociado);
+      prisma.$transaction.mockResolvedValue([
+        { ...mockAsociado, estado: 'rechazado', motivoRechazo: 'Docs incompletos' },
+        { id: 'nota-1' },
+      ]);
 
-      await service.updateEstado('uuid-1', 'suspendido', 'admin-id');
-      expect(prisma.asociado.update).toHaveBeenCalledWith({
-        where: { id: 'uuid-1' },
-        data: { estado: 'suspendido' },
-      });
+      const result = await service.updateEstado('uuid-1', 'rechazado', 'admin-id', 'Docs incompletos');
+      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(result.estado).toBe('rechazado');
     });
 
     it('should throw NotFoundException if asociado not found', async () => {
@@ -181,6 +199,135 @@ describe('AsociadosService', () => {
 
       expect(prisma.vehiculo.updateMany).toHaveBeenCalled();
       expect(result.marca).toBe('Toyota');
+    });
+  });
+
+  describe('updateMyProfile', () => {
+    it('should update only provided fields', async () => {
+      prisma.asociado.update.mockResolvedValue({ ...mockAsociado, nombre: 'Carlos' });
+
+      const result = await service.updateMyProfile('uuid-1', { nombre: 'Carlos' } as any);
+      expect(prisma.asociado.update).toHaveBeenCalledWith({
+        where: { id: 'uuid-1' },
+        data: { nombre: 'Carlos' },
+        include: { vehiculos: true },
+      });
+      expect(result.nombre).toBe('Carlos');
+    });
+  });
+
+  describe('uploadFoto', () => {
+    const mockFile = {
+      originalname: 'foto.jpg',
+      buffer: Buffer.from('fake-image'),
+      mimetype: 'image/jpeg',
+    } as Express.Multer.File;
+
+    it('should upload photo and update fotoUrl in DB', async () => {
+      prisma.asociado.findUnique.mockResolvedValue(mockAsociado);
+      prisma.asociado.update.mockResolvedValue({ ...mockAsociado, fotoUrl: 'uuid-1/foto/123.jpg' });
+
+      const result = await service.uploadFoto('uuid-1', mockFile);
+      expect(storage.uploadFile).toHaveBeenCalledWith(
+        'core-associates-photos',
+        expect.stringContaining('uuid-1/foto/'),
+        mockFile.buffer,
+        'image/jpeg',
+      );
+      expect(prisma.asociado.update).toHaveBeenCalledWith({
+        where: { id: 'uuid-1' },
+        data: { fotoUrl: expect.stringContaining('uuid-1/foto/') },
+      });
+      expect(result.fotoUrl).toBeTruthy();
+    });
+
+    it('should delete previous photo if one exists', async () => {
+      prisma.asociado.findUnique.mockResolvedValue({ ...mockAsociado, fotoUrl: 'old/key.jpg' });
+      prisma.asociado.update.mockResolvedValue({ ...mockAsociado, fotoUrl: 'new/key.jpg' });
+
+      await service.uploadFoto('uuid-1', mockFile);
+      expect(storage.deleteFile).toHaveBeenCalledWith('core-associates-photos', 'old/key.jpg');
+    });
+
+    it('should throw NotFoundException if asociado not found', async () => {
+      prisma.asociado.findUnique.mockResolvedValue(null);
+      await expect(service.uploadFoto('bad-id', mockFile)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getFotoUrl', () => {
+    it('should return presigned URL when fotoUrl exists', async () => {
+      prisma.asociado.findUnique.mockResolvedValue({ ...mockAsociado, fotoUrl: 'uuid-1/foto/1.jpg' });
+
+      const result = await service.getFotoUrl('uuid-1');
+      expect(storage.getPresignedUrl).toHaveBeenCalledWith('core-associates-photos', 'uuid-1/foto/1.jpg');
+      expect(result.url).toBe('https://minio/presigned-url');
+    });
+
+    it('should return null url when no photo', async () => {
+      prisma.asociado.findUnique.mockResolvedValue({ ...mockAsociado, fotoUrl: null });
+
+      const result = await service.getFotoUrl('uuid-1');
+      expect(storage.getPresignedUrl).not.toHaveBeenCalled();
+      expect(result.url).toBeNull();
+    });
+
+    it('should throw NotFoundException if asociado not found', async () => {
+      prisma.asociado.findUnique.mockResolvedValue(null);
+      await expect(service.getFotoUrl('bad-id')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getNotas', () => {
+    it('should return notas ordered by createdAt desc', async () => {
+      prisma.asociado.findUnique.mockResolvedValue(mockAsociado);
+      prisma.notaAsociado.findMany.mockResolvedValue([
+        { id: 'n1', contenido: 'Nota 1', autor: { nombre: 'Admin', rol: 'admin' } },
+      ]);
+
+      const result = await service.getNotas('uuid-1');
+      expect(prisma.notaAsociado.findMany).toHaveBeenCalledWith({
+        where: { asociadoId: 'uuid-1' },
+        orderBy: { createdAt: 'desc' },
+        include: { autor: { select: { id: true, nombre: true, rol: true } } },
+      });
+      expect(result).toHaveLength(1);
+    });
+
+    it('should throw NotFoundException if asociado not found', async () => {
+      prisma.asociado.findUnique.mockResolvedValue(null);
+      await expect(service.getNotas('bad-id')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('createNota', () => {
+    it('should create a nota with default tipo "nota"', async () => {
+      prisma.asociado.findUnique.mockResolvedValue(mockAsociado);
+      prisma.notaAsociado.create.mockResolvedValue({
+        id: 'n1',
+        contenido: 'Llamada de seguimiento',
+        tipo: 'nota',
+        autor: { id: 'admin-1', nombre: 'Admin', rol: 'admin' },
+      });
+
+      const result = await service.createNota('uuid-1', 'admin-1', { contenido: 'Llamada de seguimiento' } as any);
+      expect(prisma.notaAsociado.create).toHaveBeenCalledWith({
+        data: {
+          asociadoId: 'uuid-1',
+          autorId: 'admin-1',
+          contenido: 'Llamada de seguimiento',
+          tipo: 'nota',
+        },
+        include: { autor: { select: { id: true, nombre: true, rol: true } } },
+      });
+      expect(result.contenido).toBe('Llamada de seguimiento');
+    });
+
+    it('should throw NotFoundException if asociado not found', async () => {
+      prisma.asociado.findUnique.mockResolvedValue(null);
+      await expect(
+        service.createNota('bad-id', 'admin-1', { contenido: 'test' } as any),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

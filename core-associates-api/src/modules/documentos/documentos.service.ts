@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { createHash } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 
 const BUCKET = 'core-associates-documents';
 
@@ -10,6 +11,7 @@ export class DocumentosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly notificaciones: NotificacionesService,
   ) {}
 
   async uploadDocument(
@@ -70,7 +72,7 @@ export class DocumentosService {
       throw new NotFoundException('Documento no encontrado');
     }
 
-    return this.prisma.documento.update({
+    const updated = await this.prisma.documento.update({
       where: { id },
       data: {
         estado: estado as any,
@@ -79,6 +81,24 @@ export class DocumentosService {
         fechaRevision: new Date(),
       },
     });
+
+    // Notificar al asociado sobre revisión de documento
+    const docForNotif = await this.prisma.documento.findUnique({ where: { id }, select: { asociadoId: true, tipo: true } });
+    if (docForNotif) {
+      const titulo = estado === 'aprobado' ? 'Documento aprobado' : 'Documento rechazado';
+      const mensaje = estado === 'aprobado'
+        ? `Tu documento (${docForNotif.tipo}) ha sido aprobado.`
+        : `Tu documento (${docForNotif.tipo}) fue rechazado. Motivo: ${motivoRechazo || 'No especificado'}`;
+
+      this.notificaciones.sendPush(
+        docForNotif.asociadoId,
+        titulo,
+        mensaje,
+        { tipo: 'estado_documento', estado, documentoId: id },
+      ).catch(() => {}); // fire-and-forget
+    }
+
+    return updated;
   }
 
   async getPendingDocuments(page = 1, limit = 10) {

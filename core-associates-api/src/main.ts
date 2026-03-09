@@ -8,10 +8,12 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { PrismaService } from './prisma/prisma.service';
+import { AppLogger } from './common/logger/app-logger';
 
 async function bootstrap() {
+  const appLogger = new AppLogger();
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log'],
+    logger: appLogger,
   });
 
   // Security — HTTP headers

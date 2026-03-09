@@ -11,25 +11,25 @@ describe('Badge', () => {
   it('should apply default variant classes when no variant specified', () => {
     render(<Badge>Default</Badge>);
     const badge = screen.getByText('Default');
-    expect(badge).toHaveClass('bg-gray-100', 'text-gray-700');
+    expect(badge).toHaveClass('bg-gray-50', 'text-gray-600');
   });
 
   it('should apply success variant classes', () => {
     render(<Badge variant="success">OK</Badge>);
     const badge = screen.getByText('OK');
-    expect(badge).toHaveClass('bg-green-100', 'text-green-700');
+    expect(badge).toHaveClass('bg-green-50', 'text-green-700');
   });
 
   it('should apply danger variant classes', () => {
     render(<Badge variant="danger">Error</Badge>);
     const badge = screen.getByText('Error');
-    expect(badge).toHaveClass('bg-red-100', 'text-red-700');
+    expect(badge).toHaveClass('bg-red-50', 'text-red-700');
   });
 
   it('should apply warning variant classes', () => {
     render(<Badge variant="warning">Pendiente</Badge>);
     const badge = screen.getByText('Pendiente');
-    expect(badge).toHaveClass('bg-yellow-100', 'text-yellow-700');
+    expect(badge).toHaveClass('bg-amber-50', 'text-amber-700');
   });
 
   it('should accept custom className', () => {

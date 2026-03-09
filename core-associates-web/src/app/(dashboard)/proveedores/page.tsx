@@ -9,8 +9,10 @@ import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { Badge, estadoProveedorVariant, tipoProveedorVariant } from '@/components/ui/Badge';
 import { ProveedorFormDialog } from '@/components/shared/ProveedorFormDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
-import { Download, Printer, Eye, ExternalLink, Store, Utensils, Wrench, Droplets, GraduationCap, Gavel, HelpCircle } from 'lucide-react';
+import { usePermisos } from '@/lib/permisos';
+import { Download, Printer, Eye, ExternalLink, Trash2, Store, Utensils, Wrench, Droplets, GraduationCap, Gavel, HelpCircle } from 'lucide-react';
 
 const tipoIcon: Record<string, typeof Store> = {
   abogado: Gavel, comida: Utensils, taller: Wrench, lavado: Droplets, capacitacion: GraduationCap, otro: HelpCircle,
@@ -31,6 +33,7 @@ const tipoOptions = [
 
 export default function ProveedoresPage() {
   const router = useRouter();
+  const { puede } = usePermisos();
   const [data, setData] = useState<Proveedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -39,6 +42,8 @@ export default function ProveedoresPage() {
   const [search, setSearch] = useState('');
   const [tipoFilter, setTipoFilter] = useState('');
   const [showDialog, setShowDialog] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Proveedor | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -61,6 +66,20 @@ export default function ProveedoresPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await apiClient(`/proveedores/${deleteTarget.id}`, { method: 'DELETE' });
+      setDeleteTarget(null);
+      fetchData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const columns: ColumnDef<Proveedor, any>[] = [
     {
@@ -125,6 +144,15 @@ export default function ProveedoresPage() {
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </button>
+          {puede('eliminar:proveedores') && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setDeleteTarget(row.original); }}
+              title="Eliminar"
+              className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       ),
     },
@@ -176,6 +204,17 @@ export default function ProveedoresPage() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Eliminar proveedor"
+        message={`¿Estás seguro de eliminar a "${deleteTarget?.razonSocial}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

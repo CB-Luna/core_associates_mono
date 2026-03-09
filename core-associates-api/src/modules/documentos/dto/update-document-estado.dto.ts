@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsString, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 enum EstadoDocumento {
@@ -9,10 +9,10 @@ enum EstadoDocumento {
 export class UpdateDocumentEstadoDto {
   @ApiProperty({ enum: EstadoDocumento })
   @IsEnum(EstadoDocumento)
-  estado: EstadoDocumento;
+  estado!: EstadoDocumento;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiPropertyOptional({ description: 'Requerido cuando estado es rechazado' })
+  @ValidateIf((o) => o.estado === 'rechazado')
   @IsString()
   motivoRechazo?: string;
 }

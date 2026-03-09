@@ -1,12 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class HomeShell extends StatelessWidget {
+import '../../../../core/services/push_notification_service.dart';
+
+class HomeShell extends ConsumerStatefulWidget {
   final Widget child;
 
   const HomeShell({super.key, required this.child});
 
-  int _currentIndex(BuildContext context) {
+  @override
+  ConsumerState<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends ConsumerState<HomeShell> {
+  bool _pushInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPush();
+  }
+
+  Future<void> _initPush() async {
+    if (_pushInitialized) return;
+    _pushInitialized = true;
+    try {
+      await ref.read(pushNotificationServiceProvider).initialize();
+    } catch (_) {
+      // Push not available (e.g., Firebase not configured)
+    }
+  }
+
+  int _currentIndex() {
     final location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith('/promotions')) return 1;
     if (location.startsWith('/legal')) return 2;
@@ -14,7 +40,7 @@ class HomeShell extends StatelessWidget {
     return 0;
   }
 
-  void _onTap(BuildContext context, int index) {
+  void _onTap(int index) {
     switch (index) {
       case 0:
         context.go('/home');
@@ -29,13 +55,13 @@ class HomeShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final index = _currentIndex(context);
+    final index = _currentIndex();
 
     return Scaffold(
-      body: child,
+      body: widget.child,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: index,
-        onTap: (i) => _onTap(context, i),
+        onTap: _onTap,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),

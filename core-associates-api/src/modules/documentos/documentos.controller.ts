@@ -14,7 +14,7 @@ import {
   FileTypeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { DocumentosService } from './documentos.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -34,6 +34,9 @@ export class DocumentosController {
   @Post('upload')
   @ApiOperation({ summary: 'Subir documento' })
   @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Documento subido y registrado' })
+  @ApiResponse({ status: 400, description: 'Archivo inválido (máx 10MB, JPEG/PNG/WebP/PDF)' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
   @UseInterceptors(FileInterceptor('file'))
   uploadDocument(
     @CurrentUser('id') asociadoId: string,
@@ -53,6 +56,8 @@ export class DocumentosController {
 
   @Get('mis-documentos')
   @ApiOperation({ summary: 'Listar mis documentos' })
+  @ApiResponse({ status: 200, description: 'Lista de documentos del asociado' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
   getMyDocuments(@CurrentUser('id') asociadoId: string) {
     return this.documentosService.getMyDocuments(asociadoId);
   }
@@ -61,12 +66,19 @@ export class DocumentosController {
   @UseGuards(RolesGuard)
   @Roles('admin', 'operador')
   @ApiOperation({ summary: 'Listar documentos pendientes de revisión (admin)' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de documentos pendientes' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo admin/operador' })
   getPendingDocuments(@Query() query: PaginationQueryDto) {
     return this.documentosService.getPendingDocuments(query.page, query.limit);
   }
 
   @Get(':id/url')
   @ApiOperation({ summary: 'Obtener URL presignada del documento' })
+  @ApiResponse({ status: 200, description: 'URL presignada (15 min)' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Sin acceso al documento' })
+  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
   getDocumentUrl(
     @Param('id') id: string,
     @CurrentUser() user: { id: string; tipo: string },
@@ -78,6 +90,11 @@ export class DocumentosController {
   @UseGuards(RolesGuard)
   @Roles('admin', 'operador')
   @ApiOperation({ summary: 'Aprobar o rechazar documento' })
+  @ApiResponse({ status: 200, description: 'Estado del documento actualizado' })
+  @ApiResponse({ status: 400, description: 'Estado inválido o motivo faltante para rechazo' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo admin/operador' })
+  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
   updateEstado(
     @Param('id') id: string,
     @Body() dto: UpdateDocumentEstadoDto,

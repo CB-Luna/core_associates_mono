@@ -113,12 +113,16 @@ export class AuthService {
       data: { ultimoAcceso: new Date() },
     });
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       sub: usuario.id,
       email: usuario.email,
       rol: usuario.rol,
       tipo: 'usuario',
     };
+
+    if (usuario.rol === 'proveedor' && usuario.proveedorId) {
+      payload.proveedorId = usuario.proveedorId;
+    }
 
     return {
       accessToken: this.jwtService.sign(payload),
@@ -128,6 +132,7 @@ export class AuthService {
         email: usuario.email,
         nombre: usuario.nombre,
         rol: usuario.rol,
+        ...(usuario.proveedorId && { proveedorId: usuario.proveedorId }),
       },
     };
   }
@@ -137,7 +142,10 @@ export class AuthService {
   ): Promise<{ accessToken: string }> {
     try {
       const payload = this.jwtService.verify(token);
-      const newPayload = { sub: payload.sub, email: payload.email, telefono: payload.telefono, rol: payload.rol, tipo: payload.tipo };
+      const newPayload: Record<string, unknown> = { sub: payload.sub, email: payload.email, telefono: payload.telefono, rol: payload.rol, tipo: payload.tipo };
+      if (payload.proveedorId) {
+        newPayload.proveedorId = payload.proveedorId;
+      }
       return {
         accessToken: this.jwtService.sign(newPayload),
       };

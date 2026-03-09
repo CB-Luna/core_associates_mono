@@ -13,55 +13,63 @@ void main() {
   setUp(() {
     mockApiClient = MockApiClient();
     mockStorage = MockSecureStorageService();
-    repository = AuthRepository(
-      apiClient: mockApiClient,
-      storage: mockStorage,
-    );
+    repository = AuthRepository(apiClient: mockApiClient, storage: mockStorage);
   });
 
   group('AuthRepository', () {
     group('sendOtp', () {
       test('calls apiClient.post with correct path and data', () async {
-        when(() => mockApiClient.post(
-              '/auth/otp/send',
-              data: {'telefono': '+525512345678'},
-            )).thenAnswer((_) async => Response(
-              data: {'message': 'OTP sent'},
-              requestOptions: RequestOptions(path: '/auth/otp/send'),
-            ));
+        when(
+          () => mockApiClient.post(
+            '/auth/otp/send',
+            data: {'telefono': '+525599887766'},
+          ),
+        ).thenAnswer(
+          (_) async => Response(
+            data: {'message': 'OTP sent'},
+            requestOptions: RequestOptions(path: '/auth/otp/send'),
+          ),
+        );
 
-        await repository.sendOtp('+525512345678');
+        await repository.sendOtp('+525599887766');
 
-        verify(() => mockApiClient.post(
-              '/auth/otp/send',
-              data: {'telefono': '+525512345678'},
-            )).called(1);
+        verify(
+          () => mockApiClient.post(
+            '/auth/otp/send',
+            data: {'telefono': '+525599887766'},
+          ),
+        ).called(1);
       });
     });
 
     group('verifyOtp', () {
       test('saves tokens on successful verification', () async {
-        when(() => mockApiClient.post(
-              '/auth/otp/verify',
-              data: {'telefono': '+525512345678', 'otp': '000000'},
-            )).thenAnswer((_) async => Response(
-              data: {
-                'accessToken': 'access-123',
-                'refreshToken': 'refresh-456',
-              },
-              requestOptions: RequestOptions(path: '/auth/otp/verify'),
-            ));
-        when(() => mockStorage.setTokens(
-              accessToken: 'access-123',
-              refreshToken: 'refresh-456',
-            )).thenAnswer((_) async {});
+        when(
+          () => mockApiClient.post(
+            '/auth/otp/verify',
+            data: {'telefono': '+525512345678', 'otp': '000000'},
+          ),
+        ).thenAnswer(
+          (_) async => Response(
+            data: {'accessToken': 'access-123', 'refreshToken': 'refresh-456'},
+            requestOptions: RequestOptions(path: '/auth/otp/verify'),
+          ),
+        );
+        when(
+          () => mockStorage.setTokens(
+            accessToken: 'access-123',
+            refreshToken: 'refresh-456',
+          ),
+        ).thenAnswer((_) async {});
 
         await repository.verifyOtp('+525512345678', '000000');
 
-        verify(() => mockStorage.setTokens(
-              accessToken: 'access-123',
-              refreshToken: 'refresh-456',
-            )).called(1);
+        verify(
+          () => mockStorage.setTokens(
+            accessToken: 'access-123',
+            refreshToken: 'refresh-456',
+          ),
+        ).called(1);
       });
     });
 

@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 enum EstadoAsociado {
@@ -12,10 +12,10 @@ enum EstadoAsociado {
 export class UpdateEstadoDto {
   @ApiProperty({ enum: EstadoAsociado })
   @IsEnum(EstadoAsociado)
-  estado: EstadoAsociado;
+  estado!: EstadoAsociado;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiPropertyOptional({ description: 'Requerido cuando estado es rechazado o suspendido' })
+  @ValidateIf((o) => o.estado === 'rechazado' || o.estado === 'suspendido')
   @IsString()
   motivo?: string;
 }

@@ -11,7 +11,6 @@ import {
 } from 'recharts';
 import { Trophy, Store } from 'lucide-react';
 import { usePermisos } from '@/lib/permisos';
-import { exportToPDFNative } from '@/lib/export-utils';
 
 const PIE_COLORS = ['#22c55e', '#3b82f6', '#eab308', '#ef4444', '#8b5cf6', '#6b7280'];
 
@@ -94,23 +93,134 @@ export default function ReportesPage() {
 
   const exportPDF = async () => {
     if (!reporte) return;
-    const data = reporte.trend.map((t) => ({
-      mes: t.mes,
-      asociados: t.asociados,
-      cupones: t.cupones,
-      casos: t.casos,
-    }));
-    await exportToPDFNative(
-      data,
-      [
-        { key: 'mes', header: 'Mes' },
-        { key: 'asociados', header: 'Asociados' },
-        { key: 'cupones', header: 'Cupones' },
-        { key: 'casos', header: 'Casos' },
-      ],
-      'Reporte Avanzado',
-      `reporte-${desde}-${hasta}`,
-    );
+    const { default: jsPDF } = await import('jspdf');
+    await import('jspdf-autotable');
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 14;
+    let y = 18;
+
+    // ── Encabezado ──
+    doc.setFontSize(18);
+    doc.setTextColor(30, 41, 59);
+    doc.text('Reporte Ejecutivo Mensual', margin, y);
+    y += 7;
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Período: ${desde} — ${hasta}  |  Generado: ${new Date().toLocaleString('es-MX')}`, margin, y);
+    y += 4;
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 8;
+
+    // ── Resumen General ──
+    doc.setFontSize(13);
+    doc.setTextColor(30, 41, 59);
+    doc.text('Resumen General', margin, y);
+    y += 6;
+    const resumenData = [
+      ['Asociados registrados', String(reporte.asociados.registrados)],
+      ['Cupones generados', String(reporte.cupones.generados)],
+      ['Casos legales', String(Object.values(reporte.casosLegales.porEstado).reduce((a, b) => a + b, 0))],
+      ['Documentos procesados', String(Object.values(reporte.documentos.porEstado).reduce((a, b) => a + b, 0))],
+    ];
+    (doc as any).autoTable({
+      startY: y,
+      body: resumenData,
+      theme: 'plain',
+      bodyStyles: { fontSize: 10, textColor: [30, 41, 59] },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 }, 1: { halign: 'left' } },
+      margin: { left: margin, right: margin },
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+
+    // ── Tendencia Mensual ──
+    doc.setFontSize(13);
+    doc.setTextColor(30, 41, 59);
+    doc.text('Tendencia Mensual', margin, y);
+    y += 2;
+    (doc as any).autoTable({
+      startY: y,
+      head: [['Mes', 'Asociados', 'Cupones', 'Casos']],
+      body: reporte.trend.map((t) => [t.mes, t.asociados, t.cupones, t.casos]),
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 9, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: margin, right: margin },
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+
+    // ── Tiempo de Resolución de Casos ──
+    if (reporte.tiempoResolucionCasos?.some((d) => d.casosResueltos > 0)) {
+      if (y > 240) { doc.addPage(); y = 18; }
+      doc.setFontSize(13);
+      doc.setTextColor(30, 41, 59);
+      doc.text('Tiempo Promedio de Resolución de Casos', margin, y);
+      y += 2;
+      (doc as any).autoTable({
+        startY: y,
+        head: [['Mes', 'Días promedio', 'Casos resueltos']],
+        body: reporte.tiempoResolucionCasos.map((d) => [d.mes, d.diasPromedio, d.casosResueltos]),
+        theme: 'grid',
+        headStyles: { fillColor: [245, 158, 11], textColor: 255, fontSize: 9, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [255, 251, 235] },
+        margin: { left: margin, right: margin },
+      });
+      y = (doc as any).lastAutoTable.finalY + 8;
+    }
+
+    // ── Tasa de Aprobación ──
+    if (reporte.tasaAprobacion?.some((d) => d.registrados > 0)) {
+      if (y > 240) { doc.addPage(); y = 18; }
+      doc.setFontSize(13);
+      doc.setTextColor(30, 41, 59);
+      doc.text('Tasa de Aprobación de Asociados', margin, y);
+      y += 2;
+      (doc as any).autoTable({
+        startY: y,
+        head: [['Mes', 'Tasa (%)', 'Aprobados', 'Registrados']],
+        body: reporte.tasaAprobacion.map((d) => [d.mes, `${d.tasa}%`, d.aprobados, d.registrados]),
+        theme: 'grid',
+        headStyles: { fillColor: [34, 197, 94], textColor: 255, fontSize: 9, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [240, 253, 244] },
+        margin: { left: margin, right: margin },
+      });
+      y = (doc as any).lastAutoTable.finalY + 8;
+    }
+
+    // ── Top Proveedores ──
+    if (reporte.topProveedores.length > 0) {
+      if (y > 220) { doc.addPage(); y = 18; }
+      doc.setFontSize(13);
+      doc.setTextColor(30, 41, 59);
+      doc.text('Top Proveedores', margin, y);
+      y += 2;
+      (doc as any).autoTable({
+        startY: y,
+        head: [['#', 'Proveedor', 'Tipo', 'Emitidos', 'Canjeados', 'Promociones']],
+        body: reporte.topProveedores.map((p, i) => [i + 1, p.razonSocial, p.tipo, p.cuponesEmitidos, p.cuponesCanjeados, p.promociones]),
+        theme: 'grid',
+        headStyles: { fillColor: [139, 92, 246], textColor: 255, fontSize: 9, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 8, textColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [245, 243, 255] },
+        margin: { left: margin, right: margin },
+      });
+    }
+
+    // ── Pie de página ──
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Core Associates — Página ${i} de ${totalPages}`, margin, doc.internal.pageSize.getHeight() - 8);
+    }
+
+    doc.save(`reporte-ejecutivo-${desde}-${hasta}.pdf`);
   };
 
   if (loading) {
@@ -377,6 +487,52 @@ export default function ReportesPage() {
               <p className="py-4 text-center text-sm text-gray-400">Sin datos en el período</p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Tiempo de Resolución + Tasa de Aprobación */}
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Tiempo promedio de resolución de casos */}
+        <div className="rounded-xl border bg-white p-6 shadow-sm">
+          <h3 className="mb-1 text-sm font-semibold text-gray-900">Tiempo promedio de resolución</h3>
+          <p className="mb-4 text-xs text-gray-500">Días promedio para resolver/cerrar casos legales por mes</p>
+          {reporte.tiempoResolucionCasos?.some((d) => d.casosResueltos > 0) ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={reporte.tiempoResolucionCasos}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="mes" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} unit=" d" />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend wrapperStyle={{ paddingTop: 12, fontSize: 13 }} iconType="circle" iconSize={8} />
+                <Line type="monotone" dataKey="diasPromedio" stroke="#f59e0b" strokeWidth={2.5} name="Días promedio" dot={{ r: 4, fill: '#f59e0b' }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="casosResueltos" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="5 5" name="Casos resueltos" dot={{ r: 3, fill: '#8b5cf6' }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="py-16 text-center text-sm text-gray-400">Sin casos resueltos en el período</p>
+          )}
+        </div>
+
+        {/* Tasa de aprobación de asociados */}
+        <div className="rounded-xl border bg-white p-6 shadow-sm">
+          <h3 className="mb-1 text-sm font-semibold text-gray-900">Tasa de aprobación de asociados</h3>
+          <p className="mb-4 text-xs text-gray-500">Porcentaje de asociados aprobados vs registrados por mes</p>
+          {reporte.tasaAprobacion?.some((d) => d.registrados > 0) ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={reporte.tasaAprobacion}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="mes" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} unit="%" domain={[0, 100]} />
+                <Tooltip content={<ChartTooltip />} />
+                <Legend wrapperStyle={{ paddingTop: 12, fontSize: 13 }} iconType="circle" iconSize={8} />
+                <Line type="monotone" dataKey="tasa" stroke="#22c55e" strokeWidth={2.5} name="Tasa aprobación (%)" dot={{ r: 4, fill: '#22c55e' }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="aprobados" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" name="Aprobados" dot={{ r: 3, fill: '#3b82f6' }} />
+                <Line type="monotone" dataKey="registrados" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" name="Registrados" dot={{ r: 3, fill: '#94a3b8' }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="py-16 text-center text-sm text-gray-400">Sin registros en el período</p>
+          )}
         </div>
       </div>
 

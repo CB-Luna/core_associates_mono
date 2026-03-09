@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../../../shared/theme/app_theme.dart';
 import '../providers/profile_provider.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -18,6 +20,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _emailCtrl;
   late TextEditingController _fechaNacCtrl;
   bool _saving = false;
+  bool _uploadingFoto = false;
 
   @override
   void initState() {
@@ -56,6 +59,35 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     if (picked != null) {
       _fechaNacCtrl.text =
           '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+    }
+  }
+
+  Future<void> _pickAndUploadFoto() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      imageQuality: 85,
+    );
+    if (image == null) return;
+
+    setState(() => _uploadingFoto = true);
+    try {
+      await ref.read(profileProvider.notifier).uploadFoto(image.path);
+      ref.invalidate(fotoUrlProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Foto actualizada')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al subir foto: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingFoto = false);
     }
   }
 
@@ -106,6 +138,73 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Foto de perfil
+              Center(
+                child: GestureDetector(
+                  onTap: _uploadingFoto ? null : _pickAndUploadFoto,
+                  child: Stack(
+                    children: [
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final fotoUrl = ref.watch(fotoUrlProvider).value;
+                          final asociado = ref.watch(profileProvider).value;
+                          final iniciales = asociado?.iniciales ?? '?';
+                          if (fotoUrl != null && fotoUrl.isNotEmpty) {
+                            return CircleAvatar(
+                              radius: 48,
+                              backgroundImage: NetworkImage(fotoUrl),
+                              backgroundColor: AppColors.primary.withValues(
+                                alpha: 0.1,
+                              ),
+                            );
+                          }
+                          return CircleAvatar(
+                            radius: 48,
+                            backgroundColor: AppColors.primary.withValues(
+                              alpha: 0.1,
+                            ),
+                            child: Text(
+                              iniciales,
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: _uploadingFoto
+                              ? const SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.camera_alt,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
               TextFormField(
                 controller: _nombreCtrl,
                 decoration: const InputDecoration(

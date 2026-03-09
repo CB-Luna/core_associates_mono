@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X } from 'lucide-react';
+import { X, Upload, ImageIcon } from 'lucide-react';
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
 import type { Promocion, Proveedor } from '@/lib/api-types';
+import { useAuthStore } from '@/stores/auth-store';
 
 const promocionSchema = z.object({
-  proveedorId: z.string().min(1, 'Selecciona un proveedor'),
+  proveedorId: z.string().optional(),
   titulo: z.string().min(1, 'Título requerido'),
   descripcion: z.string().min(1, 'Descripción requerida'),
   tipoDescuento: z.enum(['porcentaje', 'monto_fijo']),
@@ -36,8 +37,13 @@ function toDateInputValue(iso: string): string {
 
 export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: PromocionFormDialogProps) {
   const isEdit = !!promocion;
+  const user = useAuthStore((s) => s.user);
+  const esProveedor = user?.rol === 'proveedor';
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [serverError, setServerError] = useState('');
+  const [imagenFile, setImagenFile] = useState<File | null>(null);
+  const [imagenPreview, setImagenPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -61,11 +67,11 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
   });
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || esProveedor) return;
     apiClient<PaginatedResponse<Proveedor>>('/proveedores?limit=200&estado=activo')
       .then((res) => setProveedores(res.data))
       .catch(() => {});
-  }, [open]);
+  }, [open, esProveedor]);
 
   useEffect(() => {
     if (open && promocion) {
@@ -85,10 +91,26 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
       reset();
     }
     setServerError('');
+    setImagenFile(null);
+    setImagenPreview(null);
   }, [open, promocion, reset]);
+
+  // Load existing image preview when editing
+  useEffect(() => {
+    if (open && promocion?.imagenUrl) {
+      apiClient<string>(`/promociones/${promocion.id}/imagen`)
+        .then((url) => setImagenPreview(url))
+        .catch(() => {});
+    }
+  }, [open, promocion]);
 
   const onSubmit = async (data: PromocionFormData) => {
     setServerError('');
+
+    if (!esProveedor && !data.proveedorId) {
+      setServerError('Selecciona un proveedor');
+      return;
+    }
 
     const body = {
       proveedorId: data.proveedorId,
@@ -104,16 +126,46 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
     };
 
     try {
-      if (isEdit) {
-        await apiClient(`/promociones/${promocion!.id}`, {
-          method: 'PUT',
-          body: JSON.stringify(body),
-        });
+      let savedPromoId = promocion?.id;
+
+      if (esProveedor) {
+        // El proveedor usa sus propios endpoints, no necesita enviar proveedorId
+        const { proveedorId: _unused, ...proveedorBody } = body;
+        if (isEdit) {
+          await apiClient(`/promociones/mis-promociones/${promocion!.id}`, {
+            method: 'PUT',
+            body: JSON.stringify(proveedorBody),
+          });
+        } else {
+          const created = await apiClient<Promocion>('/promociones/mis-promociones', {
+            method: 'POST',
+            body: JSON.stringify(proveedorBody),
+          });
+          savedPromoId = created.id;
+        }
       } else {
-        await apiClient('/promociones', {
-          method: 'POST',
-          body: JSON.stringify(body),
-        });
+        if (isEdit) {
+          await apiClient(`/promociones/${promocion!.id}`, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+          });
+        } else {
+          const created = await apiClient<Promocion>('/promociones', {
+            method: 'POST',
+            body: JSON.stringify(body),
+          });
+          savedPromoId = created.id;
+        }
+      }
+
+      // Upload image if selected
+      if (imagenFile && savedPromoId) {
+        const formData = new FormData();
+        formData.append('file', imagenFile);
+        const uploadEndpoint = esProveedor
+          ? `/promociones/mis-promociones/${savedPromoId}/imagen`
+          : `/promociones/${savedPromoId}/imagen`;
+        await apiClient(uploadEndpoint, { method: 'POST', body: formData });
       }
       onSuccess();
       onClose();
@@ -144,22 +196,24 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Proveedor */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor *</label>
-            <select
-              {...register('proveedorId')}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            >
-              <option value="">Seleccionar proveedor...</option>
-              {proveedores.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.razonSocial} ({p.tipo})
-                </option>
-              ))}
-            </select>
-            {errors.proveedorId && <p className="mt-1 text-xs text-red-500">{errors.proveedorId.message}</p>}
-          </div>
+          {/* Proveedor — oculto si el usuario es proveedor */}
+          {!esProveedor && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor *</label>
+              <select
+                {...register('proveedorId')}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              >
+                <option value="">Seleccionar proveedor...</option>
+                {proveedores.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.razonSocial} ({p.tipo})
+                  </option>
+                ))}
+              </select>
+              {errors.proveedorId && <p className="mt-1 text-xs text-red-500">{errors.proveedorId.message}</p>}
+            </div>
+          )}
 
           {/* Título */}
           <div>
@@ -251,6 +305,60 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
                 placeholder="Sin límite"
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
+            </div>
+          </div>
+
+          {/* Imagen de promoción */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Imagen de promoción</label>
+            <div className="flex items-start gap-4">
+              {(imagenPreview || imagenFile) ? (
+                <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200">
+                  <img
+                    src={imagenFile ? URL.createObjectURL(imagenFile) : imagenPreview!}
+                    alt="Preview"
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setImagenFile(null); setImagenPreview(null); }}
+                    className="absolute -right-1 -top-1 rounded-full bg-red-500 p-0.5 text-white hover:bg-red-600"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-gray-300">
+                  <ImageIcon className="h-8 w-8 text-gray-400" />
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <Upload className="h-4 w-4" />
+                  {imagenFile || imagenPreview ? 'Cambiar imagen' : 'Subir imagen'}
+                </button>
+                <p className="text-xs text-gray-500">JPG, PNG o WebP. Máx. 5MB</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && file.size <= 5 * 1024 * 1024) {
+                      setImagenFile(file);
+                      setImagenPreview(null);
+                    } else if (file) {
+                      setServerError('La imagen no debe superar 5MB');
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </div>
             </div>
           </div>
 

@@ -107,6 +107,15 @@ export class CasosLegalesService {
     return this.prisma.casoLegal.update({ where: { id }, data });
   }
 
+  async updatePrioridad(id: string, prioridad: string) {
+    const caso = await this.prisma.casoLegal.findUnique({ where: { id } });
+    if (!caso) throw new NotFoundException('Caso no encontrado');
+    return this.prisma.casoLegal.update({
+      where: { id },
+      data: { prioridad: prioridad as any },
+    });
+  }
+
   async assignAbogado(id: string, abogadoId: string) {
     const proveedor = await this.prisma.proveedor.findUnique({ where: { id: abogadoId } });
     if (!proveedor) throw new NotFoundException('Proveedor no encontrado');
@@ -154,7 +163,16 @@ export class CasosLegalesService {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
-    const [nuevos, enAtencion, resueltos, totalAbiertos] = await Promise.all([
+    const [
+      casosNuevos,
+      casosEnAtencion,
+      casosResueltos,
+      casosTotalAbiertos,
+      asociadosRegistrados,
+      cuponesGenerados,
+      cuponesCanjeados,
+      docsPendientes,
+    ] = await Promise.all([
       this.prisma.casoLegal.count({
         where: { createdAt: { gte: ayer, lt: hoy } },
       }),
@@ -167,10 +185,47 @@ export class CasosLegalesService {
       this.prisma.casoLegal.count({
         where: { estado: { in: ['abierto', 'en_atencion', 'escalado'] } },
       }),
+      this.prisma.asociado.count({
+        where: { fechaRegistro: { gte: ayer, lt: hoy } },
+      }),
+      this.prisma.cupon.count({
+        where: { createdAt: { gte: ayer, lt: hoy } },
+      }),
+      this.prisma.cupon.count({
+        where: { estado: 'canjeado', fechaCanje: { gte: ayer, lt: hoy } },
+      }),
+      this.prisma.documento.count({
+        where: { estado: 'pendiente' },
+      }),
     ]);
 
+    await this.prisma.resumenDiario.upsert({
+      where: { fecha: ayer },
+      update: {
+        casosNuevos,
+        casosEnAtencion,
+        casosResueltos,
+        casosTotalAbiertos,
+        asociadosRegistrados,
+        cuponesGenerados,
+        cuponesCanjeados,
+        docsPendientes,
+      },
+      create: {
+        fecha: ayer,
+        casosNuevos,
+        casosEnAtencion,
+        casosResueltos,
+        casosTotalAbiertos,
+        asociadosRegistrados,
+        cuponesGenerados,
+        cuponesCanjeados,
+        docsPendientes,
+      },
+    });
+
     this.logger.log(
-      `[Resumen diario] Nuevos: ${nuevos} | En atención: ${enAtencion} | Resueltos ayer: ${resueltos} | Total abiertos: ${totalAbiertos}`,
+      `[Resumen diario ${ayer.toISOString().slice(0, 10)}] Casos nuevos: ${casosNuevos} | En atención: ${casosEnAtencion} | Resueltos: ${casosResueltos} | Abiertos: ${casosTotalAbiertos} | Asociados reg: ${asociadosRegistrados} | Cupones gen: ${cuponesGenerados} | Cupones canj: ${cuponesCanjeados} | Docs pend: ${docsPendientes}`,
     );
   }
 }

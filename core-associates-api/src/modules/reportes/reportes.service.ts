@@ -87,6 +87,8 @@ export class ReportesService {
       docsPorEstado,
       trendMensual,
       topProveedores,
+      tiempoResolucion,
+      tasaAprobacion,
     ] = await Promise.all([
       this.prisma.asociado.count({ where: { fechaRegistro: dateFilter } }),
       this.prisma.asociado.groupBy({
@@ -135,6 +137,8 @@ export class ReportesService {
         orderBy: { cuponesEmitidos: { _count: 'desc' } },
         take: 10,
       }),
+      this.getResolutionTimeByMonth(desde, hasta),
+      this.getApprovalRateByMonth(desde, hasta),
     ]);
 
     return {
@@ -166,6 +170,8 @@ export class ReportesService {
         cuponesCanjeados: p._count.cuponesCanjeados,
         promociones: p._count.promociones,
       })),
+      tiempoResolucionCasos: tiempoResolucion,
+      tasaAprobacion,
     };
   }
 
@@ -177,6 +183,19 @@ export class ReportesService {
       nodeEnv: process.env.NODE_ENV || 'development',
       uptime: Math.floor(process.uptime()),
     };
+  }
+
+  // ── Resúmenes diarios ──
+
+  async getResumenesDiarios(dias = 30) {
+    const desde = new Date();
+    desde.setDate(desde.getDate() - dias);
+    desde.setHours(0, 0, 0, 0);
+
+    return this.prisma.resumenDiario.findMany({
+      where: { fecha: { gte: desde } },
+      orderBy: { fecha: 'desc' },
+    });
   }
 
   // ── Helpers ──
@@ -240,5 +259,98 @@ export class ReportesService {
     }
 
     return months;
+  }
+
+  /**
+   * Tiempo promedio de resolución de casos legales por mes.
+   * Solo considera casos con fechaCierre (resuelto/cerrado).
+   */
+  private async getResolutionTimeByMonth(desde?: string, hasta?: string) {
+    const result: { mes: string; diasPromedio: number; casosResueltos: number }[] = [];
+    const now = new Date();
+
+    let startDate: Date;
+    let endDate: Date;
+    if (desde && hasta) {
+      startDate = new Date(desde);
+      endDate = new Date(hasta);
+    } else {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    }
+
+    const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    while (current <= endDate) {
+      const monthStart = new Date(current);
+      const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+      const mesLabel = current.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+
+      const casos = await this.prisma.casoLegal.findMany({
+        where: {
+          fechaCierre: { gte: monthStart, lt: monthEnd },
+        },
+        select: { fechaApertura: true, fechaCierre: true },
+      });
+
+      if (casos.length > 0) {
+        const totalDias = casos.reduce((sum, c) => {
+          const diff = (c.fechaCierre!.getTime() - c.fechaApertura.getTime()) / (1000 * 60 * 60 * 24);
+          return sum + diff;
+        }, 0);
+        result.push({
+          mes: mesLabel,
+          diasPromedio: Math.round((totalDias / casos.length) * 10) / 10,
+          casosResueltos: casos.length,
+        });
+      } else {
+        result.push({ mes: mesLabel, diasPromedio: 0, casosResueltos: 0 });
+      }
+
+      current.setMonth(current.getMonth() + 1);
+    }
+
+    return result;
+  }
+
+  /**
+   * Tasa de aprobación de asociados por mes.
+   * Compara aprobados (fechaAprobacion en ese mes) vs total registrados (fechaRegistro).
+   */
+  private async getApprovalRateByMonth(desde?: string, hasta?: string) {
+    const result: { mes: string; tasa: number; aprobados: number; registrados: number }[] = [];
+    const now = new Date();
+
+    let startDate: Date;
+    let endDate: Date;
+    if (desde && hasta) {
+      startDate = new Date(desde);
+      endDate = new Date(hasta);
+    } else {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    }
+
+    const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    while (current <= endDate) {
+      const monthStart = new Date(current);
+      const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+      const mesLabel = current.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+
+      const [aprobados, registrados] = await Promise.all([
+        this.prisma.asociado.count({
+          where: { fechaAprobacion: { gte: monthStart, lt: monthEnd } },
+        }),
+        this.prisma.asociado.count({
+          where: { fechaRegistro: { gte: monthStart, lt: monthEnd } },
+        }),
+      ]);
+
+      const tasa = registrados > 0 ? Math.round((aprobados / registrados) * 1000) / 10 : 0;
+      result.push({ mes: mesLabel, tasa, aprobados, registrados });
+
+      current.setMonth(current.getMonth() + 1);
+    }
+
+    return result;
   }
 }

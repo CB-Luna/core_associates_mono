@@ -1,24 +1,61 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import * as admin from 'firebase-admin';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SmsService } from '../../common/sms/sms.service';
 import { RegisterTokenDto } from './dto/register-token.dto';
 import { SendNotificationDto } from './dto/send-notification.dto';
 
 @Injectable()
-export class NotificacionesService {
+export class NotificacionesService implements OnModuleInit {
   private readonly logger = new Logger(NotificacionesService.name);
-  private readonly fcmServerKey: string | undefined;
+  private fcmAvailable = false;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly smsService: SmsService,
-  ) {
-    this.fcmServerKey = this.configService.get<string>('FCM_SERVER_KEY');
-    if (!this.fcmServerKey) {
-      this.logger.warn('FCM_SERVER_KEY not configured — push notifications will be logged only');
+  ) {}
+
+  onModuleInit() {
+    this.initializeFirebase();
+  }
+
+  private initializeFirebase() {
+    if (admin.apps.length > 0) {
+      this.fcmAvailable = true;
+      return;
     }
+
+    // Option 1: GOOGLE_APPLICATION_CREDENTIALS env var (file path — standard Firebase approach)
+    const credentialsPath = this.configService.get<string>('GOOGLE_APPLICATION_CREDENTIALS');
+    if (credentialsPath) {
+      try {
+        admin.initializeApp({ credential: admin.credential.applicationDefault() });
+        this.fcmAvailable = true;
+        this.logger.log('Firebase Admin initialized via GOOGLE_APPLICATION_CREDENTIALS');
+        return;
+      } catch (error) {
+        this.logger.error(`Firebase init via credentials file failed: ${error}`);
+      }
+    }
+
+    // Option 2: FIREBASE_SERVICE_ACCOUNT_BASE64 (base64-encoded JSON — for Docker/CI)
+    const base64 = this.configService.get<string>('FIREBASE_SERVICE_ACCOUNT_BASE64');
+    if (base64) {
+      try {
+        const serviceAccount = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+        this.fcmAvailable = true;
+        this.logger.log('Firebase Admin initialized via FIREBASE_SERVICE_ACCOUNT_BASE64');
+        return;
+      } catch (error) {
+        this.logger.error(`Firebase init from base64 failed: ${error}`);
+      }
+    }
+
+    this.logger.warn('Firebase not configured — push notifications will be logged only');
   }
 
   async registerToken(asociadoId: string, dto: RegisterTokenDto) {
@@ -61,7 +98,7 @@ export class NotificacionesService {
       return { enviado: true, canal: 'sms' };
     }
 
-    // Push notification via FCM
+    // Push notification via FCM HTTP v1
     return this.sendPush(dto.asociadoId, dto.titulo, dto.mensaje, dto.data);
   }
 
@@ -83,47 +120,82 @@ export class NotificacionesService {
 
     const tokenList = tokens.map((t) => t.token);
 
-    if (!this.fcmServerKey) {
+    if (!this.fcmAvailable) {
       this.logger.log(
         `[DEV PUSH] To: ${asociadoId} | Title: ${titulo} | Body: ${mensaje} | Tokens: ${tokenList.length}`,
       );
       return { enviado: true, canal: 'push', modo: 'dev' };
     }
 
-    // FCM HTTP v1 send
+    // FCM HTTP v1 via firebase-admin SDK
     try {
-      const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `key=${this.fcmServerKey}`,
-        },
-        body: JSON.stringify({
-          registration_ids: tokenList,
-          notification: { title: titulo, body: mensaje },
-          data: data || {},
-        }),
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens: tokenList,
+        notification: { title: titulo, body: mensaje },
+        data: data || {},
       });
 
-      const result = await response.json();
-      this.logger.log(`FCM response for ${asociadoId}: success=${result.success}, failure=${result.failure}`);
+      this.logger.log(
+        `FCM response for ${asociadoId}: success=${response.successCount}, failure=${response.failureCount}`,
+      );
 
-      // Deactivate invalid tokens
-      if (result.results) {
-        for (let i = 0; i < result.results.length; i++) {
-          if (result.results[i].error === 'NotRegistered' || result.results[i].error === 'InvalidRegistration') {
+      // Deactivate invalid tokens based on error codes
+      for (let i = 0; i < response.responses.length; i++) {
+        const resp = response.responses[i];
+        if (!resp.success && resp.error) {
+          const code = resp.error.code;
+          if (
+            code === 'messaging/registration-token-not-registered' ||
+            code === 'messaging/invalid-registration-token'
+          ) {
             await this.prisma.dispositivoToken.updateMany({
               where: { token: tokenList[i] },
               data: { activo: false },
             });
+            this.logger.log(`Deactivated invalid token for asociado ${asociadoId}`);
           }
         }
       }
 
-      return { enviado: true, canal: 'push', exitosos: result.success, fallidos: result.failure };
+      return { enviado: true, canal: 'push', exitosos: response.successCount, fallidos: response.failureCount };
     } catch (error) {
       this.logger.error(`FCM send failed for ${asociadoId}: ${error}`);
       return { enviado: false, canal: 'push', error: 'FCM send failed' };
+    }
+  }
+
+  /**
+   * Limpieza periódica de tokens obsoletos.
+   * - Elimina tokens inactivos con 30+ días sin actualización.
+   * - Desactiva tokens activos con 60+ días sin actualización (probablemente expirados).
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async cleanupStaleTokens() {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const deleted = await this.prisma.dispositivoToken.deleteMany({
+      where: {
+        activo: false,
+        updatedAt: { lt: thirtyDaysAgo },
+      },
+    });
+
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+    const deactivated = await this.prisma.dispositivoToken.updateMany({
+      where: {
+        activo: true,
+        updatedAt: { lt: sixtyDaysAgo },
+      },
+      data: { activo: false },
+    });
+
+    if (deleted.count > 0 || deactivated.count > 0) {
+      this.logger.log(
+        `Token cleanup: ${deleted.count} deleted, ${deactivated.count} deactivated`,
+      );
     }
   }
 }
