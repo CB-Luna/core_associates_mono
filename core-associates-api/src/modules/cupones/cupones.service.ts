@@ -1,16 +1,21 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { randomBytes, createHmac } from 'crypto';
 import * as QRCode from 'qrcode';
 
-const HMAC_SECRET = 'core-associates-secret';
-
 @Injectable()
 export class CuponesService {
   private readonly logger = new Logger(CuponesService.name);
+  private readonly hmacSecret: string;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {
+    this.hmacSecret = this.configService.get<string>('HMAC_SECRET', 'core-associates-secret');
+  }
 
   async generateCupon(asociadoId: string, promocionId: string) {
     const promocion = await this.prisma.promocion.findUnique({
@@ -44,7 +49,7 @@ export class CuponesService {
       asociadoId,
       proveedorId: promocion.proveedorId,
     });
-    const qrFirma = createHmac('sha256', HMAC_SECRET)
+    const qrFirma = createHmac('sha256', this.hmacSecret)
       .update(qrPayload)
       .digest('hex')
       .substring(0, 128);
@@ -133,7 +138,7 @@ export class CuponesService {
 
   async validateCoupon(payload: string, firma: string, proveedorId: string) {
     // Verify HMAC
-    const expectedFirma = createHmac('sha256', HMAC_SECRET)
+    const expectedFirma = createHmac('sha256', this.hmacSecret)
       .update(payload)
       .digest('hex')
       .substring(0, 128);

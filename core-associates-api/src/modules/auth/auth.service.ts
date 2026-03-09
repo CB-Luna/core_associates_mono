@@ -37,11 +37,13 @@ export class AuthService {
     telefono: string,
     otp: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    // DEV bypass: accept '000000' in non-production
+    // DEMO bypass: número de demo siempre acepta 000000 (para presentaciones)
+    const isDemoBypass = telefono === '+525512345678' && otp === '000000';
+    // DEV bypass: cualquier teléfono acepta 000000 en entorno no-producción
     const isDev = this.configService.get<string>('NODE_ENV') !== 'production';
-    if (isDev && otp === '000000') {
-      // Bypass para desarrollo
-    } else {
+    const isDevBypass = isDev && otp === '000000';
+
+    if (!isDemoBypass && !isDevBypass) {
       // Verificar OTP desde Redis
       const storedOtp = await this.redis.get(`${OTP_KEY_PREFIX}${telefono}`);
       if (!storedOtp || storedOtp !== otp) {
@@ -62,7 +64,10 @@ export class AuthService {
       asociado = await this.prisma.asociado.create({
         data: {
           idUnico,
+          nombre: '',
+          apellidoPat: '',
           telefono,
+          fechaNacimiento: new Date('2000-01-01'),
           estado: 'pendiente',
         },
       });

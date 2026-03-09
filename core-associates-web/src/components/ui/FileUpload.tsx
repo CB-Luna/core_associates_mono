@@ -21,6 +21,7 @@ export function FileUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [selected, setSelected] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<Record<number, string>>({});
   const [error, setError] = useState('');
 
   const processFiles = useCallback(
@@ -38,6 +39,16 @@ export function FileUpload({
       }
       const result = multiple ? valid : valid.slice(0, 1);
       setSelected(result);
+      // Generate image previews
+      const newPreviews: Record<number, string> = {};
+      result.forEach((file, i) => {
+        if (file.type.startsWith('image/')) {
+          newPreviews[i] = URL.createObjectURL(file);
+        }
+      });
+      // Revoke old preview URLs
+      Object.values(previews).forEach((url) => URL.revokeObjectURL(url));
+      setPreviews(newPreviews);
       if (result.length > 0) onFiles(result);
     },
     [maxSizeMB, multiple, onFiles],
@@ -52,9 +63,15 @@ export function FileUpload({
   };
 
   const removeFile = (index: number) => {
+    if (previews[index]) URL.revokeObjectURL(previews[index]);
     setSelected((prev) => {
       const next = prev.filter((_, i) => i !== index);
       onFiles(next);
+      return next;
+    });
+    setPreviews((prev) => {
+      const next = { ...prev };
+      delete next[index];
       return next;
     });
   };
@@ -91,7 +108,12 @@ export function FileUpload({
         <div className="mt-3 space-y-2">
           {selected.map((file, i) => (
             <div key={`${file.name}-${i}`} className="flex items-center gap-2 rounded-lg bg-gray-50 p-2 text-sm">
-              <FileText className="h-4 w-4 shrink-0 text-gray-400" />
+              {previews[i] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={previews[i]} alt={file.name} className="h-10 w-10 shrink-0 rounded object-cover" />
+              ) : (
+                <FileText className="h-4 w-4 shrink-0 text-gray-400" />
+              )}
               <span className="min-w-0 flex-1 truncate text-gray-700">{file.name}</span>
               <span className="shrink-0 text-xs text-gray-400">{(file.size / 1024).toFixed(0)} KB</span>
               <button onClick={() => removeFile(i)} className="shrink-0 text-gray-400 hover:text-red-500">

@@ -10,6 +10,7 @@ interface MapMarker {
   label: string;
   popup?: string;
   color?: 'blue' | 'red' | 'green' | 'orange';
+  id?: string;
 }
 
 interface MapViewProps {
@@ -18,6 +19,8 @@ interface MapViewProps {
   zoom?: number;
   className?: string;
   height?: string;
+  onMarkerClick?: (marker: MapMarker) => void;
+  activeMarkerId?: string;
 }
 
 const MARKER_COLORS: Record<string, string> = {
@@ -42,7 +45,7 @@ function createIcon(color: string) {
   });
 }
 
-export function MapView({ markers, center, zoom = 13, className = '', height = '300px' }: MapViewProps) {
+export function MapView({ markers, center, zoom = 13, className = '', height = '300px', onMarkerClick, activeMarkerId }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
 
@@ -77,7 +80,9 @@ export function MapView({ markers, center, zoom = 13, className = '', height = '
 
     markers.forEach((m) => {
       const marker = L.marker([m.lat, m.lng], { icon: createIcon(m.color || 'blue') }).addTo(map);
-      if (m.popup || m.label) {
+      if (onMarkerClick) {
+        marker.on('click', () => onMarkerClick(m));
+      } else if (m.popup || m.label) {
         marker.bindPopup(`<strong>${m.label}</strong>${m.popup ? `<br/>${m.popup}` : ''}`);
       }
     });

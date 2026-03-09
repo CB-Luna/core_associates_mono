@@ -10,7 +10,7 @@ import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
 import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
-import { Download, Printer, Eye } from 'lucide-react';
+import { Download, Printer, Eye, ExternalLink, Phone, Calendar } from 'lucide-react';
 
 const estadoOptions = [
   { label: 'Activo', value: 'activo' },
@@ -77,22 +77,35 @@ export default function AsociadosPage() {
   };
 
   const columns: ColumnDef<Asociado, any>[] = [
-    { accessorKey: 'idUnico', header: 'ID', cell: ({ getValue }) => (
-      <span className="font-mono text-xs text-gray-400">{getValue() as string}</span>
-    ) },
     {
-      id: 'nombre',
-      header: 'Nombre',
+      id: 'asociado',
+      header: 'Asociado',
       cell: ({ row }) => {
         const a = row.original;
+        const initials = `${a.nombre?.[0] || ''}${a.apellidoPat?.[0] || ''}`.toUpperCase();
+        const fullName = `${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''}`.trim();
         return (
-          <span className="font-medium text-gray-900">
-            {`${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''}`.trim()}
-          </span>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-xs font-bold text-white shadow-sm">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-gray-900">{fullName}</p>
+              <p className="truncate font-mono text-[11px] text-gray-400">{a.idUnico}</p>
+            </div>
+          </div>
         );
       },
     },
-    { accessorKey: 'telefono', header: 'Teléfono' },
+    {
+      accessorKey: 'telefono',
+      header: 'Teléfono',
+      cell: ({ getValue }) => (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+          <Phone className="h-3 w-3" />{getValue() as string}
+        </span>
+      ),
+    },
     {
       accessorKey: 'estado',
       header: 'Estado',
@@ -108,19 +121,33 @@ export default function AsociadosPage() {
     {
       accessorKey: 'fechaRegistro',
       header: 'Registro',
-      cell: ({ getValue }) => new Date(getValue() as string).toLocaleDateString('es-MX'),
+      cell: ({ getValue }) => (
+        <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+          <Calendar className="h-3 w-3 text-gray-400" />
+          {new Date(getValue() as string).toLocaleDateString('es-MX')}
+        </span>
+      ),
     },
     {
       id: 'actions',
       header: '',
       cell: ({ row }) => (
-        <button
-          onClick={() => router.push(`/asociados/${row.original.id}`)}
-          title="Ver detalle"
-          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
-        >
-          <Eye className="h-4 w-4" />
-        </button>
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); router.push(`/asociados/${row.original.id}`); }}
+            title="Ver detalle"
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
+          >
+            <Eye className="h-4 w-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); window.open(`/asociados/${row.original.id}`, '_blank'); }}
+            title="Abrir en nueva pestaña"
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        </div>
       ),
     },
   ];

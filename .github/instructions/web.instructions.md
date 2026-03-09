@@ -43,7 +43,9 @@ await apiClient('/endpoint', { method: 'POST', body: JSON.stringify(data) });
 await apiClient('/endpoint', { method: 'POST', body: formData });
 ```
 
-- Base: `NEXT_PUBLIC_API_URL || http://localhost:3501`, prefijo `/api/v1`.
+- Base: `NEXT_PUBLIC_API_URL || ''` (vacío), prefijo `/api/v1`.
+- **En producción (Docker)**: `NEXT_PUBLIC_API_URL=""` → genera rutas relativas `/api/v1/...` → Nginx proxea al backend. **NUNCA** usar `http://localhost:3501` en docker-compose porque Next.js bake-a la variable en build y el browser del usuario llamaría a su propia máquina.
+- **En desarrollo local** (sin Docker): definir `NEXT_PUBLIC_API_URL=http://localhost:3501` en `.env.local`.
 - Inyecta `Bearer token` de `localStorage`. En 401: limpia storage y redirige a `/login`.
 - Interfaces de dominio en `lib/api-types.ts`. Respuesta paginada: `{ data: T[], meta: { total, page, limit, totalPages } }`.
 

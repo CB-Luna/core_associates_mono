@@ -89,6 +89,29 @@ Cada DTO documenta con `@ApiProperty()` / `@ApiPropertyOptional()`. Controllers 
 - `PrismaModule` es **global** — no necesita importarse en cada módulo.
 - Errores Prisma: usar try/catch para `PrismaClientKnownRequestError` cuando sea relevante (ej. unique constraint).
 
+## CORS
+
+Configurado en `main.ts` con whitelist explícita:
+```typescript
+app.enableCors({
+  origin: [
+    'http://localhost:3600',          // Next.js CRM local
+    'http://localhost:8580',          // Nginx Gateway local
+    'http://216.250.125.239:8580',    // Nginx Gateway producción
+  ],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  credentials: true,
+});
+```
+
+**Al desplegar en un nuevo dominio/IP**, agregar la URL pública a la lista `origin`. En producción, el CRM web usa rutas relativas vía Nginx (mismo origen), pero el CORS sigue necesario como capa de seguridad adicional.
+
+## Docker (`docker-entrypoint.sh`)
+
+- Usa `npm ci` **sin** `--ignore-scripts` → necesario para compilar módulos nativos (`bcrypt`).
+- Ejecuta `prisma migrate deploy` (solo aplica migraciones pendientes, no crea nuevas).
+- Luego arranca con `npm run start:dev` (watch mode en target development).
+
 ## Swagger
 
 URL: `http://localhost:3501/api/docs`. Prefijo global: `/api/v1`.

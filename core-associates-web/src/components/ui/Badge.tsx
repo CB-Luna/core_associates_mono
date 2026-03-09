@@ -5,12 +5,12 @@ import { cn } from '@/lib/utils';
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'secondary';
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: 'bg-gray-100 text-gray-700',
-  success: 'bg-green-100 text-green-700',
-  warning: 'bg-yellow-100 text-yellow-700',
-  danger: 'bg-red-100 text-red-700',
-  info: 'bg-blue-100 text-blue-700',
-  secondary: 'bg-purple-100 text-purple-700',
+  default: 'bg-gray-50 text-gray-600 ring-1 ring-gray-200',
+  success: 'bg-green-50 text-green-700 ring-1 ring-green-200',
+  warning: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  danger: 'bg-red-50 text-red-700 ring-1 ring-red-200',
+  info: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+  secondary: 'bg-purple-50 text-purple-700 ring-1 ring-purple-200',
 };
 
 interface BadgeProps {

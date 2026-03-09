@@ -9,6 +9,9 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
@@ -34,7 +37,15 @@ export class DocumentosController {
   @UseInterceptors(FileInterceptor('file'))
   uploadDocument(
     @CurrentUser('id') asociadoId: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }), // 10 MB
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp)|application\/pdf$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
     @Body() dto: UploadDocumentDto,
   ) {
     return this.documentosService.uploadDocument(asociadoId, file, dto.tipo);

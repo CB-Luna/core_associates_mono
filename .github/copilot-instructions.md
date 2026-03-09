@@ -65,6 +65,24 @@ flutter test               # Tests unitarios
 
 PostgreSQL `5435`, Redis `6382`, MinIO API `9002` / Console `9003`, API `3501`, Web `3600`, Nginx `8580`, pgAdmin `5056`.
 
+## Despliegue — Docker Compose + Nginx
+
+**Servidor**: IONOS VPS `216.250.125.239`, usuario `cbluna`, directorio `/home/cbluna/apps/core-associates`.
+
+**Patrón Nginx reverse proxy** (mismo origen → sin CORS en browser):
+```
+Browser → http://<IP>:8580/api/v1/... → Nginx → http://api:3501 (red interna Docker)
+Browser → http://<IP>:8580/...          → Nginx → http://web:3000 (red interna Docker)
+```
+
+**Reglas críticas para evitar errores de CORS/despliegue:**
+
+1. **`NEXT_PUBLIC_API_URL` debe ser `""` (vacío) en `docker-compose.yml`**. Next.js bake-a esta variable en el bundle del cliente. Si apunta a `http://localhost:3501`, el browser del usuario intentará llamar a su propia máquina local, no al servidor. Con valor vacío, `api-client.ts` genera rutas relativas (`/api/v1/...`) que Nginx proxea internamente.
+2. **CORS whitelist en `main.ts`** debe incluir la URL pública del servidor (ej. `http://216.250.125.239:8580`), además de `http://localhost:3600` y `http://localhost:8580` para desarrollo local.
+3. **`docker-entrypoint.sh`**: usar `npm ci` **sin** `--ignore-scripts`. El flag `--ignore-scripts` impide la compilación de módulos nativos como `bcrypt`, causando `MODULE_NOT_FOUND` en runtime.
+4. **Rebuild web tras cambios en env vars**: `NEXT_PUBLIC_*` se incorporan en build-time. Tras modificarlas: `docker compose build web && docker compose up -d web`.
+5. **Seed de datos**: `prisma/seed-demo.ts` contiene datos de demostración. Compilar con `npx tsc` → copiar JS al contenedor → ejecutar con `node`. Las contraseñas del seed son: admin `Admin2026!`, operador `Operador2026!`, proveedor `Proveedor2026!`.
+
 ## Instrucciones por subproyecto
 
 Las reglas específicas de cada componente están en `.github/instructions/`:

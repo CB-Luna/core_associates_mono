@@ -8,7 +8,7 @@ import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
 import { exportToCSV, exportToPDFNative } from '@/lib/export-utils';
-import { Download, FileDown, X, QrCode, Eye } from 'lucide-react';
+import { Download, FileDown, X, QrCode, Eye, Ticket, Calendar } from 'lucide-react';
 import { QRDisplay } from '@/components/ui/QRDisplay';
 import type { Proveedor } from '@/lib/api-types';
 
@@ -93,33 +93,62 @@ export default function CuponesPage() {
   }, [fetchData]);
 
   const columns: ColumnDef<any, any>[] = [
-    { accessorKey: 'codigo', header: 'Código', cell: ({ getValue }) => (
-      <span className="font-mono text-xs text-gray-400">{getValue() as string}</span>
-    ) },
+    {
+      id: 'cupon',
+      header: 'Cupón',
+      cell: ({ row }) => {
+        const c = row.original;
+        return (
+          <div className="flex items-center gap-3">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+              c.estado === 'activo' ? 'bg-green-50 text-green-600' :
+              c.estado === 'canjeado' ? 'bg-blue-50 text-blue-600' :
+              'bg-gray-50 text-gray-400'
+            }`}>
+              <Ticket className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-mono text-xs font-bold text-gray-700">{c.codigo}</p>
+              <p className="truncate text-[11px] text-gray-400">{c.promocion?.titulo || '—'}</p>
+            </div>
+          </div>
+        );
+      },
+    },
     {
       id: 'asociado',
       header: 'Asociado',
       cell: ({ row }) => {
         const a = row.original.asociado;
-        return a ? (
-          <span className="font-medium text-gray-900">{`${a.nombre} ${a.apellidoPat}`}</span>
-        ) : <span className="text-gray-400">—</span>;
+        if (!a) return <span className="text-gray-300">—</span>;
+        const initials = `${a.nombre?.[0] || ''}${a.apellidoPat?.[0] || ''}`.toUpperCase();
+        return (
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-500">
+              {initials}
+            </div>
+            <span className="truncate font-medium text-gray-800">{`${a.nombre} ${a.apellidoPat}`}</span>
+          </div>
+        );
       },
-    },
-    {
-      id: 'promocion',
-      header: 'Promoción',
-      cell: ({ row }) => row.original.promocion?.titulo || <span className="text-gray-400">—</span>,
     },
     {
       id: 'proveedor',
       header: 'Proveedor',
-      cell: ({ row }) => row.original.proveedor?.razonSocial || '—',
+      cell: ({ row }) => {
+        const name = row.original.proveedor?.razonSocial;
+        return name ? <span className="text-gray-600">{name}</span> : <span className="text-gray-300">—</span>;
+      },
     },
     {
       accessorKey: 'fechaVencimiento',
       header: 'Vencimiento',
-      cell: ({ getValue }) => new Date(getValue() as string).toLocaleDateString('es-MX'),
+      cell: ({ getValue }) => (
+        <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+          <Calendar className="h-3 w-3 text-gray-400" />
+          {new Date(getValue() as string).toLocaleDateString('es-MX')}
+        </span>
+      ),
     },
     {
       accessorKey: 'estado',
@@ -136,7 +165,7 @@ export default function CuponesPage() {
         <button
           onClick={(e) => { e.stopPropagation(); setSelectedCupon(row.original); }}
           title="Ver detalle"
-          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
+          className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
         >
           <Eye className="h-4 w-4" />
         </button>

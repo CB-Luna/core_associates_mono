@@ -9,7 +9,15 @@ import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
 import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
-import { Download, Printer, Eye } from 'lucide-react';
+import { Download, Printer, Eye, ExternalLink, Car, Gavel, ShieldAlert, AlertTriangle, HelpCircle, Calendar } from 'lucide-react';
+
+const tipoIcon: Record<string, typeof AlertTriangle> = {
+  accidente: Car, infraccion: Gavel, robo: ShieldAlert, asalto: AlertTriangle, otro: HelpCircle,
+};
+const tipoColorBg: Record<string, string> = {
+  accidente: 'bg-red-50 text-red-500', infraccion: 'bg-amber-50 text-amber-500', robo: 'bg-purple-50 text-purple-500',
+  asalto: 'bg-orange-50 text-orange-500', otro: 'bg-gray-50 text-gray-400',
+};
 
 const estadoOptions = [
   { label: 'Abierto', value: 'abierto' },
@@ -94,22 +102,42 @@ export default function CasosLegalesPage() {
   }, [fetchData]);
 
   const columns: ColumnDef<any, any>[] = [
-    { accessorKey: 'codigo', header: 'Código', cell: ({ getValue }) => (
-      <span className="font-mono text-xs text-gray-400">{getValue() as string}</span>
-    ) },
+    {
+      id: 'caso',
+      header: 'Caso',
+      cell: ({ row }) => {
+        const c = row.original;
+        const TIcon = tipoIcon[c.tipoPercance] || HelpCircle;
+        return (
+          <div className="flex items-center gap-3">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tipoColorBg[c.tipoPercance] || 'bg-gray-50 text-gray-400'}`}>
+              <TIcon className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-mono text-xs font-bold text-gray-700">{c.codigo}</p>
+              <p className="truncate text-[11px] capitalize text-gray-400">{c.tipoPercance}</p>
+            </div>
+          </div>
+        );
+      },
+    },
     {
       id: 'asociado',
       header: 'Asociado',
       cell: ({ row }) => {
         const a = row.original.asociado;
-        return a ? (
-          <span className="font-medium text-gray-900">{`${a.nombre} ${a.apellidoPat}`}</span>
-        ) : <span className="text-gray-400">—</span>;
+        if (!a) return <span className="text-gray-300">—</span>;
+        const initials = `${a.nombre?.[0] || ''}${a.apellidoPat?.[0] || ''}`.toUpperCase();
+        return (
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-500">
+              {initials}
+            </div>
+            <span className="truncate font-medium text-gray-800">{`${a.nombre} ${a.apellidoPat}`}</span>
+          </div>
+        );
       },
     },
-    { accessorKey: 'tipoPercance', header: 'Tipo', cell: ({ getValue }) => (
-      <span className="capitalize">{getValue() as string}</span>
-    ) },
     {
       accessorKey: 'prioridad',
       header: 'Prioridad',
@@ -121,37 +149,49 @@ export default function CasosLegalesPage() {
     {
       id: 'abogado',
       header: 'Abogado',
-      cell: ({ row }) => row.original.abogado?.razonSocial || 'Sin asignar',
-    },
-    {
-      id: 'notas',
-      header: 'Notas',
-      cell: ({ row }) => row.original._count?.notas || 0,
+      cell: ({ row }) => {
+        const name = row.original.abogado?.razonSocial;
+        return name ? <span className="text-gray-600">{name}</span> : <span className="text-xs text-gray-300">Sin asignar</span>;
+      },
     },
     {
       accessorKey: 'fechaApertura',
       header: 'Apertura',
-      cell: ({ getValue }) => new Date(getValue() as string).toLocaleDateString('es-MX'),
+      cell: ({ getValue }) => (
+        <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+          <Calendar className="h-3 w-3 text-gray-400" />
+          {new Date(getValue() as string).toLocaleDateString('es-MX')}
+        </span>
+      ),
     },
     {
       accessorKey: 'estado',
       header: 'Estado',
       cell: ({ getValue }) => {
         const estado = getValue() as string;
-        return <Badge variant={estadoVariant[estado] || 'default'}>{estado}</Badge>;
+        return <Badge variant={estadoVariant[estado] || 'default'}>{estado?.replace('_', ' ')}</Badge>;
       },
     },
     {
       id: 'actions',
       header: '',
       cell: ({ row }) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); router.push(`/casos-legales/${row.original.id}`); }}
-          title="Ver detalle"
-          className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
-        >
-          <Eye className="h-4 w-4" />
-        </button>
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); router.push(`/casos-legales/${row.original.id}`); }}
+            title="Ver detalle"
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
+          >
+            <Eye className="h-4 w-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); window.open(`/casos-legales/${row.original.id}`, '_blank'); }}
+            title="Abrir en nueva pestaña"
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        </div>
       ),
     },
   ];

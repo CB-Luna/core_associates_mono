@@ -8,7 +8,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { Badge } from '@/components/ui/Badge';
 import { PromocionFormDialog } from '@/components/promociones/PromocionFormDialog';
-import { Pause, Play, StopCircle } from 'lucide-react';
+import { Pause, Play, StopCircle, Percent, DollarSign, Calendar, Tag } from 'lucide-react';
 
 const estadoOptions = [
   { label: 'Activa', value: 'activa' },
@@ -67,22 +67,34 @@ export default function PromocionesPage() {
   };
 
   const columns: ColumnDef<Promocion, any>[] = [
-    { accessorKey: 'titulo', header: 'Título', cell: ({ getValue }) => (
-      <span className="font-medium text-gray-900">{getValue() as string}</span>
-    ) },
     {
-      id: 'proveedor',
-      header: 'Proveedor',
-      cell: ({ row }) => row.original.proveedor?.razonSocial || '—',
+      id: 'promocion',
+      header: 'Promoción',
+      cell: ({ row }) => {
+        const p = row.original;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+              <Tag className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-gray-900">{p.titulo}</p>
+              <p className="truncate text-[11px] text-gray-400">{p.proveedor?.razonSocial || '—'}</p>
+            </div>
+          </div>
+        );
+      },
     },
     {
       id: 'descuento',
       header: 'Descuento',
       cell: ({ row }) => {
         const p = row.original;
+        const isPct = p.tipoDescuento === 'porcentaje';
         return (
-          <span className="font-semibold text-green-700">
-            {p.tipoDescuento === 'porcentaje' ? `${p.valorDescuento}%` : `$${p.valorDescuento}`}
+          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${isPct ? 'bg-green-50 text-green-700' : 'bg-emerald-50 text-emerald-700'}`}>
+            {isPct ? <Percent className="h-3 w-3" /> : <DollarSign className="h-3 w-3" />}
+            {isPct ? `${p.valorDescuento}%` : `$${p.valorDescuento}`}
           </span>
         );
       },
@@ -92,13 +104,25 @@ export default function PromocionesPage() {
       header: 'Periodo',
       cell: ({ row }) => {
         const p = row.original;
-        return `${new Date(p.fechaInicio).toLocaleDateString('es-MX')} - ${new Date(p.fechaFin).toLocaleDateString('es-MX')}`;
+        return (
+          <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+            <Calendar className="h-3 w-3 text-gray-400" />
+            {new Date(p.fechaInicio).toLocaleDateString('es-MX')} — {new Date(p.fechaFin).toLocaleDateString('es-MX')}
+          </span>
+        );
       },
     },
     {
       id: 'cupones',
       header: 'Cupones',
-      cell: ({ row }) => row.original._count?.cupones || 0,
+      cell: ({ row }) => {
+        const count = row.original._count?.cupones || 0;
+        return (
+          <span className={`inline-flex min-w-[2rem] items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${count > 0 ? 'bg-blue-50 text-blue-700' : 'bg-gray-50 text-gray-400'}`}>
+            {count}
+          </span>
+        );
+      },
     },
     {
       accessorKey: 'estado',
@@ -120,29 +144,17 @@ export default function PromocionesPage() {
         return (
           <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
             {p.estado === 'activa' && (
-              <button
-                onClick={() => handleEstadoChange(p.id, 'pausada')}
-                title="Pausar"
-                className="rounded-lg p-1.5 text-amber-500 transition-colors hover:bg-amber-50"
-              >
+              <button onClick={() => handleEstadoChange(p.id, 'pausada')} title="Pausar" className="rounded-lg p-2 text-amber-500 transition-colors hover:bg-amber-50">
                 <Pause className="h-4 w-4" />
               </button>
             )}
             {p.estado === 'pausada' && (
-              <button
-                onClick={() => handleEstadoChange(p.id, 'activa')}
-                title="Activar"
-                className="rounded-lg p-1.5 text-green-500 transition-colors hover:bg-green-50"
-              >
+              <button onClick={() => handleEstadoChange(p.id, 'activa')} title="Activar" className="rounded-lg p-2 text-green-500 transition-colors hover:bg-green-50">
                 <Play className="h-4 w-4" />
               </button>
             )}
             {p.estado !== 'finalizada' && (
-              <button
-                onClick={() => handleEstadoChange(p.id, 'finalizada')}
-                title="Finalizar"
-                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100"
-              >
+              <button onClick={() => handleEstadoChange(p.id, 'finalizada')} title="Finalizar" className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100">
                 <StopCircle className="h-4 w-4" />
               </button>
             )}
