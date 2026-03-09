@@ -198,7 +198,7 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
                 subtitle: const Text('Se usará como vehículo predeterminado'),
                 value: _esPrincipal,
                 onChanged: (v) => setState(() => _esPrincipal = v),
-                activeColor: AppColors.primary,
+                activeThumbColor: AppColors.primary,
                 contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 24),

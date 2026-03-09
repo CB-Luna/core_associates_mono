@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:core_associates_app/features/home/presentation/screens/home_shell.dart';
 
 void main() {
-  GoRouter _createRouter() => GoRouter(
+  GoRouter createRouter() => GoRouter(
     initialLocation: '/home',
     routes: [
       ShellRoute(
@@ -13,19 +13,19 @@ void main() {
         routes: [
           GoRoute(
             path: '/home',
-            builder: (_, __) => const Center(child: Text('Home Content')),
+            builder: (_, _) => const Center(child: Text('Home Content')),
           ),
           GoRoute(
             path: '/promotions',
-            builder: (_, __) => const Center(child: Text('Promotions')),
+            builder: (_, _) => const Center(child: Text('Promotions')),
           ),
           GoRoute(
             path: '/legal',
-            builder: (_, __) => const Center(child: Text('Legal')),
+            builder: (_, _) => const Center(child: Text('Legal')),
           ),
           GoRoute(
             path: '/profile',
-            builder: (_, __) => const Center(child: Text('Profile')),
+            builder: (_, _) => const Center(child: Text('Profile')),
           ),
         ],
       ),
@@ -34,7 +34,7 @@ void main() {
 
   group('HomeShell', () {
     testWidgets('renders all four navigation tabs', (tester) async {
-      final router = _createRouter();
+      final router = createRouter();
       await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pumpAndSettle();
 
@@ -45,7 +45,7 @@ void main() {
     });
 
     testWidgets('has BottomNavigationBar with 4 items', (tester) async {
-      final router = _createRouter();
+      final router = createRouter();
       await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pumpAndSettle();
 
@@ -57,7 +57,7 @@ void main() {
     });
 
     testWidgets('renders child content', (tester) async {
-      final router = _createRouter();
+      final router = createRouter();
       await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pumpAndSettle();
 

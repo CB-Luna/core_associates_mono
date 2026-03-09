@@ -56,7 +56,8 @@ class ApiException {
 /// Extrae un mensaje legible de cualquier error, priorizando [ApiException].
 String errorMessage(Object error) {
   if (error is ApiException) return error.message;
-  if (error is DioException)
+  if (error is DioException) {
     return ApiException.fromDioException(error).message;
+  }
   return 'Ocurrió un error inesperado.';
 }
