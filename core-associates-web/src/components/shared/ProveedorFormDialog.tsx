@@ -109,7 +109,7 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
         // Si se proporcionaron credenciales CRM, crear el usuario vinculado
         if (crmEmail && crmPassword) {
           try {
-            await apiClient('/auth/usuarios', {
+            await apiClient('/auth/register-admin', {
               method: 'POST',
               body: JSON.stringify({
                 email: crmEmail,

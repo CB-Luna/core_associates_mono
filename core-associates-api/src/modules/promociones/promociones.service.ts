@@ -100,7 +100,7 @@ export class PromocionesService {
   async create(dto: CreatePromocionDto) {
     return this.prisma.promocion.create({
       data: {
-        proveedorId: dto.proveedorId,
+        proveedorId: dto.proveedorId!,
         titulo: dto.titulo,
         descripcion: dto.descripcion,
         tipoDescuento: dto.tipoDescuento,

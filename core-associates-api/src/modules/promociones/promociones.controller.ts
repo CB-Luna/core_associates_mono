@@ -154,6 +154,9 @@ export class PromocionesController {
   @ApiResponse({ status: 401, description: 'No autenticado' })
   @ApiResponse({ status: 403, description: 'Solo admin' })
   create(@Body() dto: CreatePromocionDto) {
+    if (!dto.proveedorId) {
+      throw new BadRequestException('proveedorId es requerido');
+    }
     return this.promocionesService.create(dto);
   }
 

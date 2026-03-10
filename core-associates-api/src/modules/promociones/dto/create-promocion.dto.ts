@@ -7,9 +7,10 @@ enum TipoDescuento {
 }
 
 export class CreatePromocionDto {
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Requerido para admin/operador, omitido por proveedor (se toma del JWT)' })
+  @IsOptional()
   @IsString()
-  proveedorId: string;
+  proveedorId?: string;
 
   @ApiProperty()
   @IsString()

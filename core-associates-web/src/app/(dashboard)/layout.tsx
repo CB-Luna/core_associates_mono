@@ -17,6 +17,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
+  const loadFromStorage = useAuthStore((s) => s.loadFromStorage);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -24,9 +25,10 @@ export default function DashboardLayout({
     if (!token) {
       router.replace('/login');
     } else {
+      loadFromStorage();
       setReady(true);
     }
-  }, [router]);
+  }, [router, loadFromStorage]);
 
   // Route guard: redirect proveedor away from restricted routes
   useEffect(() => {
