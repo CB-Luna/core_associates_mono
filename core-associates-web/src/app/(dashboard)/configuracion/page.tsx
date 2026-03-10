@@ -13,11 +13,17 @@ import { type UsuarioCRM, type AuditoriaRecord } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
 import { Pencil, KeyRound, Power, Shield, Users } from 'lucide-react';
 
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+
 const createUserSchema = z.object({
   nombre: z.string().min(2, 'Mínimo 2 caracteres'),
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Mínimo 6 caracteres'),
+  password: z.string().min(8, 'Mínimo 8 caracteres').regex(passwordRegex, 'Debe incluir mayúscula, minúscula y número'),
+  confirmPassword: z.string().min(1, 'Confirma la contraseña'),
   rol: z.enum(['operador', 'admin']),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Las contraseñas no coinciden',
+  path: ['confirmPassword'],
 });
 
 const editUserSchema = z.object({
@@ -27,12 +33,16 @@ const editUserSchema = z.object({
 });
 
 const resetPasswordSchema = z.object({
-  password: z.string().min(6, 'Mínimo 6 caracteres'),
+  password: z.string().min(8, 'Mínimo 8 caracteres').regex(passwordRegex, 'Debe incluir mayúscula, minúscula y número'),
+  confirmPassword: z.string().min(1, 'Confirma la contraseña'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Las contraseñas no coinciden',
+  path: ['confirmPassword'],
 });
 
-type CreateUserData = z.infer<typeof createUserSchema>;
+type CreateUserInput = z.input<typeof createUserSchema>;
 type EditUserData = z.infer<typeof editUserSchema>;
-type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
+type ResetPasswordInput = z.input<typeof resetPasswordSchema>;
 
 interface SystemInfo {
   apiVersion: string;
@@ -54,9 +64,9 @@ export default function ConfiguracionPage() {
   const [saving, setSaving] = useState(false);
 
   // RHF forms
-  const createForm = useForm<CreateUserData>({
+  const createForm = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: { nombre: '', email: '', password: '', rol: 'operador' },
+    defaultValues: { nombre: '', email: '', password: '', confirmPassword: '', rol: 'operador' },
   });
 
   const editForm = useForm<EditUserData>({
@@ -64,9 +74,9 @@ export default function ConfiguracionPage() {
     defaultValues: { nombre: '', email: '', rol: 'operador' },
   });
 
-  const resetForm = useForm<ResetPasswordData>({
+  const resetForm = useForm<ResetPasswordInput>({
     resolver: zodResolver(resetPasswordSchema),
-    defaultValues: { password: '' },
+    defaultValues: { password: '', confirmPassword: '' },
   });
 
   // Auditoría state
@@ -116,12 +126,13 @@ export default function ConfiguracionPage() {
     if (activeTab === 'auditoria') fetchAuditLogs();
   }, [activeTab, fetchAuditLogs]);
 
-  const handleCreateUser = async (data: CreateUserData) => {
+  const handleCreateUser = async (data: CreateUserInput) => {
     setSaving(true);
     try {
+      const { confirmPassword: _, ...payload } = data;
       await apiClient('/auth/register-admin', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       setShowForm(false);
       createForm.reset();
@@ -166,13 +177,14 @@ export default function ConfiguracionPage() {
     }
   };
 
-  const handleResetPassword = async (data: ResetPasswordData) => {
+  const handleResetPassword = async (data: ResetPasswordInput) => {
     if (!resetUserId) return;
     setSaving(true);
     try {
+      const { confirmPassword: _, ...payload } = data;
       await apiClient(`/auth/users/${resetUserId}/reset-password`, {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       setResetUserId(null);
       resetForm.reset();
@@ -363,6 +375,11 @@ export default function ConfiguracionPage() {
                   {createForm.formState.errors.password && <p className="mt-1 text-xs text-red-600">{createForm.formState.errors.password.message}</p>}
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700">Confirmar contraseña</label>
+                  <input type="password" {...createForm.register('confirmPassword')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  {createForm.formState.errors.confirmPassword && <p className="mt-1 text-xs text-red-600">{createForm.formState.errors.confirmPassword.message}</p>}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700">Rol</label>
                   <select {...createForm.register('rol')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <option value="operador">Operador</option>
@@ -419,11 +436,19 @@ export default function ConfiguracionPage() {
                 <h4 className="text-sm font-semibold text-orange-800">Resetear contraseña</h4>
                 <button type="button" onClick={() => { setResetUserId(null); resetForm.reset(); }} className="text-sm text-gray-500 hover:text-gray-700">Cancelar</button>
               </div>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <input type="password" {...resetForm.register('password')} placeholder="Nueva contraseña (mín. 6 caracteres)" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500" />
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Nueva contraseña</label>
+                  <input type="password" {...resetForm.register('password')} placeholder="Mín. 8 caracteres" className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500" />
                   {resetForm.formState.errors.password && <p className="mt-1 text-xs text-red-600">{resetForm.formState.errors.password.message}</p>}
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Confirmar contraseña</label>
+                  <input type="password" {...resetForm.register('confirmPassword')} placeholder="Repite la contraseña" className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500" />
+                  {resetForm.formState.errors.confirmPassword && <p className="mt-1 text-xs text-red-600">{resetForm.formState.errors.confirmPassword.message}</p>}
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end">
                 <button type="submit" disabled={saving} className="rounded-lg bg-orange-600 px-6 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50">
                   {saving ? 'Guardando...' : 'Resetear'}
                 </button>

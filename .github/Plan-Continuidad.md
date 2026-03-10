@@ -1,7 +1,7 @@
 # Plan de Continuidad v2 — Core Associates
 
 > **Última actualización**: 10 de marzo de 2026  
-> **Estado general**: API ~95% · Web ~90% · App ~80%  
+> **Estado general**: API ~98% · Web ~95% · App ~95%  
 > **Tests pasando**: 250 (73 API + 39 Web + 138 App)  
 > **Deploy**: IONOS VPS via `.\deploy-ionos.ps1` — dominio `https://core-asoc.cbluna-dev.com`  
 > **Seed producción**: ✅ 12 asociados, 8 proveedores, 8 promociones, 28 cupones, 8 casos legales
@@ -32,6 +32,13 @@
 | C13 | Verificado: widgets reutilizables ya existían en `shared/widgets/` | — |
 | C14 | Verificado: timeline notas ya existía en `asociados/[id]/page.tsx` | — |
 | C15 | Verificado: gráficos línea ya existían en `reportes/page.tsx` | — |
+| C16 | Fix: suppress hydration warning + favicon SVG | `3d31502` |
+| C17 | Fix: syntax error `legal_repository.dart` (collection-if) | `df50abd` |
+| C18 | Fix: agregar `estado` a `ProveedoresQueryDto` + filtro en service (dropdown vacío proveedores) | `df50abd` |
+| C19 | Nuevo endpoint `GET /casos-legales/mis-casos/:id` (detalle caso para asociados) | `df50abd` |
+| C20 | App `getCasoDetail()` usa nuevo endpoint en vez de fetch-all + filter | `df50abd` |
+| C21 | `build-apk-prod.ps1` actualizado: API_URL → `https://core-asoc.cbluna-dev.com` | `6ccb810` |
+| C22 | App verificada corriendo en emulador pixel7 | — |
 
 **Credenciales de prueba disponibles:**
 - **CRM Web**: `admin@coreassociates.com` / `Admin2026!` → `https://core-asoc.cbluna-dev.com`
