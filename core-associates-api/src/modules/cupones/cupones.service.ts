@@ -252,4 +252,52 @@ export class CuponesService {
 
     return { activos, canjeados, vencidos, total };
   }
+
+  // Proveedor: list own coupons with pagination
+  async findByProveedor(proveedorId: string, query: { page?: number; limit?: number; estado?: string; search?: string }) {
+    const { page = 1, limit = 10, estado, search } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = { proveedorId };
+    if (estado) where.estado = estado;
+    if (search) {
+      where.OR = [
+        { codigo: { contains: search, mode: 'insensitive' } },
+        { asociado: { nombre: { contains: search, mode: 'insensitive' } } },
+        { asociado: { apellidoPat: { contains: search, mode: 'insensitive' } } },
+        { promocion: { titulo: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.cupon.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          asociado: { select: { idUnico: true, nombre: true, apellidoPat: true } },
+          promocion: { select: { titulo: true } },
+          proveedor: { select: { razonSocial: true } },
+        },
+      }),
+      this.prisma.cupon.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async getEstadisticasProveedor(proveedorId: string) {
+    const [activos, canjeados, vencidos, total] = await Promise.all([
+      this.prisma.cupon.count({ where: { proveedorId, estado: 'activo' } }),
+      this.prisma.cupon.count({ where: { proveedorId, estado: 'canjeado' } }),
+      this.prisma.cupon.count({ where: { proveedorId, estado: 'vencido' } }),
+      this.prisma.cupon.count({ where: { proveedorId } }),
+    ]);
+
+    return { activos, canjeados, vencidos, total };
+  }
 }

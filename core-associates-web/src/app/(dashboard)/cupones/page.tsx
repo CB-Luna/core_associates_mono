@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { usePermisos } from '@/lib/permisos';
 import { useToast } from '@/components/ui/Toast';
 import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
@@ -29,6 +30,7 @@ const estadoVariant: Record<string, any> = {
 
 export default function CuponesPage() {
   const { toast } = useToast();
+  const { esProveedor } = usePermisos();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -53,11 +55,12 @@ export default function CuponesPage() {
       const params = new URLSearchParams({ page: String(page), limit: '10' });
       if (estadoFilter) params.set('estado', estadoFilter);
       if (search) params.set('search', search);
-      if (proveedorFilter) params.set('proveedorId', proveedorFilter);
+      if (!esProveedor && proveedorFilter) params.set('proveedorId', proveedorFilter);
       if (fechaDesde) params.set('desde', fechaDesde);
       if (fechaHasta) params.set('hasta', fechaHasta);
 
-      const res = await apiClient<PaginatedResponse<any>>(`/cupones/admin/all?${params}`);
+      const endpoint = esProveedor ? '/cupones/mis-cupones-proveedor' : '/cupones/admin/all';
+      const res = await apiClient<PaginatedResponse<any>>(`${endpoint}?${params}`);
       setData(res.data);
       setTotalPages(res.meta.totalPages);
       setTotal(res.meta.total);
@@ -67,29 +70,22 @@ export default function CuponesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, estadoFilter, search, proveedorFilter, fechaDesde, fechaHasta]);
+  }, [page, estadoFilter, search, proveedorFilter, fechaDesde, fechaHasta, esProveedor]);
 
   useEffect(() => {
-    // Fetch stats per estado
-    Promise.all([
-      apiClient<PaginatedResponse<any>>('/cupones/admin/all?limit=1&estado=activo'),
-      apiClient<PaginatedResponse<any>>('/cupones/admin/all?limit=1&estado=canjeado'),
-      apiClient<PaginatedResponse<any>>('/cupones/admin/all?limit=1&estado=vencido'),
-      apiClient<PaginatedResponse<any>>('/cupones/admin/all?limit=1'),
-    ]).then(([activos, canjeados, vencidos, all]) => {
-      setStats({
-        activos: activos.meta.total,
-        canjeados: canjeados.meta.total,
-        vencidos: vencidos.meta.total,
-        total: all.meta.total,
-      });
-    }).catch(() => {});
-
-    // Fetch proveedores for filter
-    apiClient<PaginatedResponse<Proveedor>>('/proveedores?limit=100')
-      .then((res) => setProveedores(res.data))
+    // Fetch stats
+    const statsEndpoint = esProveedor ? '/cupones/estadisticas-proveedor' : '/cupones/estadisticas';
+    apiClient<{ activos: number; canjeados: number; vencidos: number; total: number }>(statsEndpoint)
+      .then(setStats)
       .catch(() => {});
-  }, []);
+
+    // Fetch proveedores for filter (only admin/operador)
+    if (!esProveedor) {
+      apiClient<PaginatedResponse<Proveedor>>('/proveedores?limit=100')
+        .then((res) => setProveedores(res.data))
+        .catch(() => {});
+    }
+  }, [esProveedor]);
 
   useEffect(() => {
     fetchData();
@@ -135,14 +131,14 @@ export default function CuponesPage() {
         );
       },
     },
-    {
+    ...(!esProveedor ? [{
       id: 'proveedor',
       header: 'Proveedor',
-      cell: ({ row }) => {
+      cell: ({ row }: { row: any }) => {
         const name = row.original.proveedor?.razonSocial;
         return name ? <span className="text-gray-600">{name}</span> : <span className="text-gray-300">—</span>;
       },
-    },
+    } as ColumnDef<any, any>] : []),
     {
       accessorKey: 'fechaVencimiento',
       header: 'Vencimiento',
@@ -181,12 +177,14 @@ export default function CuponesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Cupones</h1>
-          <p className="mt-1 text-sm text-gray-600">Seguimiento de cupones generados</p>
+          <p className="mt-1 text-sm text-gray-600">{esProveedor ? 'Cupones generados con tus promociones' : 'Seguimiento de cupones generados'}</p>
         </div>
+        {!esProveedor && (
         <div className="flex gap-2">
           <button onClick={() => exportToCSV(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', promocion: c.promocion?.titulo || '', proveedor: c.proveedor?.razonSocial || '', vencimiento: new Date(c.fechaVencimiento).toLocaleDateString('es-MX'), estado: c.estado })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'promocion', header: 'Promoción' }, { key: 'proveedor', header: 'Proveedor' }, { key: 'vencimiento', header: 'Vencimiento' }, { key: 'estado', header: 'Estado' }], 'cupones')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
           <button onClick={() => exportToPDFNative(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', promocion: c.promocion?.titulo || '', proveedor: c.proveedor?.razonSocial || '', vencimiento: new Date(c.fechaVencimiento).toLocaleDateString('es-MX'), estado: c.estado })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'promocion', header: 'Promoción' }, { key: 'proveedor', header: 'Proveedor' }, { key: 'vencimiento', header: 'Vencimiento' }, { key: 'estado', header: 'Estado' }], 'Reporte de Cupones', 'cupones')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><FileDown className="h-4 w-4" />PDF</button>
         </div>
+        )}
       </div>
 
       <StatsCards
@@ -210,6 +208,7 @@ export default function CuponesPage() {
 
         {/* Advanced filters row */}
         <div className="mt-3 flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-3">
+          {!esProveedor && (
           <div>
             <label className="block text-xs font-medium text-gray-500">Proveedor</label>
             <select
@@ -223,6 +222,7 @@ export default function CuponesPage() {
               ))}
             </select>
           </div>
+          )
           <div>
             <label className="block text-xs font-medium text-gray-500">Desde</label>
             <input

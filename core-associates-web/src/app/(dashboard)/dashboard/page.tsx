@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
-import type { DashboardMetrics } from '@/lib/api-types';
+import type { DashboardMetrics, DashboardProveedorMetrics } from '@/lib/api-types';
+import { usePermisos } from '@/lib/permisos';
 import { useToast } from '@/components/ui/Toast';
 import { StatsCards } from '@/components/ui/StatsCards';
 import {
@@ -53,15 +54,25 @@ function PieTooltip({ active, payload }: any) {
 
 export default function DashboardPage() {
   const { toast } = useToast();
+  const { esProveedor } = usePermisos();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [proveedorMetrics, setProveedorMetrics] = useState<DashboardProveedorMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiClient<DashboardMetrics>('/reportes/dashboard')
-      .then(setMetrics)
-      .catch((err) => { console.error(err); toast('error', 'Error', 'No se pudieron cargar las métricas'); })
-      .finally(() => setLoading(false));
-  }, []);
+    const endpoint = esProveedor ? '/reportes/dashboard-proveedor' : '/reportes/dashboard';
+    if (esProveedor) {
+      apiClient<DashboardProveedorMetrics>(endpoint)
+        .then(setProveedorMetrics)
+        .catch((err) => { console.error(err); toast('error', 'Error', 'No se pudieron cargar las métricas'); })
+        .finally(() => setLoading(false));
+    } else {
+      apiClient<DashboardMetrics>(endpoint)
+        .then(setMetrics)
+        .catch((err) => { console.error(err); toast('error', 'Error', 'No se pudieron cargar las métricas'); })
+        .finally(() => setLoading(false));
+    }
+  }, [esProveedor]);
 
   if (loading) {
     return (
@@ -69,6 +80,11 @@ export default function DashboardPage() {
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-primary-600" />
       </div>
     );
+  }
+
+  if (esProveedor) {
+    if (!proveedorMetrics) return <p className="text-gray-500">Error cargando métricas</p>;
+    return <DashboardProveedor metrics={proveedorMetrics} />;
   }
 
   if (!metrics) {
@@ -170,6 +186,107 @@ export default function DashboardPage() {
           cards={[
             { title: 'Docs Pendientes', value: metrics.documentos.pendientes, color: 'red', subtitle: 'Requieren revisión' },
             { title: 'Asociados Pendientes', value: metrics.asociados.pendientes, color: 'orange', subtitle: 'Esperando aprobación' },
+          ]}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard para Proveedor ──
+
+function DashboardProveedor({ metrics }: { metrics: DashboardProveedorMetrics }) {
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <p className="mt-1 text-sm text-gray-600">Resumen de tu negocio</p>
+
+      <StatsCards
+        className="mt-6"
+        cards={[
+          { title: 'Promociones Activas', value: metrics.promociones.activas, color: 'green', subtitle: `${metrics.promociones.total} total` },
+          { title: 'Cupones Emitidos', value: metrics.cupones.totales, color: 'blue' },
+          { title: 'Cupones Canjeados', value: metrics.cupones.canjeados, color: 'purple' },
+          { title: 'Cupones del Mes', value: metrics.cupones.delMes, color: 'orange' },
+        ]}
+      />
+
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Monthly trend bar chart */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900">Tendencia Mensual</h3>
+          <p className="text-xs text-gray-500">Cupones emitidos y canjeados de los últimos 6 meses</p>
+          <div className="mt-4 h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={metrics.trend} barGap={4}>
+                <defs>
+                  <linearGradient id="gradEmitidos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.5} />
+                  </linearGradient>
+                  <linearGradient id="gradCanjeados" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#22c55e" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#22c55e" stopOpacity={0.5} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="mes" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                <Legend wrapperStyle={{ paddingTop: 12, fontSize: 13 }} iconType="circle" iconSize={8} />
+                <Bar dataKey="emitidos" name="Emitidos" fill="url(#gradEmitidos)" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="canjeados" name="Canjeados" fill="url(#gradCanjeados)" radius={[6, 6, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Promociones summary */}
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900">Estado de Promociones</h3>
+          <p className="text-xs text-gray-500">Distribución actual</p>
+          <div className="mt-4 h-72">
+            {metrics.promociones.total > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Activas', value: metrics.promociones.activas },
+                      { name: 'Pausadas', value: metrics.promociones.pausadas },
+                      { name: 'Finalizadas', value: metrics.promociones.finalizadas },
+                    ].filter((d) => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={65}
+                    outerRadius={95}
+                    paddingAngle={4}
+                    dataKey="value"
+                    strokeWidth={2}
+                    stroke="#fff"
+                  >
+                    <Cell fill="#22c55e" />
+                    <Cell fill="#f59e0b" />
+                    <Cell fill="#6b7280" />
+                  </Pie>
+                  <Tooltip content={<PieTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 13 }} iconType="circle" iconSize={8} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                Sin promociones creadas
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Cupones vencidos */}
+      <div className="mt-6">
+        <StatsCards
+          cards={[
+            { title: 'Cupones Vencidos', value: metrics.cupones.vencidos, color: 'red', subtitle: 'Expirados sin canjear' },
+            { title: 'Promociones Pausadas', value: metrics.promociones.pausadas, color: 'orange', subtitle: 'Reactivar desde Promociones' },
           ]}
         />
       </div>

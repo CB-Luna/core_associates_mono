@@ -59,6 +59,33 @@ export class CuponesController {
     return this.cuponesService.getEstadisticas();
   }
 
+  @Get('mis-cupones-proveedor')
+  @UseGuards(RolesGuard)
+  @Roles('proveedor')
+  @ApiOperation({ summary: 'Listar cupones del proveedor' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de cupones del proveedor' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo proveedor' })
+  findByProveedor(
+    @CurrentUser() user: { id: string; proveedorId?: string },
+    @Query() query: CuponesQueryDto,
+  ) {
+    return this.cuponesService.findByProveedor(user.proveedorId, query);
+  }
+
+  @Get('estadisticas-proveedor')
+  @UseGuards(RolesGuard)
+  @Roles('proveedor')
+  @ApiOperation({ summary: 'Estadísticas de cupones del proveedor' })
+  @ApiResponse({ status: 200, description: 'Conteo de cupones por estado del proveedor' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo proveedor' })
+  getEstadisticasProveedor(
+    @CurrentUser() user: { id: string; proveedorId?: string },
+  ) {
+    return this.cuponesService.getEstadisticasProveedor(user.proveedorId);
+  }
+
   @Get(':id/qr')
   @ApiOperation({ summary: 'Obtener QR del cupón como imagen PNG' })
   @ApiResponse({ status: 200, description: 'Imagen PNG del código QR' })

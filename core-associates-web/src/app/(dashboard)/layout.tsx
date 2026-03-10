@@ -1,9 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
+import { useAuthStore } from '@/stores/auth-store';
+
+// Routes accessible to proveedor role
+const PROVEEDOR_ALLOWED = ['/dashboard', '/promociones', '/cupones'];
 
 export default function DashboardLayout({
   children,
@@ -11,6 +15,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const user = useAuthStore((s) => s.user);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -21,6 +27,17 @@ export default function DashboardLayout({
       setReady(true);
     }
   }, [router]);
+
+  // Route guard: redirect proveedor away from restricted routes
+  useEffect(() => {
+    if (!ready || !user) return;
+    if (user.rol === 'proveedor') {
+      const allowed = PROVEEDOR_ALLOWED.some((r) => pathname === r || pathname.startsWith(r + '/'));
+      if (!allowed) {
+        router.replace('/dashboard');
+      }
+    }
+  }, [ready, user, pathname, router]);
 
   if (!ready) {
     return (

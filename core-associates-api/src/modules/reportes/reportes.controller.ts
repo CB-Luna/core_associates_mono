@@ -4,6 +4,7 @@ import { ReportesService } from './reportes.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ReporteFiltrosDto } from './dto/reporte-filtros.dto';
 
 @ApiTags('Reportes')
@@ -21,6 +22,18 @@ export class ReportesController {
   @ApiResponse({ status: 403, description: 'Solo admin/operador' })
   getDashboard() {
     return this.reportesService.getDashboardMetrics();
+  }
+
+  @Get('dashboard-proveedor')
+  @Roles('proveedor')
+  @ApiOperation({ summary: 'Métricas del dashboard para proveedor' })
+  @ApiResponse({ status: 200, description: 'Métricas del proveedor: promociones, cupones emitidos/canjeados' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo proveedor' })
+  getDashboardProveedor(
+    @CurrentUser() user: { id: string; proveedorId?: string },
+  ) {
+    return this.reportesService.getDashboardProveedorMetrics(user.proveedorId);
   }
 
   @Get('avanzado')

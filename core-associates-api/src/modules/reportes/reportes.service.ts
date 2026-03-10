@@ -175,6 +175,79 @@ export class ReportesService {
     };
   }
 
+  // ── Dashboard Proveedor ──
+
+  async getDashboardProveedorMetrics(proveedorId: string) {
+    const now = new Date();
+    const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [
+      promocionesActivas,
+      promocionesPausadas,
+      promocionesFinalizadas,
+      cuponesTotales,
+      cuponesCanjeados,
+      cuponesVencidos,
+      cuponesDelMes,
+    ] = await Promise.all([
+      this.prisma.promocion.count({ where: { proveedorId, estado: 'activa' } }),
+      this.prisma.promocion.count({ where: { proveedorId, estado: 'pausada' } }),
+      this.prisma.promocion.count({ where: { proveedorId, estado: 'finalizada' } }),
+      this.prisma.cupon.count({ where: { proveedorId } }),
+      this.prisma.cupon.count({ where: { proveedorId, estado: 'canjeado' } }),
+      this.prisma.cupon.count({ where: { proveedorId, estado: 'vencido' } }),
+      this.prisma.cupon.count({
+        where: { proveedorId, createdAt: { gte: inicioMes } },
+      }),
+    ]);
+
+    const trend = await this.getMonthlyTrendProveedor(proveedorId);
+
+    return {
+      promociones: {
+        activas: promocionesActivas,
+        pausadas: promocionesPausadas,
+        finalizadas: promocionesFinalizadas,
+        total: promocionesActivas + promocionesPausadas + promocionesFinalizadas,
+      },
+      cupones: {
+        totales: cuponesTotales,
+        canjeados: cuponesCanjeados,
+        vencidos: cuponesVencidos,
+        delMes: cuponesDelMes,
+      },
+      trend,
+    };
+  }
+
+  private async getMonthlyTrendProveedor(proveedorId: string) {
+    const months: { mes: string; emitidos: number; canjeados: number }[] = [];
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    while (current <= endDate) {
+      const monthStart = new Date(current);
+      const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+      const mesLabel = current.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+
+      const [emitidos, canjeados] = await Promise.all([
+        this.prisma.cupon.count({
+          where: { proveedorId, createdAt: { gte: monthStart, lt: monthEnd } },
+        }),
+        this.prisma.cupon.count({
+          where: { proveedorId, estado: 'canjeado', fechaCanje: { gte: monthStart, lt: monthEnd } },
+        }),
+      ]);
+
+      months.push({ mes: mesLabel, emitidos, canjeados });
+      current.setMonth(current.getMonth() + 1);
+    }
+
+    return months;
+  }
+
   // ── System Info ──
 
   getSystemInfo() {

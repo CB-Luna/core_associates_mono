@@ -227,6 +227,26 @@ export interface DashboardMetrics {
   }[];
 }
 
+export interface DashboardProveedorMetrics {
+  promociones: {
+    activas: number;
+    pausadas: number;
+    finalizadas: number;
+    total: number;
+  };
+  cupones: {
+    totales: number;
+    canjeados: number;
+    vencidos: number;
+    delMes: number;
+  };
+  trend: {
+    mes: string;
+    emitidos: number;
+    canjeados: number;
+  }[];
+}
+
 // Reporte avanzado con filtros
 export interface ReporteAvanzado {
   periodo: { desde: string | null; hasta: string | null };
