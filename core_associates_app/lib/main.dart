@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'app/router.dart';
+import 'core/api/api_client.dart' show rootScaffoldMessengerKey;
 import 'shared/theme/app_theme.dart';
 import 'shared/widgets/offline_banner.dart';
 
@@ -33,6 +34,7 @@ class CoreAssociatesApp extends ConsumerWidget {
       title: 'Core Associates',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       routerConfig: router,
       builder: (context, child) {
         return Column(

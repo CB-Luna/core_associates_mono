@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -35,7 +36,9 @@ void main() {
   group('HomeShell', () {
     testWidgets('renders all four navigation tabs', (tester) async {
       final router = createRouter();
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpWidget(
+        ProviderScope(child: MaterialApp.router(routerConfig: router)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Inicio'), findsOneWidget);
@@ -46,7 +49,9 @@ void main() {
 
     testWidgets('has BottomNavigationBar with 4 items', (tester) async {
       final router = createRouter();
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpWidget(
+        ProviderScope(child: MaterialApp.router(routerConfig: router)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(BottomNavigationBar), findsOneWidget);
@@ -58,7 +63,9 @@ void main() {
 
     testWidgets('renders child content', (tester) async {
       final router = createRouter();
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpWidget(
+        ProviderScope(child: MaterialApp.router(routerConfig: router)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Home Content'), findsOneWidget);

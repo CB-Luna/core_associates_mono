@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../core/services/push_notification_service.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -20,6 +22,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   void initState() {
     super.initState();
     _initPush();
+    _wireSessionExpired();
   }
 
   Future<void> _initPush() async {
@@ -30,6 +33,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     } catch (_) {
       // Push not available (e.g., Firebase not configured)
     }
+  }
+
+  void _wireSessionExpired() {
+    ref.read(apiClientProvider).onSessionExpired = () {
+      ref.read(authStateProvider.notifier).logout();
+    };
   }
 
   int _currentIndex() {

@@ -1,8 +1,13 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/app_constants.dart';
+import '../network/api_exception.dart';
 import '../storage/secure_storage.dart';
+
+/// Global key for showing SnackBars from outside the widget tree (Dio interceptor).
+final rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final storage = ref.watch(secureStorageProvider);
@@ -12,6 +17,10 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 class ApiClient {
   late final Dio _dio;
   final SecureStorageService storage;
+
+  /// Called when a 401 cannot be recovered via refresh token.
+  /// Wire this to auth logout so GoRouter redirects to /login.
+  VoidCallback? onSessionExpired;
 
   ApiClient({required this.storage}) {
     _dio = Dio(
@@ -39,7 +48,7 @@ class ApiClient {
               final retryResponse = await _retry(error.requestOptions);
               return handler.resolve(retryResponse);
             } else {
-              // Notify that auth session expired — reject with clear error
+              onSessionExpired?.call();
               handler.reject(
                 DioException(
                   requestOptions: error.requestOptions,
@@ -50,6 +59,7 @@ class ApiClient {
               return;
             }
           }
+          _showGlobalError(error);
           handler.next(error);
         },
       ),
@@ -85,6 +95,28 @@ class ApiClient {
         headers: requestOptions.headers,
       ),
     );
+  }
+
+  void _showGlobalError(DioException error) {
+    final show = switch (error.type) {
+      DioExceptionType.connectionTimeout => true,
+      DioExceptionType.sendTimeout => true,
+      DioExceptionType.receiveTimeout => true,
+      DioExceptionType.connectionError => true,
+      _ => false,
+    };
+    if (!show) return;
+    final message = ApiException.fromDioException(error).message;
+    rootScaffoldMessengerKey.currentState
+      ?..removeCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
   }
 
   String _prefixed(String path) => '${AppConstants.apiPrefix}$path';
