@@ -95,9 +95,10 @@ Configurado en `main.ts` con whitelist explícita:
 ```typescript
 app.enableCors({
   origin: [
-    'http://localhost:3600',          // Next.js CRM local
-    'http://localhost:8580',          // Nginx Gateway local
-    'http://216.250.125.239:8580',    // Nginx Gateway producción
+    'http://localhost:3600',              // Next.js CRM local
+    'http://localhost:8580',              // Nginx Gateway local
+    'http://216.250.125.239:8580',        // Nginx Gateway producción (HTTP)
+    'https://core-asoc.cbluna-dev.com',   // Dominio producción (HTTPS)
   ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   credentials: true,
@@ -105,6 +106,8 @@ app.enableCors({
 ```
 
 **Al desplegar en un nuevo dominio/IP**, agregar la URL pública a la lista `origin`. En producción, el CRM web usa rutas relativas vía Nginx (mismo origen), pero el CORS sigue necesario como capa de seguridad adicional.
+
+**Dominio actual de producción**: `https://core-asoc.cbluna-dev.com` — SSL gestionado por Nginx Proxy Manager externo.
 
 ## Docker (`docker-entrypoint.sh`)
 

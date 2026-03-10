@@ -65,22 +65,46 @@ flutter test               # Tests unitarios
 
 PostgreSQL `5435`, Redis `6382`, MinIO API `9002` / Console `9003`, API `3501`, Web `3600`, Nginx `8580`, pgAdmin `5056`.
 
-## Despliegue — Docker Compose + Nginx
+## Despliegue — Docker Compose + Nginx + deploy-ionos.ps1
 
-**Servidor**: IONOS VPS `216.250.125.239`, usuario `cbluna`, directorio `/home/cbluna/apps/core-associates`.
+**Servidor**: IONOS VPS `216.250.125.239`, usuario `cbluna`, directorio `/home/cbluna/apps/core-associates`.  
+**Dominio producción**: `https://core-asoc.cbluna-dev.com` (SSL gestionado por Nginx Proxy Manager → Nginx interno `:8580` → contenedores).  
+**Repositorio**: `https://github.com/CB-Luna/core_associates_mono` (rama `main`).
 
-**Patrón Nginx reverse proxy** (mismo origen → sin CORS en browser):
+### Script de deploy (`deploy-ionos.ps1`)
+
+Deploy automatizado desde PowerShell local al VPS:
+
+```powershell
+.\deploy-ionos.ps1                    # Deploy rama main (default)
+.\deploy-ionos.ps1 -Branch develop    # Deploy rama específica
+.\deploy-ionos.ps1 -ForceRecreate     # Recrear todos los contenedores
+.\deploy-ionos.ps1 -SkipBuild         # Solo up -d sin rebuild
+.\deploy-ionos.ps1 -CopyEnv           # Copia .env local al servidor primero
 ```
-Browser → http://<IP>:8580/api/v1/... → Nginx → http://api:3501 (red interna Docker)
-Browser → http://<IP>:8580/...          → Nginx → http://web:3000 (red interna Docker)
+
+El script hace: pre-checks SSH → git pull en servidor → docker compose build + up → prisma migrate deploy → health checks → verificación HTTP pública.
+
+Requiere llave SSH en `G:\TRABAJO\SECRET\core_asociate\sshcbluna` con permisos restrictivos (solo usuario actual con lectura).
+
+### Patrón Nginx reverse proxy
+
+```
+Browser → https://core-asoc.cbluna-dev.com/api/v1/... → NPM (SSL) → Nginx :8580 → http://api:3501
+Browser → https://core-asoc.cbluna-dev.com/...          → NPM (SSL) → Nginx :8580 → http://web:3000
 ```
 
-**Reglas críticas para evitar errores de CORS/despliegue:**
+Nginx Proxy Manager (externo) gestiona SSL/HTTPS y proxea al puerto `8580` de nuestro Nginx interno, que a su vez proxea a los contenedores `api` y `web`.
 
-1. **`NEXT_PUBLIC_API_URL` debe ser `""` (vacío) en `docker-compose.yml`**. Next.js bake-a esta variable en el bundle del cliente. Si apunta a `http://localhost:3501`, el browser del usuario intentará llamar a su propia máquina local, no al servidor. Con valor vacío, `api-client.ts` genera rutas relativas (`/api/v1/...`) que Nginx proxea internamente.
-2. **CORS whitelist en `main.ts`** debe incluir la URL pública del servidor (ej. `http://216.250.125.239:8580`), además de `http://localhost:3600` y `http://localhost:8580` para desarrollo local.
+### Reglas críticas para evitar errores de CORS/despliegue:
+
+1. **`NEXT_PUBLIC_API_URL` debe ser `""` (vacío) en el `.env` del servidor**. Next.js bake-a esta variable en el bundle del cliente en build-time. Si apunta a una URL HTTP, el browser del usuario intentará llamar a esa dirección causando Mixed Content bajo HTTPS. Con valor vacío, `api-client.ts` genera rutas relativas (`/api/v1/...`) que Nginx proxea internamente.
+2. **CORS whitelist en `main.ts`** debe incluir:
+   - `https://core-asoc.cbluna-dev.com` (dominio producción HTTPS)
+   - `http://216.250.125.239:8580` (acceso directo IP)
+   - `http://localhost:3600` y `http://localhost:8580` (desarrollo local)
 3. **`docker-entrypoint.sh`**: usar `npm ci` **sin** `--ignore-scripts`. El flag `--ignore-scripts` impide la compilación de módulos nativos como `bcrypt`, causando `MODULE_NOT_FOUND` en runtime.
-4. **Rebuild web tras cambios en env vars**: `NEXT_PUBLIC_*` se incorporan en build-time. Tras modificarlas: `docker compose build web && docker compose up -d web`.
+4. **Rebuild web tras cambios en env vars**: `NEXT_PUBLIC_*` se incorporan en build-time. Tras modificarlas: `docker compose build web && docker compose up -d web` (o ejecutar `deploy-ionos.ps1` que hace rebuild completo).
 5. **Seed de datos**: `prisma/seed-demo.ts` contiene datos de demostración. Compilar con `npx tsc` → copiar JS al contenedor → ejecutar con `node`. Las contraseñas del seed son: admin `Admin2026!`, operador `Operador2026!`, proveedor `Proveedor2026!`.
 
 ## Instrucciones por subproyecto

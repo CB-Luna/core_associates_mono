@@ -28,6 +28,7 @@ describe('DocumentosService', () => {
       documento: {
         create: jest.fn(),
         findUnique: jest.fn(),
+        findFirst: jest.fn(),
         findMany: jest.fn(),
         update: jest.fn(),
         count: jest.fn(),
@@ -36,6 +37,7 @@ describe('DocumentosService', () => {
 
     storage = {
       uploadFile: jest.fn(),
+      deleteFile: jest.fn().mockResolvedValue(undefined),
       getPresignedUrl: jest.fn().mockResolvedValue('https://minio/presigned-url'),
     };
 
@@ -64,6 +66,7 @@ describe('DocumentosService', () => {
         size: 1024,
       } as Express.Multer.File;
 
+      prisma.documento.findFirst.mockResolvedValue(null);
       prisma.documento.create.mockResolvedValue({ ...mockDoc });
 
       const result = await service.uploadDocument('asoc-1', file, 'ine_frente');
@@ -75,6 +78,29 @@ describe('DocumentosService', () => {
       );
       expect(prisma.documento.create).toHaveBeenCalled();
       expect(result.tipo).toBe('ine_frente');
+    });
+
+    it('should replace existing document on re-upload', async () => {
+      const file = {
+        buffer: Buffer.from('new-test'),
+        originalname: 'ine_v2.jpg',
+        mimetype: 'image/jpeg',
+        size: 2048,
+      } as Express.Multer.File;
+
+      prisma.documento.findFirst.mockResolvedValue({ ...mockDoc });
+      prisma.documento.update.mockResolvedValue({ ...mockDoc, estado: 'pendiente', motivoRechazo: null });
+
+      const result = await service.uploadDocument('asoc-1', file, 'ine_frente');
+      expect(storage.deleteFile).toHaveBeenCalledWith(mockDoc.s3Bucket, mockDoc.s3Key);
+      expect(prisma.documento.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: mockDoc.id },
+          data: expect.objectContaining({ estado: 'pendiente', motivoRechazo: null }),
+        }),
+      );
+      expect(prisma.documento.create).not.toHaveBeenCalled();
+      expect(result.estado).toBe('pendiente');
     });
   });
 

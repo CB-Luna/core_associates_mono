@@ -25,6 +25,30 @@ export class DocumentosService {
 
     await this.storage.uploadFile(BUCKET, s3Key, file.buffer, file.mimetype);
 
+    // Si ya existe un documento del mismo tipo, reemplazarlo (re-upload)
+    const existing = await this.prisma.documento.findFirst({
+      where: { asociadoId, tipo: tipo as any },
+    });
+
+    if (existing) {
+      // Eliminar archivo anterior de S3
+      await this.storage.deleteFile(existing.s3Bucket, existing.s3Key).catch(() => {});
+      return this.prisma.documento.update({
+        where: { id: existing.id },
+        data: {
+          s3Bucket: BUCKET,
+          s3Key,
+          contentType: file.mimetype,
+          fileSize: file.size,
+          checksumSha256: checksum,
+          estado: 'pendiente',
+          motivoRechazo: null,
+          revisadoPorId: null,
+          fechaRevision: null,
+        },
+      });
+    }
+
     return this.prisma.documento.create({
       data: {
         asociadoId,

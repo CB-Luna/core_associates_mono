@@ -16,6 +16,7 @@ import '../features/promotions/presentation/screens/coupon_detail_screen.dart';
 import '../features/promotions/presentation/screens/my_coupons_screen.dart';
 import '../features/legal_support/presentation/screens/case_detail_screen.dart';
 import '../features/profile/presentation/screens/edit_profile_screen.dart';
+import '../features/profile/presentation/screens/onboarding_screen.dart';
 import '../features/profile/presentation/screens/vehicles_screen.dart';
 import '../features/profile/presentation/screens/add_vehicle_screen.dart';
 import '../features/profile/data/models/vehiculo.dart';
@@ -44,11 +45,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnLoginPage =
           state.matchedLocation == '/login' || state.matchedLocation == '/otp';
       final isOnBlockedPage = state.matchedLocation == '/blocked';
+      final isOnOnboarding = state.matchedLocation == '/onboarding';
 
       if (!isLoggedIn && !isOnLoginPage) return '/login';
       if (isLoggedIn && isOnLoginPage) {
         final estado = authState.value?.asociadoEstado;
         if (estado == 'rechazado' || estado == 'suspendido') return '/blocked';
+        if (authState.value?.profileIncomplete == true) return '/onboarding';
         return '/home';
       }
 
@@ -56,6 +59,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isLoggedIn && !isOnBlockedPage) {
         final estado = authState.value?.asociadoEstado;
         if (estado == 'rechazado' || estado == 'suspendido') return '/blocked';
+      }
+
+      // Force onboarding if profile is incomplete
+      if (isLoggedIn && !isOnOnboarding && !isOnBlockedPage) {
+        if (authState.value?.profileIncomplete == true) return '/onboarding';
       }
 
       return null;
@@ -80,6 +88,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           final motivo = authState.value?.motivoRechazo;
           return AccountBlockedScreen(estado: estado, motivo: motivo);
         },
+      ),
+
+      // Onboarding route (profile completion for new users)
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
 
       // Standalone routes (outside bottom nav)
