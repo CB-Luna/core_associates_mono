@@ -33,7 +33,7 @@ export class ReportesController {
   getDashboardProveedor(
     @CurrentUser() user: { id: string; proveedorId?: string },
   ) {
-    return this.reportesService.getDashboardProveedorMetrics(user.proveedorId);
+    return this.reportesService.getDashboardProveedorMetrics(user.proveedorId!);
   }
 
   @Get('avanzado')

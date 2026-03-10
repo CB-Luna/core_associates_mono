@@ -70,7 +70,7 @@ export class CuponesController {
     @CurrentUser() user: { id: string; proveedorId?: string },
     @Query() query: CuponesQueryDto,
   ) {
-    return this.cuponesService.findByProveedor(user.proveedorId, query);
+    return this.cuponesService.findByProveedor(user.proveedorId!, query);
   }
 
   @Get('estadisticas-proveedor')
@@ -83,7 +83,7 @@ export class CuponesController {
   getEstadisticasProveedor(
     @CurrentUser() user: { id: string; proveedorId?: string },
   ) {
-    return this.cuponesService.getEstadisticasProveedor(user.proveedorId);
+    return this.cuponesService.getEstadisticasProveedor(user.proveedorId!);
   }
 
   @Get(':id/qr')
