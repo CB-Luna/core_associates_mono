@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { type ColumnDef } from '@tanstack/react-table';
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { useToast } from '@/components/ui/Toast';
 import type { Asociado } from '@/lib/api-types';
 import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
@@ -21,6 +22,7 @@ const estadoOptions = [
 ];
 
 export default function AsociadosPage() {
+  const { toast } = useToast();
   const router = useRouter();
   const [data, setData] = useState<Asociado[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,8 +49,9 @@ export default function AsociadosPage() {
       setData(res.data);
       setTotalPages(res.meta.totalPages);
       setTotal(res.meta.total);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast('error', 'Error', err.message || 'No se pudieron cargar los asociados');
     } finally {
       setLoading(false);
     }

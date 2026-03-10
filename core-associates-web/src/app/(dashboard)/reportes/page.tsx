@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/components/ui/Toast';
 import { type ReporteAvanzado } from '@/lib/api-types';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Download, FileText } from 'lucide-react';
@@ -52,6 +53,7 @@ function getDefaultDates() {
 }
 
 export default function ReportesPage() {
+  const { toast } = useToast();
   const defaults = getDefaultDates();
   const { puede } = usePermisos();
   const [desde, setDesde] = useState(defaults.desde);
@@ -67,8 +69,9 @@ export default function ReportesPage() {
       if (hasta) params.set('hasta', hasta);
       const data = await apiClient<ReporteAvanzado>(`/reportes/avanzado?${params}`);
       setReporte(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast('error', 'Error', err.message || 'No se pudo cargar el reporte');
     } finally {
       setLoading(false);
     }

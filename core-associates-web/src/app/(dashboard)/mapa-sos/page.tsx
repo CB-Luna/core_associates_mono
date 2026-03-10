@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { useToast } from '@/components/ui/Toast';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
 import {
@@ -48,6 +49,7 @@ const prioridadOptions = [
 ];
 
 export default function MapaSosPage() {
+  const { toast } = useToast();
   const router = useRouter();
   const [casos, setCasos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,8 +66,9 @@ export default function MapaSosPage() {
       if (prioridadFilter) params.set('prioridad', prioridadFilter);
       const res = await apiClient<PaginatedResponse<any>>(`/casos-legales/admin/all?${params}`);
       setCasos(res.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast('error', 'Error', err.message || 'No se pudieron cargar los casos');
     } finally {
       setLoading(false);
     }

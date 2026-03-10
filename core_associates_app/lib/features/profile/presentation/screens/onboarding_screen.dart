@@ -119,9 +119,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   Expanded(
                     child: Container(
                       height: 2,
-                      color: _step > 0
-                          ? AppColors.primary
-                          : AppColors.border,
+                      color: _step > 0 ? AppColors.primary : AppColors.border,
                     ),
                   ),
                   _StepDot(index: 1, current: _step, label: 'Documentos'),
@@ -154,17 +152,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             const SizedBox(height: 16),
             Text(
               '¡Bienvenido a Core Associates!',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               'Completa tus datos para activar tu membresía',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -260,17 +258,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           const SizedBox(height: 16),
           Text(
             'Sube tus documentos',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             'Necesitamos verificar tu identidad. Puedes hacerlo ahora o después desde tu perfil.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -279,8 +277,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           Expanded(
             child: docsAsync.when(
               data: (docs) => _buildDocsSummary(docs),
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, _) => Center(
                 child: TextButton.icon(
                   onPressed: () => ref.invalidate(documentsProvider),
@@ -335,8 +332,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             uploaded ? Icons.check_circle : Icons.radio_button_unchecked,
             color: uploaded
                 ? (estado == 'aprobado'
-                    ? AppColors.secondary
-                    : AppColors.warning)
+                      ? AppColors.secondary
+                      : AppColors.warning)
                 : AppColors.textSecondary,
           ),
           title: Text(req['label']!),

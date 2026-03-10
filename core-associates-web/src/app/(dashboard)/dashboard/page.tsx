@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import type { DashboardMetrics } from '@/lib/api-types';
+import { useToast } from '@/components/ui/Toast';
 import { StatsCards } from '@/components/ui/StatsCards';
 import {
   BarChart,
@@ -51,13 +52,14 @@ function PieTooltip({ active, payload }: any) {
 }
 
 export default function DashboardPage() {
+  const { toast } = useToast();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     apiClient<DashboardMetrics>('/reportes/dashboard')
       .then(setMetrics)
-      .catch(console.error)
+      .catch((err) => { console.error(err); toast('error', 'Error', 'No se pudieron cargar las métricas'); })
       .finally(() => setLoading(false));
   }, []);
 

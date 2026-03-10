@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { useToast } from '@/components/ui/Toast';
 import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
@@ -27,6 +28,7 @@ const estadoVariant: Record<string, any> = {
 };
 
 export default function CuponesPage() {
+  const { toast } = useToast();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -59,8 +61,9 @@ export default function CuponesPage() {
       setData(res.data);
       setTotalPages(res.meta.totalPages);
       setTotal(res.meta.total);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast('error', 'Error', err.message || 'No se pudieron cargar los cupones');
     } finally {
       setLoading(false);
     }

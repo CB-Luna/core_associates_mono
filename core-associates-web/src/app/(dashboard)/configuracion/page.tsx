@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/components/ui/Toast';
 import { type ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
@@ -40,6 +41,7 @@ interface SystemInfo {
 }
 
 export default function ConfiguracionPage() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'usuarios' | 'auditoria'>('usuarios');
   const [users, setUsers] = useState<UsuarioCRM[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,9 +126,9 @@ export default function ConfiguracionPage() {
       setShowForm(false);
       createForm.reset();
       fetchUsers();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Error al crear usuario');
+      toast('error', 'Error', err.message || 'Error al crear usuario');
     } finally {
       setSaving(false);
     }
@@ -142,9 +144,9 @@ export default function ConfiguracionPage() {
       });
       setEditingUser(null);
       fetchUsers();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Error al actualizar usuario');
+      toast('error', 'Error', err.message || 'Error al actualizar usuario');
     } finally {
       setSaving(false);
     }
@@ -158,9 +160,9 @@ export default function ConfiguracionPage() {
         body: JSON.stringify({ estado: nuevoEstado }),
       });
       fetchUsers();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Error al cambiar estado');
+      toast('error', 'Error', err.message || 'Error al cambiar estado');
     }
   };
 
@@ -174,10 +176,10 @@ export default function ConfiguracionPage() {
       });
       setResetUserId(null);
       resetForm.reset();
-      alert('Contraseña actualizada correctamente');
-    } catch (err) {
+      toast('success', 'Éxito', 'Contraseña actualizada correctamente');
+    } catch (err: any) {
       console.error(err);
-      alert('Error al resetear contraseña');
+      toast('error', 'Error', err.message || 'Error al resetear contraseña');
     } finally {
       setSaving(false);
     }

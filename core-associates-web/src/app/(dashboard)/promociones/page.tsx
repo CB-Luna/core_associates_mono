@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { useToast } from '@/components/ui/Toast';
 import type { Promocion } from '@/lib/api-types';
 import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
@@ -42,6 +43,7 @@ function PromocionThumbnail({ promocionId, imagenUrl }: { promocionId: string; i
 }
 
 export default function PromocionesPage() {
+  const { toast } = useToast();
   const { esProveedor } = usePermisos();
   const [data, setData] = useState<Promocion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,8 +67,9 @@ export default function PromocionesPage() {
       setData(res.data);
       setTotalPages(res.meta.totalPages);
       setTotal(res.meta.total);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast('error', 'Error', err.message || 'No se pudieron cargar las promociones');
     } finally {
       setLoading(false);
     }
@@ -86,8 +89,9 @@ export default function PromocionesPage() {
         body: JSON.stringify({ estado }),
       });
       fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      toast('error', 'Error', err.message || 'No se pudo cambiar el estado');
     }
   };
 

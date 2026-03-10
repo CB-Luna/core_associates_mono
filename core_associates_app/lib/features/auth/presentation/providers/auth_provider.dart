@@ -52,7 +52,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     try {
       final profileRepo = ref.read(profileRepositoryProvider);
       final asociado = await profileRepo.getMyProfile();
-      final incomplete = asociado.nombre.isEmpty || asociado.apellidoPat.isEmpty;
+      final incomplete =
+          asociado.nombre.isEmpty || asociado.apellidoPat.isEmpty;
       return AuthState(
         isAuthenticated: true,
         asociadoEstado: asociado.estado,
