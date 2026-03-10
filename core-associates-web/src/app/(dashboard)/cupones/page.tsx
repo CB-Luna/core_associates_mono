@@ -222,7 +222,7 @@ export default function CuponesPage() {
               ))}
             </select>
           </div>
-          )
+          )}
           <div>
             <label className="block text-xs font-medium text-gray-500">Desde</label>
             <input
