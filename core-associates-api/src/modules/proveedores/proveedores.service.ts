@@ -8,13 +8,16 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 export class ProveedoresService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: PaginationQueryDto & { tipo?: string }) {
-    const { page = 1, limit = 10, search, tipo } = query;
+  async findAll(query: PaginationQueryDto & { tipo?: string; estado?: string }) {
+    const { page = 1, limit = 10, search, tipo, estado } = query;
     const skip = (page - 1) * limit;
 
     const where: any = {};
     if (tipo) {
       where.tipo = tipo;
+    }
+    if (estado) {
+      where.estado = estado;
     }
     if (search) {
       where.OR = [

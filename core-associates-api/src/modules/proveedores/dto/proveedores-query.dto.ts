@@ -7,4 +7,9 @@ export class ProveedoresQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   tipo?: string;
+
+  @ApiPropertyOptional({ enum: ['activo', 'inactivo', 'suspendido'] })
+  @IsOptional()
+  @IsString()
+  estado?: string;
 }

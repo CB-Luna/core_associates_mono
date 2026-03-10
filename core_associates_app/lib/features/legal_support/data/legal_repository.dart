@@ -25,8 +25,8 @@ class LegalRepository {
         'tipoPercance': tipoPercance,
         'latitud': latitud,
         'longitud': longitud,
-        'descripcion': ?descripcion,
-        'direccionAprox': ?direccionAprox,
+        if (descripcion != null) 'descripcion': descripcion,
+        if (direccionAprox != null) 'direccionAprox': direccionAprox,
       },
     );
     return CasoLegal.fromJson(response.data as Map<String, dynamic>);
@@ -40,10 +40,7 @@ class LegalRepository {
   }
 
   Future<CasoLegal> getCasoDetail(String casoId) async {
-    final response = await apiClient.get('/casos-legales/mis-casos');
-    final casos = (response.data as List<dynamic>)
-        .map((c) => CasoLegal.fromJson(c as Map<String, dynamic>))
-        .toList();
-    return casos.firstWhere((c) => c.id == casoId);
+    final response = await apiClient.get('/casos-legales/mis-casos/$casoId');
+    return CasoLegal.fromJson(response.data as Map<String, dynamic>);
   }
 }

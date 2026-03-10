@@ -39,6 +39,18 @@ export class CasosLegalesController {
     return this.casosLegalesService.getMisCasos(asociadoId);
   }
 
+  @Get('mis-casos/:id')
+  @ApiOperation({ summary: 'Detalle de mi caso legal' })
+  @ApiResponse({ status: 200, description: 'Detalle del caso con notas' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 404, description: 'Caso no encontrado' })
+  getMiCasoDetail(
+    @CurrentUser('id') asociadoId: string,
+    @Param('id') casoId: string,
+  ) {
+    return this.casosLegalesService.getMiCasoDetail(asociadoId, casoId);
+  }
+
   @Get('admin/all')
   @UseGuards(RolesGuard)
   @Roles('admin', 'operador')

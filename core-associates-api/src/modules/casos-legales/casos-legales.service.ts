@@ -52,6 +52,28 @@ export class CasosLegalesService {
     });
   }
 
+  async getMiCasoDetail(asociadoId: string, casoId: string) {
+    const caso = await this.prisma.casoLegal.findFirst({
+      where: { id: casoId, asociadoId },
+      include: {
+        abogado: {
+          select: {
+            razonSocial: true,
+            telefono: true,
+          },
+        },
+        notas: {
+          where: { esPrivada: false },
+          orderBy: { createdAt: 'desc' },
+          include: { autor: { select: { nombre: true, rol: true } } },
+        },
+      },
+    });
+
+    if (!caso) throw new NotFoundException('Caso no encontrado');
+    return caso;
+  }
+
   // Admin endpoints
   async findAll(query: { page?: number; limit?: number; estado?: string; prioridad?: string }) {
     const { page = 1, limit = 10, estado, prioridad } = query;
