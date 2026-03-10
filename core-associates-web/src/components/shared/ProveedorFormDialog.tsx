@@ -27,7 +27,23 @@ const proveedorSchema = z.object({
   telefono: z.string().optional().default(''),
   email: z.union([z.string().email('Email inválido'), z.literal('')]).optional().default(''),
   contactoNombre: z.string().optional().default(''),
-});
+  // Campos opcionales para crear acceso CRM
+  crmEmail: z.union([z.string().email('Email CRM inválido'), z.literal('')]).optional().default(''),
+  crmPassword: z.string().optional().default(''),
+}).refine(
+  (data) => {
+    // Si se llena uno, ambos son requeridos
+    if (data.crmEmail && !data.crmPassword) return false;
+    if (data.crmPassword && !data.crmEmail) return false;
+    // Si se llena password, validar complejidad
+    if (data.crmPassword && data.crmPassword.length < 8) return false;
+    return true;
+  },
+  {
+    message: 'Email y contraseña CRM son requeridos juntos (mín. 8 caracteres)',
+    path: ['crmPassword'],
+  },
+);
 
 type ProveedorFormData = z.infer<typeof proveedorSchema>;
 
@@ -58,6 +74,8 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
       telefono: proveedor?.telefono ?? '',
       email: proveedor?.email ?? '',
       contactoNombre: proveedor?.contactoNombre ?? '',
+      crmEmail: '',
+      crmPassword: '',
     },
   });
 
@@ -66,7 +84,8 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
 
   const onSubmit = async (data: ProveedorFormData) => {
     setServerError('');
-    const body: Record<string, unknown> = { ...data };
+    const { crmEmail, crmPassword, ...proveedorData } = data;
+    const body: Record<string, unknown> = { ...proveedorData };
     // Remove empty optional strings
     if (!body.direccion) delete body.direccion;
     if (!body.telefono) delete body.telefono;
@@ -82,10 +101,33 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
           body: JSON.stringify(body),
         });
       } else {
-        await apiClient('/proveedores', {
+        const nuevoProveedor = await apiClient<{ id: string }>('/proveedores', {
           method: 'POST',
           body: JSON.stringify(body),
         });
+
+        // Si se proporcionaron credenciales CRM, crear el usuario vinculado
+        if (crmEmail && crmPassword) {
+          try {
+            await apiClient('/auth/usuarios', {
+              method: 'POST',
+              body: JSON.stringify({
+                email: crmEmail,
+                password: crmPassword,
+                nombre: data.razonSocial,
+                rol: 'proveedor',
+                proveedorId: nuevoProveedor.id,
+              }),
+            });
+          } catch (crmErr) {
+            // El proveedor ya se creó, informar del error parcial
+            setServerError(
+              `Proveedor creado, pero falló el acceso CRM: ${crmErr instanceof Error ? crmErr.message : 'Error desconocido'}`,
+            );
+            onSaved();
+            return;
+          }
+        }
       }
       onSaved();
     } catch (err) {
@@ -191,6 +233,40 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
               height="200px"
             />
           </div>
+
+          {/* Acceso CRM — solo al crear */}
+          {!isEdit && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <label className="block text-sm font-semibold text-blue-800 mb-2">
+                Acceso al CRM (opcional)
+              </label>
+              <p className="mb-3 text-xs text-blue-600">
+                Si desea que este proveedor pueda iniciar sesión en el CRM, llene ambos campos.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-600">Email de acceso</label>
+                  <input
+                    {...register('crmEmail')}
+                    type="email"
+                    placeholder="usuario@empresa.com"
+                    className={inputClass(!!errors.crmEmail)}
+                  />
+                  {errors.crmEmail && <p className="mt-1 text-xs text-red-500">{errors.crmEmail.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600">Contraseña</label>
+                  <input
+                    {...register('crmPassword')}
+                    type="password"
+                    placeholder="Mín. 8 caracteres"
+                    className={inputClass(!!errors.crmPassword)}
+                  />
+                  {errors.crmPassword && <p className="mt-1 text-xs text-red-500">{errors.crmPassword.message}</p>}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-2">
             <button

@@ -7,12 +7,13 @@ type Rol = 'admin' | 'operador' | 'proveedor';
  */
 const PERMISOS: Record<string, Rol[]> = {
   // Navegación
-  'ver:dashboard': ['admin', 'operador'],
+  'ver:dashboard': ['admin', 'operador', 'proveedor'],
   'ver:asociados': ['admin', 'operador'],
   'ver:proveedores': ['admin', 'operador'],
   'ver:promociones': ['admin', 'operador', 'proveedor'],
   'ver:cupones': ['admin', 'operador', 'proveedor'],
   'ver:casos-legales': ['admin', 'operador'],
+  'ver:mapa-sos': ['admin', 'operador'],
   'ver:reportes': ['admin'],
   'ver:configuracion': ['admin'],
 
