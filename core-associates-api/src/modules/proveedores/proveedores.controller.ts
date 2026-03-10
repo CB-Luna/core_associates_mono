@@ -4,6 +4,7 @@ import { ProveedoresService } from './proveedores.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateProveedorDto } from './dto/create-proveedor.dto';
 import { UpdateProveedorDto } from './dto/update-proveedor.dto';
 import { ProveedoresQueryDto } from './dto/proveedores-query.dto';
@@ -11,12 +12,21 @@ import { ProveedoresQueryDto } from './dto/proveedores-query.dto';
 @ApiTags('Proveedores')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin', 'operador')
 @Controller('proveedores')
 export class ProveedoresController {
   constructor(private readonly proveedoresService: ProveedoresService) {}
 
+  @Get('mi-perfil')
+  @Roles('proveedor')
+  @ApiOperation({ summary: 'Obtener datos del proveedor autenticado' })
+  @ApiResponse({ status: 200, description: 'Datos del proveedor' })
+  @ApiResponse({ status: 404, description: 'Proveedor no vinculado' })
+  getMyProfile(@CurrentUser('proveedorId') proveedorId: string) {
+    return this.proveedoresService.findOne(proveedorId);
+  }
+
   @Get()
+  @Roles('admin', 'operador')
   @ApiOperation({ summary: 'Listar proveedores' })
   @ApiResponse({ status: 200, description: 'Lista paginada de proveedores' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -26,6 +36,7 @@ export class ProveedoresController {
   }
 
   @Get(':id')
+  @Roles('admin', 'operador')
   @ApiOperation({ summary: 'Detalle de proveedor' })
   @ApiResponse({ status: 200, description: 'Detalle del proveedor' })
   @ApiResponse({ status: 401, description: 'No autenticado' })

@@ -12,9 +12,9 @@ export class UpdateUsuarioDto {
   @IsString()
   nombre?: string;
 
-  @ApiPropertyOptional({ enum: ['admin', 'operador'] })
+  @ApiPropertyOptional({ enum: ['admin', 'operador', 'proveedor'] })
   @IsOptional()
-  @IsEnum(['admin', 'operador'])
+  @IsEnum(['admin', 'operador', 'proveedor'])
   rol?: string;
 
   @ApiPropertyOptional({ enum: ['activo', 'inactivo'] })

@@ -167,6 +167,7 @@ export class AuthService {
         nombre: true,
         rol: true,
         estado: true,
+        proveedorId: true,
         ultimoAcceso: true,
         createdAt: true,
       },
@@ -179,6 +180,7 @@ export class AuthService {
     nombre: string;
     password: string;
     rol: string;
+    proveedorId?: string;
   }) {
     const existing = await this.prisma.usuario.findUnique({
       where: { email: data.email },
@@ -195,6 +197,7 @@ export class AuthService {
         nombre: data.nombre,
         passwordHash,
         rol: data.rol as RolUsuario,
+        ...(data.proveedorId && { proveedorId: data.proveedorId }),
       },
       select: {
         id: true,

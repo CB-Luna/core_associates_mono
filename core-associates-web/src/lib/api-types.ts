@@ -296,6 +296,7 @@ export interface UsuarioCRM {
   email: string;
   nombre: string;
   rol: 'admin' | 'operador' | 'proveedor';
+  proveedorId?: string;
   estado: 'activo' | 'inactivo';
   ultimoAcceso: string | null;
   createdAt: string;

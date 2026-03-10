@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/Toast';
 import { type ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
-import { type UsuarioCRM, type AuditoriaRecord } from '@/lib/api-types';
+import { type UsuarioCRM, type AuditoriaRecord, type Proveedor } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
 import { Pencil, KeyRound, Power, Shield, Users } from 'lucide-react';
 
@@ -20,16 +20,20 @@ const createUserSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(8, 'Mínimo 8 caracteres').regex(passwordRegex, 'Debe incluir mayúscula, minúscula y número'),
   confirmPassword: z.string().min(1, 'Confirma la contraseña'),
-  rol: z.enum(['operador', 'admin']),
+  rol: z.enum(['operador', 'admin', 'proveedor']),
+  proveedorId: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Las contraseñas no coinciden',
   path: ['confirmPassword'],
+}).refine((data) => data.rol !== 'proveedor' || !!data.proveedorId, {
+  message: 'Selecciona un proveedor',
+  path: ['proveedorId'],
 });
 
 const editUserSchema = z.object({
   nombre: z.string().min(2, 'Mínimo 2 caracteres'),
   email: z.string().email('Email inválido'),
-  rol: z.enum(['operador', 'admin']),
+  rol: z.enum(['operador', 'admin', 'proveedor']),
 });
 
 const resetPasswordSchema = z.object({
@@ -66,7 +70,7 @@ export default function ConfiguracionPage() {
   // RHF forms
   const createForm = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: { nombre: '', email: '', password: '', confirmPassword: '', rol: 'operador' },
+    defaultValues: { nombre: '', email: '', password: '', confirmPassword: '', rol: 'operador', proveedorId: '' },
   });
 
   const editForm = useForm<EditUserData>({
@@ -86,6 +90,9 @@ export default function ConfiguracionPage() {
   const [auditMeta, setAuditMeta] = useState({ total: 0, totalPages: 1 });
   const [auditFilters, setAuditFilters] = useState({ entidad: '', accion: '', search: '' });
 
+  // Proveedores para selector (cuando rol = proveedor)
+  const [proveedoresList, setProveedoresList] = useState<Proveedor[]>([]);
+
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -102,6 +109,9 @@ export default function ConfiguracionPage() {
     fetchUsers();
     apiClient<SystemInfo>('/reportes/system-info')
       .then(setSysInfo)
+      .catch(() => {});
+    apiClient<PaginatedResponse<Proveedor>>('/proveedores?limit=200&estado=activo')
+      .then((res) => setProveedoresList(res.data))
       .catch(() => {});
   }, [fetchUsers]);
 
@@ -129,7 +139,11 @@ export default function ConfiguracionPage() {
   const handleCreateUser = async (data: CreateUserInput) => {
     setSaving(true);
     try {
-      const { confirmPassword: _, ...payload } = data;
+      const { confirmPassword: _, proveedorId, ...rest } = data;
+      const payload: Record<string, unknown> = { ...rest };
+      if (data.rol === 'proveedor' && proveedorId) {
+        payload.proveedorId = proveedorId;
+      }
       await apiClient('/auth/register-admin', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -384,8 +398,21 @@ export default function ConfiguracionPage() {
                   <select {...createForm.register('rol')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <option value="operador">Operador</option>
                     <option value="admin">Administrador</option>
+                    <option value="proveedor">Proveedor</option>
                   </select>
                 </div>
+                {createForm.watch('rol') === 'proveedor' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Proveedor a vincular *</label>
+                    <select {...createForm.register('proveedorId')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                      <option value="">Seleccionar proveedor...</option>
+                      {proveedoresList.map((p) => (
+                        <option key={p.id} value={p.id}>{p.razonSocial} ({p.idUnico})</option>
+                      ))}
+                    </select>
+                    {createForm.formState.errors.proveedorId && <p className="mt-1 text-xs text-red-600">{createForm.formState.errors.proveedorId.message}</p>}
+                  </div>
+                )}
               </div>
               <div className="mt-4 flex justify-end">
                 <button type="submit" disabled={saving} className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
@@ -418,6 +445,7 @@ export default function ConfiguracionPage() {
                   <select {...editForm.register('rol')} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <option value="operador">Operador</option>
                     <option value="admin">Administrador</option>
+                    <option value="proveedor">Proveedor</option>
                   </select>
                 </div>
               </div>
