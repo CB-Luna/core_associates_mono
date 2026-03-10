@@ -86,6 +86,20 @@ export async function apiClient<T>(
   return text ? JSON.parse(text) : ({} as T);
 }
 
+/**
+ * Fetch an image endpoint as a blob and return an object URL for <img src>.
+ */
+export async function apiImageUrl(endpoint: string): Promise<string> {
+  const token = localStorage.getItem('accessToken');
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_URL}/api/v1${endpoint}`, { headers });
+  if (!res.ok) throw new Error(`Error ${res.status}`);
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
 // Paginated response helper
 export interface PaginatedResponse<T> {
   data: T[];

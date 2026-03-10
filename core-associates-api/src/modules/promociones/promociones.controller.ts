@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Param, Query, Body, UseGuards, UseInterceptors, UploadedFile, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Query, Body, Res, UseGuards, UseInterceptors, UploadedFile, ForbiddenException, BadRequestException, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PromocionesService } from './promociones.service';
@@ -204,11 +205,14 @@ export class PromocionesController {
   }
 
   @Get(':id/imagen')
-  @ApiOperation({ summary: 'Obtener URL firmada de imagen de promoción' })
-  @ApiResponse({ status: 200, description: 'URL presignada de imagen (15 min)' })
+  @ApiOperation({ summary: 'Obtener imagen de promoción' })
+  @ApiResponse({ status: 200, description: 'Imagen binaria de la promoción' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
   @ApiResponse({ status: 404, description: 'Promoción sin imagen' })
-  getImagenUrl(@Param('id') id: string) {
-    return this.promocionesService.getImagenUrl(id);
+  async getImagen(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+    const { buffer, contentType } = await this.promocionesService.getImagenBuffer(id);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=900');
+    return new StreamableFile(buffer);
   }
 }

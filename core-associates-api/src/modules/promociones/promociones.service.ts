@@ -247,10 +247,14 @@ export class PromocionesService {
     });
   }
 
-  async getImagenUrl(id: string): Promise<string> {
+  async getImagenBuffer(id: string): Promise<{ buffer: Buffer; contentType: string }> {
     const promo = await this.prisma.promocion.findUnique({ where: { id } });
     if (!promo) throw new NotFoundException('Promoción no encontrada');
     if (!promo.imagenUrl) throw new NotFoundException('Promoción sin imagen');
-    return this.storage.getPresignedUrl(BUCKET_PROMOTIONS, promo.imagenUrl);
+
+    const buffer = await this.storage.getFile(BUCKET_PROMOTIONS, promo.imagenUrl);
+    const ext = promo.imagenUrl.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif' };
+    return { buffer, contentType: mimeMap[ext] || 'image/jpeg' };
   }
 }

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { X, Upload, ImageIcon } from 'lucide-react';
-import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import type { Promocion, Proveedor } from '@/lib/api-types';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -98,7 +98,7 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
   // Load existing image preview when editing
   useEffect(() => {
     if (open && promocion?.imagenUrl) {
-      apiClient<string>(`/promociones/${promocion.id}/imagen`)
+      apiImageUrl(`/promociones/${promocion.id}/imagen`)
         .then((url) => setImagenPreview(url))
         .catch(() => {});
     }

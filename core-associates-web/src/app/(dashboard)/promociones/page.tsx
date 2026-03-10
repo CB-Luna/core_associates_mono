@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
-import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import { useToast } from '@/components/ui/Toast';
 import type { Promocion } from '@/lib/api-types';
 import { DataTable } from '@/components/ui/DataTable';
@@ -23,7 +23,7 @@ function PromocionThumbnail({ promocionId, imagenUrl }: { promocionId: string; i
 
   useEffect(() => {
     if (!imagenUrl) return;
-    apiClient<string>(`/promociones/${promocionId}/imagen`)
+    apiImageUrl(`/promociones/${promocionId}/imagen`)
       .then(setSrc)
       .catch(() => {});
   }, [promocionId, imagenUrl]);

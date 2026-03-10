@@ -36,6 +36,15 @@ export class StorageService {
     return this.minioClient.presignedGetObject(bucket, objectName, expirySeconds);
   }
 
+  async getFile(bucket: string, objectName: string): Promise<Buffer> {
+    const stream = await this.minioClient.getObject(bucket, objectName);
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+
   async deleteFile(bucket: string, objectName: string): Promise<void> {
     await this.minioClient.removeObject(bucket, objectName);
   }

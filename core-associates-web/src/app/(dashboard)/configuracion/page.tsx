@@ -110,7 +110,7 @@ export default function ConfiguracionPage() {
     apiClient<SystemInfo>('/reportes/system-info')
       .then(setSysInfo)
       .catch(() => {});
-    apiClient<PaginatedResponse<Proveedor>>('/proveedores?limit=200&estado=activo')
+    apiClient<PaginatedResponse<Proveedor>>('/proveedores?limit=100&estado=activo')
       .then((res) => setProveedoresList(res.data))
       .catch(() => {});
   }, [fetchUsers]);
