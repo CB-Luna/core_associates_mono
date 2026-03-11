@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsNumber, IsOptional, IsDateString, IsInt, Min, Max } from 'class-validator';
+import { IsString, IsEnum, IsNumber, IsOptional, IsDateString, IsInt, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 enum TipoDescuento {

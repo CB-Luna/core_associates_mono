@@ -151,8 +151,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       Consumer(
                         builder: (context, ref, _) {
                           final fotoUrl = ref.watch(fotoUrlProvider);
-                          final asociado = ref.watch(profileProvider).value;
-                          final iniciales = asociado?.iniciales ?? '?';
                           return CircleAvatar(
                             radius: 48,
                             backgroundColor: AppColors.primary.withValues(

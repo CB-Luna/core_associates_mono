@@ -9,41 +9,45 @@ void main() {
 
   group('App smoke tests', () {
     testWidgets('App starts and shows login screen', (tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(child: CoreAssociatesApp()),
-      );
+      await tester.pumpWidget(const ProviderScope(child: CoreAssociatesApp()));
       await tester.pumpAndSettle(const Duration(seconds: 3));
 
       // Should show the login screen with phone input
       expect(find.byType(MaterialApp), findsOneWidget);
 
       // Look for login UI elements (text field or login-related text)
-      final hasLoginElements = find.textContaining('teléfono').evaluate().isNotEmpty ||
+      final hasLoginElements =
+          find.textContaining('teléfono').evaluate().isNotEmpty ||
           find.textContaining('Iniciar').evaluate().isNotEmpty ||
           find.textContaining('Bienvenido').evaluate().isNotEmpty ||
           find.byType(TextField).evaluate().isNotEmpty;
 
-      expect(hasLoginElements, isTrue, reason: 'Login screen should have phone input or welcome text');
+      expect(
+        hasLoginElements,
+        isTrue,
+        reason: 'Login screen should have phone input or welcome text',
+      );
     });
 
     testWidgets('Login screen has submit button', (tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(child: CoreAssociatesApp()),
-      );
+      await tester.pumpWidget(const ProviderScope(child: CoreAssociatesApp()));
       await tester.pumpAndSettle(const Duration(seconds: 3));
 
       // Should have at least one ElevatedButton or button-like widget
-      final buttons = find.byType(ElevatedButton).evaluate().isNotEmpty ||
+      final buttons =
+          find.byType(ElevatedButton).evaluate().isNotEmpty ||
           find.byType(FilledButton).evaluate().isNotEmpty ||
           find.byType(TextButton).evaluate().isNotEmpty;
 
-      expect(buttons, isTrue, reason: 'Login screen should have a submit button');
+      expect(
+        buttons,
+        isTrue,
+        reason: 'Login screen should have a submit button',
+      );
     });
 
     testWidgets('Can enter phone number', (tester) async {
-      await tester.pumpWidget(
-        const ProviderScope(child: CoreAssociatesApp()),
-      );
+      await tester.pumpWidget(const ProviderScope(child: CoreAssociatesApp()));
       await tester.pumpAndSettle(const Duration(seconds: 3));
 
       // Find a text field and enter a phone number

@@ -5,5 +5,5 @@
     "outDir": "../dist-test",
     "types": ["node", "jest", "express", "multer", "supertest"]
   },
-  "include": ["./**/*.ts", "../src/**/*.ts"]
+  "include": ["**/*.ts", "../src/**/*.ts"]
 }
