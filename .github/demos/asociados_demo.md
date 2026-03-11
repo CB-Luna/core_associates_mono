@@ -15,6 +15,11 @@ Estos números se pueden dar al cliente para que descargue el APK y se dé de al
 | 3 | +52 55 2000 0003 | `5520000003` | 🟢 Disponible |
 | 4 | +52 55 2000 0004 | `5520000004` | 🟢 Disponible |
 | 5 | +52 55 2000 0005 | `5520000005` | 🟢 Disponible |
+| 6 | +52 55 3000 0001 | `5530000001` | 🟢 Disponible |
+| 7 | +52 55 3000 0002 | `5530000002` | 🟢 Disponible |
+| 8 | +52 55 3000 0003 | `5530000003` | 🟢 Disponible |
+| 9 | +52 55 3000 0004 | `5530000004` | 🟢 Disponible |
+| 10 | +52 55 3000 0005 | `5530000005` | 🟢 Disponible |
 
 > **Nota**: una vez que un número se usa para registrarse, ya queda con cuenta creada. Si se necesitan más números "frescos", se pueden agregar en la variable `DEMO_PHONES` del servidor o en el fallback de `auth.service.ts`.
 
