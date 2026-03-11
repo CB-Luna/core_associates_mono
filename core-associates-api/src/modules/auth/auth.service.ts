@@ -38,8 +38,13 @@ export class AuthService {
     otp: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     // DEMO bypass: números de demo aceptan 000000 (para presentaciones y QA)
+    const defaultDemoPhones = [
+      '+525512345678',
+      '+525510000001', '+525510000002', '+525510000003',
+      '+525520000001', '+525520000002', '+525520000003', '+525520000004', '+525520000005',
+    ].join(',');
     const demoNumbers = (
-      this.configService.get<string>('DEMO_PHONES') || '+525512345678'
+      this.configService.get<string>('DEMO_PHONES') || defaultDemoPhones
     ).split(',').map((n) => n.trim());
     const isDemoBypass = demoNumbers.includes(telefono) && otp === '000000';
     // DEV bypass: cualquier teléfono acepta 000000 en entorno no-producción
