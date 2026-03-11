@@ -70,7 +70,7 @@ export class DocumentosService {
     });
   }
 
-  async getDocumentUrl(id: string, userId: string, userTipo: string) {
+  async getDocumentBuffer(id: string, userId: string, userTipo: string): Promise<{ buffer: Buffer; contentType: string }> {
     const doc = await this.prisma.documento.findUnique({ where: { id } });
     if (!doc) {
       throw new NotFoundException('Documento no encontrado');
@@ -81,8 +81,10 @@ export class DocumentosService {
       throw new ForbiddenException('No autorizado');
     }
 
-    const url = await this.storage.getPresignedUrl(doc.s3Bucket, doc.s3Key, 900);
-    return { url };
+    const buffer = await this.storage.getFile(doc.s3Bucket, doc.s3Key);
+    const ext = doc.s3Key.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf' };
+    return { buffer, contentType: mimeMap[ext] || 'application/octet-stream' };
   }
 
   async updateEstado(

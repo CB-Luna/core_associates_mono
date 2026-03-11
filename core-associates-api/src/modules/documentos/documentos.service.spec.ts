@@ -117,38 +117,40 @@ describe('DocumentosService', () => {
     });
   });
 
-  describe('getDocumentUrl', () => {
-    it('should return presigned URL for document owner', async () => {
+  describe('getDocumentBuffer', () => {
+    it('should return buffer and contentType for document owner', async () => {
       prisma.documento.findUnique.mockResolvedValue(mockDoc);
+      storage.getFile = jest.fn().mockResolvedValue(Buffer.from('fake-doc'));
 
-      const result = await service.getDocumentUrl('doc-1', 'asoc-1', 'asociado');
-      expect(result.url).toBe('https://minio/presigned-url');
-      expect(storage.getPresignedUrl).toHaveBeenCalledWith(
+      const result = await service.getDocumentBuffer('doc-1', 'asoc-1', 'asociado');
+      expect(result.contentType).toBe('image/jpeg');
+      expect(result.buffer).toEqual(expect.any(Buffer));
+      expect(storage.getFile).toHaveBeenCalledWith(
         mockDoc.s3Bucket,
         mockDoc.s3Key,
-        900,
       );
     });
 
     it('should throw NotFoundException if document not found', async () => {
       prisma.documento.findUnique.mockResolvedValue(null);
-      await expect(service.getDocumentUrl('nonexistent', 'asoc-1', 'asociado')).rejects.toThrow(
+      await expect(service.getDocumentBuffer('nonexistent', 'asoc-1', 'asociado')).rejects.toThrow(
         NotFoundException,
       );
     });
 
     it('should throw ForbiddenException if asociado accesses other document', async () => {
       prisma.documento.findUnique.mockResolvedValue(mockDoc);
-      await expect(service.getDocumentUrl('doc-1', 'other-asoc', 'asociado')).rejects.toThrow(
+      await expect(service.getDocumentBuffer('doc-1', 'other-asoc', 'asociado')).rejects.toThrow(
         ForbiddenException,
       );
     });
 
     it('should allow CRM users to access any document', async () => {
       prisma.documento.findUnique.mockResolvedValue(mockDoc);
+      storage.getFile = jest.fn().mockResolvedValue(Buffer.from('fake-doc'));
 
-      const result = await service.getDocumentUrl('doc-1', 'admin-1', 'usuario');
-      expect(result.url).toBe('https://minio/presigned-url');
+      const result = await service.getDocumentBuffer('doc-1', 'admin-1', 'usuario');
+      expect(result.buffer).toEqual(expect.any(Buffer));
     });
   });
 

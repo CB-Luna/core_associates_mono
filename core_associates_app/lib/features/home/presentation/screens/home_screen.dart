@@ -1,7 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../promotions/presentation/providers/promotions_provider.dart';
@@ -448,23 +450,51 @@ class _PromocionCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.secondary.withValues(alpha: 0.1),
+            if (promocion.imagenUrl != null)
+              ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(
-                child: Text(
-                  promocion.descuentoFormateado,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColors.secondary,
-                    fontWeight: FontWeight.bold,
+                child: CachedNetworkImage(
+                  imageUrl: '${AppConstants.apiBaseUrl}${AppConstants.apiPrefix}/promociones/${promocion.id}/imagen',
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        promocion.descuentoFormateado,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: AppColors.secondary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: Text(
+                    promocion.descuentoFormateado,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: AppColors.secondary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
-            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

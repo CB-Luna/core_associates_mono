@@ -6,13 +6,16 @@ import {
   Param,
   Query,
   Body,
+  Res,
   UseGuards,
   UseInterceptors,
   UploadedFile,
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
+  StreamableFile,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { DocumentosService } from './documentos.service';
@@ -74,16 +77,20 @@ export class DocumentosController {
   }
 
   @Get(':id/url')
-  @ApiOperation({ summary: 'Obtener URL presignada del documento' })
-  @ApiResponse({ status: 200, description: 'URL presignada (15 min)' })
+  @ApiOperation({ summary: 'Obtener documento (stream binario)' })
+  @ApiResponse({ status: 200, description: 'Contenido binario del documento' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
   @ApiResponse({ status: 403, description: 'Sin acceso al documento' })
   @ApiResponse({ status: 404, description: 'Documento no encontrado' })
-  getDocumentUrl(
+  async getDocument(
     @Param('id') id: string,
     @CurrentUser() user: { id: string; tipo: string },
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.documentosService.getDocumentUrl(id, user.id, user.tipo);
+    const { buffer, contentType } = await this.documentosService.getDocumentBuffer(id, user.id, user.tipo);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=900');
+    return new StreamableFile(buffer);
   }
 
   @Put(':id/estado')

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -74,6 +75,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     setState(() => _uploadingFoto = true);
     try {
       await ref.read(profileProvider.notifier).uploadFoto(image.path);
+      // Evict the cached photo so CachedNetworkImage re-fetches
+      final url = ref.read(fotoUrlProvider);
+      await CachedNetworkImage.evictFromCache(url);
       ref.invalidate(fotoUrlProvider);
       if (mounted) {
         ScaffoldMessenger.of(
@@ -146,31 +150,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     children: [
                       Consumer(
                         builder: (context, ref, _) {
-                          final fotoUrl = ref.watch(fotoUrlProvider).value;
+                          final fotoUrl = ref.watch(fotoUrlProvider);
                           final asociado = ref.watch(profileProvider).value;
                           final iniciales = asociado?.iniciales ?? '?';
-                          if (fotoUrl != null && fotoUrl.isNotEmpty) {
-                            return CircleAvatar(
-                              radius: 48,
-                              backgroundImage: NetworkImage(fotoUrl),
-                              backgroundColor: AppColors.primary.withValues(
-                                alpha: 0.1,
-                              ),
-                            );
-                          }
                           return CircleAvatar(
                             radius: 48,
                             backgroundColor: AppColors.primary.withValues(
                               alpha: 0.1,
                             ),
-                            child: Text(
-                              iniciales,
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            ),
+                            backgroundImage: CachedNetworkImageProvider(fotoUrl),
+                            onBackgroundImageError: (_, __) {},
+                            child: null,
                           );
                         },
                       ),

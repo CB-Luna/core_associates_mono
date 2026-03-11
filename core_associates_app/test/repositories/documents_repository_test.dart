@@ -47,17 +47,13 @@ void main() {
     });
 
     group('getDocumentUrl', () {
-      test('returns download URL', () async {
-        when(() => mockApiClient.get('/documentos/doc-1/url'))
-            .thenAnswer((_) async => Response(
-                  data: {'url': 'https://minio.example.com/docs/doc-1.jpg'},
-                  requestOptions:
-                      RequestOptions(path: '/documentos/doc-1/url'),
-                ));
+      test('returns streaming URL', () {
+        when(() => mockApiClient.imageUrl('/documentos/doc-1/url'))
+            .thenReturn('http://10.0.2.2:3501/api/v1/documentos/doc-1/url');
 
-        final result = await repository.getDocumentUrl('doc-1');
+        final result = repository.getDocumentUrl('doc-1');
 
-        expect(result, 'https://minio.example.com/docs/doc-1.jpg');
+        expect(result, contains('/documentos/doc-1/url'));
       });
     });
   });

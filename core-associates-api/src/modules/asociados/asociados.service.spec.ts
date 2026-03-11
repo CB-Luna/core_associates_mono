@@ -255,26 +255,26 @@ describe('AsociadosService', () => {
     });
   });
 
-  describe('getFotoUrl', () => {
-    it('should return presigned URL when fotoUrl exists', async () => {
+  describe('getFotoBuffer', () => {
+    it('should return buffer and contentType when fotoUrl exists', async () => {
       prisma.asociado.findUnique.mockResolvedValue({ ...mockAsociado, fotoUrl: 'uuid-1/foto/1.jpg' });
+      storage.getFile = jest.fn().mockResolvedValue(Buffer.from('fake-image'));
 
-      const result = await service.getFotoUrl('uuid-1');
-      expect(storage.getPresignedUrl).toHaveBeenCalledWith('core-associates-photos', 'uuid-1/foto/1.jpg');
-      expect(result.url).toBe('https://minio/presigned-url');
+      const result = await service.getFotoBuffer('uuid-1');
+      expect(storage.getFile).toHaveBeenCalledWith('core-associates-photos', 'uuid-1/foto/1.jpg');
+      expect(result).toEqual({ buffer: expect.any(Buffer), contentType: 'image/jpeg' });
     });
 
-    it('should return null url when no photo', async () => {
+    it('should return null when no photo', async () => {
       prisma.asociado.findUnique.mockResolvedValue({ ...mockAsociado, fotoUrl: null });
 
-      const result = await service.getFotoUrl('uuid-1');
-      expect(storage.getPresignedUrl).not.toHaveBeenCalled();
-      expect(result.url).toBeNull();
+      const result = await service.getFotoBuffer('uuid-1');
+      expect(result).toBeNull();
     });
 
     it('should throw NotFoundException if asociado not found', async () => {
       prisma.asociado.findUnique.mockResolvedValue(null);
-      await expect(service.getFotoUrl('bad-id')).rejects.toThrow(NotFoundException);
+      await expect(service.getFotoBuffer('bad-id')).rejects.toThrow(NotFoundException);
     });
   });
 

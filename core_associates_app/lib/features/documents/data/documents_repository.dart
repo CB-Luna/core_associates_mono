@@ -30,8 +30,8 @@ class DocumentsRepository {
     return Documento.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<String> getDocumentUrl(String id) async {
-    final response = await apiClient.get('/documentos/$id/url');
-    return (response.data as Map<String, dynamic>)['url'] as String;
+  /// Returns the full streaming URL for a document.
+  String getDocumentUrl(String id) {
+    return apiClient.imageUrl('/documentos/$id/url');
   }
 }

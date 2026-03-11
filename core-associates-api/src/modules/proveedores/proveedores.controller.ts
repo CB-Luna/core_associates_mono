@@ -1,5 +1,11 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards,
+  UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator,
+  FileTypeValidator, Res, StreamableFile,
+} from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { ProveedoresService } from './proveedores.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -79,5 +85,42 @@ export class ProveedoresController {
   @ApiResponse({ status: 409, description: 'Tiene cupones o promociones asociadas' })
   remove(@Param('id') id: string) {
     return this.proveedoresService.remove(id);
+  }
+
+  @Post(':id/logotipo')
+  @Roles('admin', 'proveedor')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Subir logotipo del proveedor' })
+  @ApiResponse({ status: 200, description: 'Logotipo actualizado' })
+  @ApiResponse({ status: 404, description: 'Proveedor no encontrado' })
+  uploadLogotipo(
+    @Param('id') id: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp|svg\+xml)$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.proveedoresService.uploadLogotipo(id, file);
+  }
+
+  @Get(':id/logotipo')
+  @Roles('admin', 'operador', 'proveedor')
+  @ApiOperation({ summary: 'Obtener logotipo del proveedor (streaming)' })
+  @ApiResponse({ status: 200, description: 'Imagen del logotipo' })
+  @ApiResponse({ status: 404, description: 'Proveedor o logotipo no encontrado' })
+  async getLogotipo(
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { buffer, contentType } = await this.proveedoresService.getLogotipoBuffer(id);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=900');
+    return new StreamableFile(buffer);
   }
 }

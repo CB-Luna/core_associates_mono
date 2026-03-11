@@ -228,16 +228,18 @@ export class AsociadosService {
     });
   }
 
-  async getFotoUrl(asociadoId: string) {
+  async getFotoBuffer(asociadoId: string): Promise<{ buffer: Buffer; contentType: string } | null> {
     const asociado = await this.prisma.asociado.findUnique({ where: { id: asociadoId } });
     if (!asociado) {
       throw new NotFoundException('Asociado no encontrado');
     }
     if (!asociado.fotoUrl) {
-      return { url: null };
+      return null;
     }
-    const url = await this.storage.getPresignedUrl(BUCKET_FOTOS, asociado.fotoUrl);
-    return { url };
+    const buffer = await this.storage.getFile(BUCKET_FOTOS, asociado.fotoUrl);
+    const ext = asociado.fotoUrl.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+    return { buffer, contentType: mimeMap[ext] || 'image/jpeg' };
   }
 
   // ── Notas del asociado ──

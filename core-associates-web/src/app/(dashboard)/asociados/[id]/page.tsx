@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Car, FileText, Ticket, Eye, CheckCircle, XCircle, MessageSquare, Clock, Send, User } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, apiImageUrl } from '@/lib/api-client';
 import type { Asociado, Documento, NotaAsociado } from '@/lib/api-types';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
 import { DocumentViewer } from '@/components/documentos/DocumentViewer';
@@ -44,8 +44,8 @@ export default function AsociadoDetailPage() {
       .then(setNotas)
       .catch(console.error)
       .finally(() => setNotasLoading(false));
-    apiClient<{ url: string | null }>(`/asociados/${id}/foto`)
-      .then((res) => setFotoUrl(res.url))
+    apiImageUrl(`/asociados/${id}/foto`)
+      .then(setFotoUrl)
       .catch(() => {});
   }, [id]);
 
@@ -97,8 +97,8 @@ export default function AsociadoDetailPage() {
 
   const handleViewDocument = async (doc: Documento) => {
     try {
-      const res = await apiClient<{ url: string }>(`/documentos/${doc.id}/url`);
-      setViewerUrl(res.url);
+      const blobUrl = await apiImageUrl(`/documentos/${doc.id}/url`);
+      setViewerUrl(blobUrl);
       setViewerTitle(doc.tipo.replace(/_/g, ' '));
       setViewerOpen(true);
     } catch {

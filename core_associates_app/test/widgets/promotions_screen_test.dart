@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +14,15 @@ import 'package:core_associates_app/core/storage/secure_storage.dart';
 import '../helpers/mocks.dart';
 import '../helpers/fixtures.dart';
 
+/// Prevents real HTTP calls from CachedNetworkImage in tests.
+class _TestHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (_, __, ___) => true;
+  }
+}
+
 void main() {
   late MockPromotionsRepository mockPromotionsRepo;
   late MockApiClient mockApiClient;
@@ -24,6 +35,11 @@ void main() {
     mockPromotionsRepo = MockPromotionsRepository();
     mockApiClient = MockApiClient();
     mockStorage = MockSecureStorageService();
+    HttpOverrides.global = _TestHttpOverrides();
+  });
+
+  tearDown(() {
+    HttpOverrides.global = null;
   });
 
   Widget createPromotionsScreen({List<Promocion>? promos}) {
@@ -46,7 +62,7 @@ void main() {
   group('PromotionsScreen', () {
     testWidgets('renders title and subtitle', (tester) async {
       await tester.pumpWidget(createPromotionsScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Promociones'), findsOneWidget);
       expect(find.text('Descuentos exclusivos para asociados'), findsOneWidget);
@@ -54,14 +70,14 @@ void main() {
 
     testWidgets('renders Mis cupones link', (tester) async {
       await tester.pumpWidget(createPromotionsScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Mis cupones'), findsOneWidget);
     });
 
     testWidgets('renders category filter chips', (tester) async {
       await tester.pumpWidget(createPromotionsScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Todas'), findsOneWidget);
       expect(find.text('Mecánica'), findsOneWidget);
@@ -72,7 +88,7 @@ void main() {
 
     testWidgets('shows promotion cards with data', (tester) async {
       await tester.pumpWidget(createPromotionsScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('20% en cambio de aceite'), findsOneWidget);
       expect(find.text('\$200 en alineación'), findsOneWidget);
@@ -81,14 +97,14 @@ void main() {
 
     testWidgets('shows Obtener cupón buttons', (tester) async {
       await tester.pumpWidget(createPromotionsScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Obtener cupón'), findsNWidgets(2));
     });
 
     testWidgets('empty state shown when no promos', (tester) async {
       await tester.pumpWidget(createPromotionsScreen(promos: []));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Sin promociones disponibles'), findsOneWidget);
     });
@@ -97,10 +113,10 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(createPromotionsScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       await tester.tap(find.text('Obtener cupón').first);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Generar Cupón'), findsOneWidget);
       expect(find.text('Cancelar'), findsOneWidget);
@@ -109,20 +125,20 @@ void main() {
 
     testWidgets('coupon dialog can be dismissed', (tester) async {
       await tester.pumpWidget(createPromotionsScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       await tester.tap(find.text('Obtener cupón').first);
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       await tester.tap(find.text('Cancelar'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Generar Cupón'), findsNothing);
     });
 
     testWidgets('shows discount formatted in cards', (tester) async {
       await tester.pumpWidget(createPromotionsScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // 20% and $200
       expect(find.text('20%'), findsOneWidget);

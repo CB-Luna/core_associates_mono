@@ -1,4 +1,5 @@
-import { Controller, Get, Put, Post, Body, Param, Query, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
+import { Controller, Get, Put, Post, Body, Param, Query, Res, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { AsociadosService } from './asociados.service';
@@ -85,12 +86,16 @@ export class AsociadosController {
   }
 
   @Get('me/foto')
-  @ApiOperation({ summary: 'Obtener URL firmada de la foto de perfil' })
-  @ApiResponse({ status: 200, description: 'URL presignada de la foto (15 min)' })
+  @ApiOperation({ summary: 'Obtener foto de perfil del asociado' })
+  @ApiResponse({ status: 200, description: 'Imagen binaria de la foto' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
   @ApiResponse({ status: 404, description: 'No tiene foto' })
-  getMyFotoUrl(@CurrentUser('id') asociadoId: string) {
-    return this.asociadosService.getFotoUrl(asociadoId);
+  async getMyFoto(@CurrentUser('id') asociadoId: string, @Res({ passthrough: true }) res: Response) {
+    const result = await this.asociadosService.getFotoBuffer(asociadoId);
+    if (!result) return { url: null };
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Cache-Control', 'private, max-age=900');
+    return new StreamableFile(result.buffer);
   }
 
   // ── Endpoints admin (CRM) ──
@@ -121,13 +126,17 @@ export class AsociadosController {
   @Get(':id/foto')
   @UseGuards(RolesGuard)
   @Roles('admin', 'operador')
-  @ApiOperation({ summary: 'Obtener URL firmada de foto del asociado (admin)' })
-  @ApiResponse({ status: 200, description: 'URL presignada de la foto' })
+  @ApiOperation({ summary: 'Obtener foto del asociado (admin)' })
+  @ApiResponse({ status: 200, description: 'Imagen binaria de la foto' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
   @ApiResponse({ status: 403, description: 'Solo admin/operador' })
   @ApiResponse({ status: 404, description: 'No tiene foto' })
-  getFotoUrl(@Param('id') id: string) {
-    return this.asociadosService.getFotoUrl(id);
+  async getFoto(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
+    const result = await this.asociadosService.getFotoBuffer(id);
+    if (!result) return { url: null };
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Cache-Control', 'private, max-age=900');
+    return new StreamableFile(result.buffer);
   }
 
   @Put(':id/estado')

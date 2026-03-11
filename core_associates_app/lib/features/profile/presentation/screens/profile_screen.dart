@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,33 +10,20 @@ import '../providers/profile_provider.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  Widget _buildAvatar(String iniciales, AsyncValue<String?> fotoUrlAsync) {
-    final fotoUrl = fotoUrlAsync.value;
-    if (fotoUrl != null && fotoUrl.isNotEmpty) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundImage: NetworkImage(fotoUrl),
-        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-      );
-    }
+  Widget _buildAvatar(String iniciales, String fotoUrl) {
     return CircleAvatar(
       radius: 40,
       backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-      child: Text(
-        iniciales,
-        style: const TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-          color: AppColors.primary,
-        ),
-      ),
+      backgroundImage: CachedNetworkImageProvider(fotoUrl),
+      onBackgroundImageError: (_, __) {},
+      child: null,
     );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
-    final fotoUrlAsync = ref.watch(fotoUrlProvider);
+    final fotoUrl = ref.watch(fotoUrlProvider);
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -54,7 +42,7 @@ class ProfileScreen extends ConsumerWidget {
 
                 return Column(
                   children: [
-                    _buildAvatar(iniciales, fotoUrlAsync),
+                    _buildAvatar(iniciales, fotoUrl),
                     const SizedBox(height: 12),
                     Text(
                       nombre,

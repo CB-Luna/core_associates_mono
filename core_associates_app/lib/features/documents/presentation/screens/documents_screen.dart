@@ -1,9 +1,11 @@
 import 'dart:io';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../data/documents_repository.dart';
 import '../../data/models/documento.dart';
@@ -176,7 +178,8 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
   void _previewDocument(String docId, String label) async {
     try {
       final repo = ref.read(documentsRepositoryProvider);
-      final url = await repo.getDocumentUrl(docId);
+      final url = repo.getDocumentUrl(docId);
+      final headers = await ref.read(apiClientProvider).authHeaders;
       if (!mounted) return;
 
       showDialog(
@@ -193,16 +196,14 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
               minScale: 0.5,
               maxScale: 4.0,
               child: Center(
-                child: Image.network(
-                  url,
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  httpHeaders: headers,
                   fit: BoxFit.contain,
-                  loadingBuilder: (_, child, progress) {
-                    if (progress == null) return child;
-                    return const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    );
-                  },
-                  errorBuilder: (_, _, _) => const Column(
+                  placeholder: (_, __) => const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                  errorWidget: (_, __, ___) => const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.broken_image, size: 64, color: Colors.grey),

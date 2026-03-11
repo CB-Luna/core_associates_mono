@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Tag, Ticket, Pencil, Trash2, MapPin } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { ArrowLeft, Tag, Ticket, Pencil, Trash2, MapPin, Upload, ImageIcon } from 'lucide-react';
+import { apiClient, apiImageUrl } from '@/lib/api-client';
 import type { Proveedor } from '@/lib/api-types';
 import { Badge, estadoProveedorVariant, tipoProveedorVariant } from '@/components/ui/Badge';
 import { ProveedorFormDialog } from '@/components/shared/ProveedorFormDialog';
@@ -21,11 +21,20 @@ export default function ProveedorDetailPage() {
   const [editing, setEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const fetchData = () => {
     setLoading(true);
     apiClient<Proveedor>(`/proveedores/${id}`)
-      .then(setProveedor)
+      .then((p) => {
+        setProveedor(p);
+        if (p.logotipoUrl) {
+          apiImageUrl(`/proveedores/${id}/logotipo`).then(setLogoUrl).catch(() => setLogoUrl(null));
+        } else {
+          setLogoUrl(null);
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   };
@@ -43,6 +52,24 @@ export default function ProveedorDetailPage() {
       alert(err instanceof Error ? err.message : 'Error al eliminar');
       setDeleting(false);
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      await apiClient(`/proveedores/${id}/logotipo`, { method: 'POST', body: fd });
+      const url = await apiImageUrl(`/proveedores/${id}/logotipo`);
+      setLogoUrl(url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al subir logotipo');
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = '';
     }
   };
 
@@ -69,12 +96,34 @@ export default function ProveedorDetailPage() {
       </button>
 
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{proveedor.razonSocial}</h1>
-          <div className="mt-1 flex items-center gap-2">
-            <span className="text-sm text-gray-500">{proveedor.idUnico}</span>
-            <Badge variant={tipoProveedorVariant[proveedor.tipo]}>{proveedor.tipo}</Badge>
-            <Badge variant={estadoProveedorVariant[proveedor.estado]}>{proveedor.estado}</Badge>
+        <div className="flex items-start gap-4">
+          {/* Logotipo */}
+          <div className="relative group flex-shrink-0">
+            <div className="h-16 w-16 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logotipo" className="h-full w-full object-cover" />
+              ) : (
+                <ImageIcon className="h-8 w-8 text-gray-300" />
+              )}
+            </div>
+            {puede('editar:proveedores') && (
+              <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-lg bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                {uploadingLogo ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <Upload className="h-5 w-5 text-white" />
+                )}
+                <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
+              </label>
+            )}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{proveedor.razonSocial}</h1>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-sm text-gray-500">{proveedor.idUnico}</span>
+              <Badge variant={tipoProveedorVariant[proveedor.tipo]}>{proveedor.tipo}</Badge>
+              <Badge variant={estadoProveedorVariant[proveedor.estado]}>{proveedor.estado}</Badge>
+            </div>
           </div>
         </div>
         {puede('editar:proveedores') && (

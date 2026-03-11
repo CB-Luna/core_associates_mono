@@ -8,7 +8,7 @@ final profileProvider = AsyncNotifierProvider<ProfileNotifier, Asociado?>(
   ProfileNotifier.new,
 );
 
-final fotoUrlProvider = FutureProvider<String?>((ref) async {
+final fotoUrlProvider = Provider<String>((ref) {
   final repo = ref.watch(profileRepositoryProvider);
   return repo.getFotoUrl();
 });

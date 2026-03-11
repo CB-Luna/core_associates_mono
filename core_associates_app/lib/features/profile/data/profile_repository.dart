@@ -56,9 +56,9 @@ class ProfileRepository {
     return Asociado.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<String?> getFotoUrl() async {
-    final response = await apiClient.get('/asociados/me/foto');
-    final data = response.data as Map<String, dynamic>;
-    return data['url'] as String?;
+  /// Returns the full streaming URL for the profile photo.
+  /// The endpoint now returns binary data, so we build the URL for CachedNetworkImage.
+  String getFotoUrl() {
+    return apiClient.imageUrl('/asociados/me/foto');
   }
 }
