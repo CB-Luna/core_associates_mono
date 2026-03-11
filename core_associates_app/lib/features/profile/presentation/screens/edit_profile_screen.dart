@@ -158,7 +158,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             backgroundColor: AppColors.primary.withValues(
                               alpha: 0.1,
                             ),
-                            backgroundImage: CachedNetworkImageProvider(fotoUrl),
+                            backgroundImage: CachedNetworkImageProvider(
+                              fotoUrl,
+                            ),
                             onBackgroundImageError: (_, __) {},
                             child: null,
                           );

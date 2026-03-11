@@ -13,12 +13,12 @@ export class AuditoriaQueryDto extends PaginationQueryDto {
   @IsString()
   accion?: string;
 
-  @ApiPropertyOptional({ description: 'Fecha inicio' })
+  @ApiPropertyOptional({ description: 'Fecha inicio', example: '2025-01-01' })
   @IsOptional()
   @IsDateString()
   desde?: string;
 
-  @ApiPropertyOptional({ description: 'Fecha fin' })
+  @ApiPropertyOptional({ description: 'Fecha fin', example: '2025-12-31' })
   @IsOptional()
   @IsDateString()
   hasta?: string;

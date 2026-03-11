@@ -138,7 +138,8 @@ class ApiClient {
   Future<Response<T>> delete<T>(String path) => _dio.delete<T>(_prefixed(path));
 
   /// Build full URL for an API image endpoint (for CachedNetworkImage).
-  String imageUrl(String path) => '${AppConstants.apiBaseUrl}${_prefixed(path)}';
+  String imageUrl(String path) =>
+      '${AppConstants.apiBaseUrl}${_prefixed(path)}';
 
   /// Get current auth headers for image loading.
   Future<Map<String, String>> get authHeaders async {

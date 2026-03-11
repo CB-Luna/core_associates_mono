@@ -8,17 +8,17 @@ export class CuponesQueryDto extends PaginationQueryDto {
   @IsString()
   estado?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
   @IsOptional()
   @IsString()
   proveedorId?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: '2025-01-01' })
   @IsOptional()
   @IsString()
   desde?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: '2025-12-31' })
   @IsOptional()
   @IsString()
   hasta?: string;

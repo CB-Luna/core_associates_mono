@@ -12,42 +12,42 @@ export class CreatePromocionDto {
   @IsString()
   proveedorId?: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: '20% en cambio de aceite' })
   @IsString()
   titulo: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'Descuento especial para asociados en cambio de aceite sintético' })
   @IsString()
   descripcion: string;
 
-  @ApiProperty({ enum: TipoDescuento })
+  @ApiProperty({ enum: TipoDescuento, example: 'porcentaje' })
   @IsEnum(TipoDescuento)
   tipoDescuento: TipoDescuento;
 
-  @ApiProperty()
+  @ApiProperty({ example: 20 })
   @IsNumber()
   @Min(0)
   valorDescuento: number;
 
-  @ApiProperty()
+  @ApiProperty({ example: '2025-07-01' })
   @IsDateString()
   fechaInicio: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: '2025-12-31' })
   @IsDateString()
   fechaFin: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 72, description: 'Horas de vigencia del cupón generado' })
   @IsInt()
   @Min(1)
   vigenciaCupon: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'Válido solo con cita previa. No acumulable con otras promociones.' })
   @IsOptional()
   @IsString()
   terminos?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 100 })
   @IsOptional()
   @IsInt()
   @Min(1)

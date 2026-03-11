@@ -6,11 +6,11 @@ export class SendNotificationDto {
   @IsUUID()
   asociadoId: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'Cupón canjeado exitosamente' })
   @IsString()
   titulo: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'Tu cupón de 20% en Talleres El Rápido ha sido canjeado.' })
   @IsString()
   mensaje: string;
 

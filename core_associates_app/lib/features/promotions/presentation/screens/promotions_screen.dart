@@ -259,14 +259,17 @@ class _PromocionCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: CachedNetworkImage(
-                imageUrl: '${AppConstants.apiBaseUrl}${AppConstants.apiPrefix}/promociones/${promocion.id}/imagen',
+                imageUrl:
+                    '${AppConstants.apiBaseUrl}${AppConstants.apiPrefix}/promociones/${promocion.id}/imagen',
                 height: 140,
                 width: double.infinity,
                 fit: BoxFit.cover,
                 placeholder: (_, __) => Container(
                   height: 140,
                   color: AppColors.surface,
-                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
                 errorWidget: (_, __, ___) => const SizedBox.shrink(),
               ),

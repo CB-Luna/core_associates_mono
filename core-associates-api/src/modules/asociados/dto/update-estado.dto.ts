@@ -14,7 +14,7 @@ export class UpdateEstadoDto {
   @IsEnum(EstadoAsociado)
   estado!: EstadoAsociado;
 
-  @ApiPropertyOptional({ description: 'Requerido cuando estado es rechazado o suspendido' })
+  @ApiPropertyOptional({ description: 'Requerido cuando estado es rechazado o suspendido', example: 'Documentación incompleta' })
   @ValidateIf((o) => o.estado === 'rechazado' || o.estado === 'suspendido')
   @IsString()
   motivo?: string;

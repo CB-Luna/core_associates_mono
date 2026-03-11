@@ -11,40 +11,40 @@ enum TipoProveedor {
 }
 
 export class CreateProveedorDto {
-  @ApiProperty()
+  @ApiProperty({ example: 'Talleres El Rápido S.A. de C.V.' })
   @IsString()
   razonSocial: string;
 
-  @ApiProperty({ enum: TipoProveedor })
+  @ApiProperty({ enum: TipoProveedor, example: 'taller' })
   @IsEnum(TipoProveedor)
   tipo: TipoProveedor;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'Av. Insurgentes Sur 1234, Col. Del Valle, CDMX' })
   @IsOptional()
   @IsString()
   direccion?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 19.3756 })
   @IsOptional()
   @IsNumber()
   latitud?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: -99.1641 })
   @IsOptional()
   @IsNumber()
   longitud?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: '+525512345678' })
   @IsOptional()
   @IsString()
   telefono?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'contacto@tallereselrapido.com' })
   @IsOptional()
   @IsEmail()
   email?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'Carlos Méndez' })
   @IsOptional()
   @IsString()
   contactoNombre?: string;

@@ -18,12 +18,12 @@ void main() {
   group('DocumentsRepository', () {
     group('getMyDocuments', () {
       test('returns list of Documento', () async {
-        when(() => mockApiClient.get('/documentos/mis-documentos'))
-            .thenAnswer((_) async => Response(
-                  data: [documentoJson, documentoRechazadoJson],
-                  requestOptions:
-                      RequestOptions(path: '/documentos/mis-documentos'),
-                ));
+        when(() => mockApiClient.get('/documentos/mis-documentos')).thenAnswer(
+          (_) async => Response(
+            data: [documentoJson, documentoRechazadoJson],
+            requestOptions: RequestOptions(path: '/documentos/mis-documentos'),
+          ),
+        );
 
         final result = await repository.getMyDocuments();
 
@@ -33,12 +33,12 @@ void main() {
       });
 
       test('returns empty list when no documents', () async {
-        when(() => mockApiClient.get('/documentos/mis-documentos'))
-            .thenAnswer((_) async => Response(
-                  data: [],
-                  requestOptions:
-                      RequestOptions(path: '/documentos/mis-documentos'),
-                ));
+        when(() => mockApiClient.get('/documentos/mis-documentos')).thenAnswer(
+          (_) async => Response(
+            data: [],
+            requestOptions: RequestOptions(path: '/documentos/mis-documentos'),
+          ),
+        );
 
         final result = await repository.getMyDocuments();
 
@@ -48,8 +48,9 @@ void main() {
 
     group('getDocumentUrl', () {
       test('returns streaming URL', () {
-        when(() => mockApiClient.imageUrl('/documentos/doc-1/url'))
-            .thenReturn('http://10.0.2.2:3501/api/v1/documentos/doc-1/url');
+        when(
+          () => mockApiClient.imageUrl('/documentos/doc-1/url'),
+        ).thenReturn('http://10.0.2.2:3501/api/v1/documentos/doc-1/url');
 
         final result = repository.getDocumentUrl('doc-1');
 
