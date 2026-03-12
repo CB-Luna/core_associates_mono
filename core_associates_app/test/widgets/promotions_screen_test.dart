@@ -19,7 +19,7 @@ class _TestHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
     return super.createHttpClient(context)
-      ..badCertificateCallback = (_, __, ___) => true;
+      ..badCertificateCallback = (_, _, _) => true;
   }
 }
 

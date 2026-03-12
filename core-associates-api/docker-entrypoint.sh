@@ -27,5 +27,6 @@ npx prisma migrate deploy 2>/dev/null || {
 }
 
 echo "[4/4] Arrancando servidor NestJS en modo desarrollo..."
-rm -f tsconfig.tsbuildinfo
+rm -f tsconfig.tsbuildinfo tsconfig.build.tsbuildinfo
+rm -rf dist
 exec npm run start:dev

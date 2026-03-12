@@ -163,7 +163,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               fotoUrl,
                               headers: imgHeaders,
                             ),
-                            onBackgroundImageError: (_, __) {},
+                            onBackgroundImageError: (_, _) {},
                             child: null,
                           );
                         },

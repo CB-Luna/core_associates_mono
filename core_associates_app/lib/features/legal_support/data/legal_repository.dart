@@ -25,8 +25,8 @@ class LegalRepository {
         'tipoPercance': tipoPercance,
         'latitud': latitud,
         'longitud': longitud,
-        if (descripcion != null) 'descripcion': descripcion,
-        if (direccionAprox != null) 'direccionAprox': direccionAprox,
+        'descripcion': ?descripcion,
+        'direccionAprox': ?direccionAprox,
       },
     );
     return CasoLegal.fromJson(response.data as Map<String, dynamic>);
