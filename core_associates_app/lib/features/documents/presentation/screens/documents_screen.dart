@@ -201,10 +201,10 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                   imageUrl: url,
                   httpHeaders: headers,
                   fit: BoxFit.contain,
-                  placeholder: (_, __) => const Center(
+                  placeholder: (_, _) => const Center(
                     child: CircularProgressIndicator(color: Colors.white),
                   ),
-                  errorWidget: (_, __, ___) => const Column(
+                  errorWidget: (_, _, _) => const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.broken_image, size: 64, color: Colors.grey),

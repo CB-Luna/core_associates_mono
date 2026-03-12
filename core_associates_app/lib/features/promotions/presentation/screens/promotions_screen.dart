@@ -273,14 +273,14 @@ class _PromocionCard extends StatelessWidget {
                 height: 140,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
+                placeholder: (_, _) => Container(
                   height: 140,
                   color: AppColors.surface,
                   child: const Center(
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
-                errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                errorWidget: (_, _, _) => const SizedBox.shrink(),
               ),
             ),
             const SizedBox(height: 12),
