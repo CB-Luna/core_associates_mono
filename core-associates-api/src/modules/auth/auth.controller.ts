@@ -61,6 +61,19 @@ export class AuthController {
     return this.authService.refreshToken(dto.refreshToken);
   }
 
+  @Get('otp/peek')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Consultar OTP pendiente del asociado autenticado' })
+  @ApiResponse({ status: 200, description: 'Código OTP y TTL restante (o null si no hay)' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  peekOtp(@CurrentUser() user: any) {
+    if (user.tipo !== 'asociado' || !user.telefono) {
+      return { codigo: null, ttlSegundos: 0 };
+    }
+    return this.authService.peekOtp(user.telefono);
+  }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

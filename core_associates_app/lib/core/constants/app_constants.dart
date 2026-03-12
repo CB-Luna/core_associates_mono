@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 
 import 'environment.dart';
@@ -11,6 +12,10 @@ abstract class AppConstants {
       return Environment.apiUrl;
     }
     const port = '3501';
+    // Web uses localhost directly
+    if (kIsWeb) {
+      return 'http://localhost:$port';
+    }
     // Android emulator uses 10.0.2.2 to reach host localhost
     if (Platform.isAndroid) {
       return 'http://10.0.2.2:$port';

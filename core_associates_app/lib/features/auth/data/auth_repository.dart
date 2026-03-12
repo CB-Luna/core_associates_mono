@@ -45,4 +45,12 @@ class AuthRepository {
   Future<bool> isAuthenticated() async {
     return storage.hasTokens();
   }
+
+  /// Consulta el OTP pendiente del asociado autenticado.
+  /// Retorna `{ codigo, ttlSegundos }` o `null` si no hay token.
+  Future<Map<String, dynamic>?> peekOtp() async {
+    if (!await storage.hasTokens()) return null;
+    final response = await apiClient.get('/auth/otp/peek');
+    return response.data as Map<String, dynamic>;
+  }
 }

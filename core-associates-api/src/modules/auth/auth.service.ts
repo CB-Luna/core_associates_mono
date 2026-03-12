@@ -258,4 +258,14 @@ export class AuthService {
 
     return { message: 'Contraseña actualizada correctamente' };
   }
+
+  // ── OTP Peek (para que la app móvil muestre el código pendiente) ──
+
+  async peekOtp(telefono: string): Promise<{ codigo: string | null; ttlSegundos: number }> {
+    const key = `${OTP_KEY_PREFIX}${telefono}`;
+    const codigo = await this.redis.get(key);
+    if (!codigo) return { codigo: null, ttlSegundos: 0 };
+    const ttlSegundos = await this.redis.ttl(key);
+    return { codigo, ttlSegundos: ttlSegundos > 0 ? ttlSegundos : 0 };
+  }
 }

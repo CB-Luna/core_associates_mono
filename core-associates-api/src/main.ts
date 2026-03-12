@@ -26,13 +26,22 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // CORS
+  const isDev = process.env.NODE_ENV !== 'production';
+  const corsWhitelist = [
+    'http://localhost:3600',              // Next.js CRM local
+    'http://localhost:8580',              // Nginx Gateway local
+    'http://216.250.125.239:8580',        // Nginx Gateway producción (HTTP)
+    'https://core-asoc.cbluna-dev.com',   // Dominio producción (HTTPS)
+  ];
   app.enableCors({
-    origin: [
-      'http://localhost:3600',          // Next.js CRM local
-      'http://localhost:8580',          // Nginx Gateway local
-      'http://216.250.125.239:8580',    // Nginx Gateway producción (HTTP)
-      'https://core-asoc.cbluna-dev.com', // Dominio producción (HTTPS)
-    ],
+    origin: (origin, callback) => {
+      // En desarrollo, permitir cualquier origen localhost (Flutter web usa puerto variable)
+      if (!origin || corsWhitelist.includes(origin) || (isDev && origin.startsWith('http://localhost'))) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   });

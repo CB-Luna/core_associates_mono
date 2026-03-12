@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -175,6 +177,76 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                       : null,
                   child: const Text('Verificar'),
                 ),
+
+              const SizedBox(height: 24),
+
+              // Web: guía para ver OTP desde la app móvil + botón pegar
+              if (kIsWeb) ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.phone_android,
+                        color: Color(0xFF6366F1),
+                        size: 28,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Revisa tu app móvil',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF6366F1),
+                                  ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'El código aparecerá en la pantalla principal de Core Associates en tu teléfono.',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final clip = await Clipboard.getData(Clipboard.kTextPlain);
+                    final text = clip?.text?.trim() ?? '';
+                    if (text.length == 6 && RegExp(r'^\d{6}$').hasMatch(text)) {
+                      _pinController.setText(text);
+                      _verifyOtp(text);
+                    } else {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'No se encontró un código de 6 dígitos en el portapapeles',
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.content_paste),
+                  label: const Text('Pegar código del portapapeles'),
+                ),
+              ],
 
               const SizedBox(height: 24),
 
