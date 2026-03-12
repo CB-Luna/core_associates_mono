@@ -321,3 +321,41 @@ export interface UsuarioCRM {
   ultimoAcceso: string | null;
   createdAt: string;
 }
+
+// AI Analysis
+export interface AnalisisDocumento {
+  id: string;
+  estado: 'procesando' | 'completado' | 'error';
+  confianza: number | null;
+  datosExtraidos: Record<string, { valor: string | boolean; confianza: number }> | null;
+  validaciones: Record<string, boolean> | null;
+  createdAt: string;
+}
+
+// Documento with AI analysis
+export interface DocumentoConAnalisis extends Documento {
+  analisis?: AnalisisDocumento | null;
+  asociado?: {
+    id: string;
+    idUnico: string;
+    nombre: string;
+    apellidoPat: string;
+    telefono: string;
+  };
+}
+
+// AI Config
+export interface ConfiguracionIA {
+  id: string;
+  clave: string;
+  nombre: string;
+  provider: string;
+  modelo: string;
+  apiKey: string | null;
+  promptSistema: string | null;
+  temperatura: number;
+  maxTokens: number;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

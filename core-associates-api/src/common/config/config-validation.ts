@@ -38,4 +38,7 @@ export const configValidationSchema = Joi.object({
 
   // Cupones
   HMAC_SECRET: Joi.string().optional().default('secret'),
+
+  // Anthropic AI
+  ANTHROPIC_API_KEY: Joi.string().optional().allow(''),
 });

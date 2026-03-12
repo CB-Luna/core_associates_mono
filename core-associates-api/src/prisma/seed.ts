@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('Seeding database...');
@@ -190,8 +192,9 @@ async function main() {
     { codigo: 'promociones', titulo: 'Promociones', ruta: '/promociones', icono: 'Tag', permisos: ['admin', 'operador', 'proveedor'], orden: 4 },
     { codigo: 'cupones', titulo: 'Cupones', ruta: '/cupones', icono: 'Ticket', permisos: ['admin', 'operador', 'proveedor'], orden: 5 },
     { codigo: 'casos-legales', titulo: 'Casos Legales', ruta: '/casos-legales', icono: 'Scale', permisos: ['admin', 'operador'], orden: 6 },
-    { codigo: 'reportes', titulo: 'Reportes', ruta: '/reportes', icono: 'BarChart3', permisos: ['admin'], orden: 7 },
-    { codigo: 'configuracion', titulo: 'Configuraci\u00f3n', ruta: '/configuracion', icono: 'Settings', permisos: ['admin'], orden: 8 },
+    { codigo: 'documentos', titulo: 'Documentos', ruta: '/documentos', icono: 'FileCheck', permisos: ['admin', 'operador'], orden: 7 },
+    { codigo: 'reportes', titulo: 'Reportes', ruta: '/reportes', icono: 'BarChart3', permisos: ['admin'], orden: 8 },
+    { codigo: 'configuracion', titulo: 'Configuraci\u00f3n', ruta: '/configuracion', icono: 'Settings', permisos: ['admin'], orden: 9 },
   ];
 
   for (const item of menuItems) {
@@ -202,6 +205,22 @@ async function main() {
     });
   }
   console.log(`Menu items created: ${menuItems.length}`);
+
+  // Crear configuración IA por defecto
+  await prisma.configuracionIA.upsert({
+    where: { clave: 'document_analyzer' },
+    update: {},
+    create: {
+      clave: 'document_analyzer',
+      nombre: 'Analizador de Documentos',
+      provider: 'anthropic',
+      modelo: 'claude-sonnet-4-5-20250929',
+      temperatura: 0.2,
+      maxTokens: 4096,
+      activo: true,
+    },
+  });
+  console.log('AI config seeded: document_analyzer');
 
   console.log('Seed completed successfully!');
 }

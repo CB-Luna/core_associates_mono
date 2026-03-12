@@ -11,6 +11,8 @@ import '../../../../shared/theme/app_theme.dart';
 import '../../data/documents_repository.dart';
 import '../../data/models/documento.dart';
 import '../providers/documents_provider.dart';
+import '../widgets/ai_analysis_card.dart';
+import '../widgets/document_progress.dart';
 
 const _requiredDocs = [
   {'tipo': 'ine_frente', 'label': 'INE Frente', 'icon': Icons.badge_outlined},
@@ -254,7 +256,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                   color: AppColors.textSecondary,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              DocumentProgress(documents: docs),
+              const SizedBox(height: 16),
               for (final req in _requiredDocs) ...[
                 _DocumentTile(
                   tipo: req['tipo'] as String,
@@ -393,110 +397,117 @@ class _DocumentTile extends StatelessWidget {
               : AppColors.border,
         ),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color:
-                  (document != null
-                          ? _estadoColor(document!.estado)
-                          : AppColors.primary)
-                      .withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              icon,
-              color: document != null
-                  ? _estadoColor(document!.estado)
-                  : AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color:
+                      (document != null
+                              ? _estadoColor(document!.estado)
+                              : AppColors.primary)
+                          .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(height: 2),
-                if (document != null) ...[
-                  Row(
-                    children: [
-                      Icon(
-                        _estadoIcon(document!.estado),
-                        size: 14,
-                        color: _estadoColor(document!.estado),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        document!.estado.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: _estadoColor(document!.estado),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (document!.motivoRechazo != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        document!.motivoRechazo!,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.error.withValues(alpha: 0.8),
-                        ),
-                      ),
-                    ),
-                ] else
-                  Text(
-                    'No subido',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (isUploading)
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else if (document != null)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.visibility, size: 20),
-                  onPressed: () => onPreview(document!.id),
-                  tooltip: 'Ver',
+                child: Icon(
+                  icon,
+                  color: document != null
+                      ? _estadoColor(document!.estado)
+                      : AppColors.primary,
                 ),
-                if (document!.estado != 'aprobado')
-                  IconButton(
-                    icon: const Icon(Icons.upload, size: 20),
-                    onPressed: onUpload,
-                    tooltip: 'Resubir',
-                  ),
-              ],
-            )
-          else
-            IconButton(
-              icon: const Icon(
-                Icons.upload_file,
-                color: AppColors.primary,
-                size: 24,
               ),
-              onPressed: onUpload,
-              tooltip: 'Subir',
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    if (document != null) ...[
+                      Row(
+                        children: [
+                          Icon(
+                            _estadoIcon(document!.estado),
+                            size: 14,
+                            color: _estadoColor(document!.estado),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            document!.estado.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: _estadoColor(document!.estado),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (document!.motivoRechazo != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            document!.motivoRechazo!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.error.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ),
+                    ] else
+                      Text(
+                        'No subido',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (isUploading)
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else if (document != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.visibility, size: 20),
+                      onPressed: () => onPreview(document!.id),
+                      tooltip: 'Ver',
+                    ),
+                    if (document!.estado != 'aprobado')
+                      IconButton(
+                        icon: const Icon(Icons.upload, size: 20),
+                        onPressed: onUpload,
+                        tooltip: 'Resubir',
+                      ),
+                  ],
+                )
+              else
+                IconButton(
+                  icon: const Icon(
+                    Icons.upload_file,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                  onPressed: onUpload,
+                  tooltip: 'Subir',
+                ),
+            ],
+          ),
+          // AI Analysis card (shows only when analysis data is available)
+          if (document?.analisis != null)
+            AiAnalysisCard(analisis: document!.analisis),
         ],
       ),
     );

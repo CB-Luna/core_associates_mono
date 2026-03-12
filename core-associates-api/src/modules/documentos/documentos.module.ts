@@ -4,11 +4,13 @@ import { DocumentosService } from './documentos.service';
 import { DocumentosController } from './documentos.controller';
 import { StorageModule } from '../storage/storage.module';
 import { NotificacionesModule } from '../notificaciones/notificaciones.module';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
   imports: [
     StorageModule,
     NotificacionesModule,
+    AiModule,
     MulterModule.register({
       limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
     }),

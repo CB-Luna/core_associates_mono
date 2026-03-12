@@ -21,6 +21,7 @@ import { ReportesModule } from './modules/reportes/reportes.module';
 import { MenuModule } from './modules/menu/menu.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { HealthModule } from './modules/health/health.module';
+import { AiModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { HealthModule } from './modules/health/health.module';
     MenuModule,
     AuditoriaModule,
     HealthModule,
+    AiModule,
   ],
   providers: [
     {

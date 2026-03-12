@@ -202,8 +202,53 @@ model Documento {
   // Relaciones
   asociado       Asociado        @relation(fields: [asociadoId], references: [id], onDelete: Cascade)
   revisadoPor    Usuario?        @relation("RevisadorDocumento", fields: [revisadoPorId], references: [id])
+  analisis       AnalisisDocumento?
 
   @@map("documentos")
+}
+
+// ── AI Document Analysis ──
+
+enum EstadoAnalisis {
+  procesando
+  completado
+  error
+}
+
+model AnalisisDocumento {
+  id              String         @id @default(uuid()) @db.Uuid
+  documentoId     String         @unique @map("documento_id") @db.Uuid
+  provider        String         @db.VarChar(50)
+  modelo          String         @db.VarChar(100)
+  estado          EstadoAnalisis @default(procesando)
+  datosExtraidos  Json?          @map("datos_extraidos")
+  confianza       Float?
+  validaciones    Json?
+  errorMsg        String?        @map("error_msg")
+  tokensUsados    Int?           @map("tokens_usados")
+  tiempoMs        Int?           @map("tiempo_ms")
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  documento       Documento      @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+
+  @@map("analisis_documentos")
+}
+
+model ConfiguracionIA {
+  id              String   @id @default(uuid()) @db.Uuid
+  clave           String   @unique @db.VarChar(50)
+  nombre          String   @db.VarChar(100)
+  provider        String   @db.VarChar(50)
+  modelo          String   @db.VarChar(100)
+  apiKey          String?  @map("api_key") @db.VarChar(500)
+  promptSistema   String?  @map("prompt_sistema")
+  temperatura     Float    @default(0.3)
+  maxTokens       Int      @default(4096) @map("max_tokens")
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("configuracion_ia")
 }
 
 model Proveedor {

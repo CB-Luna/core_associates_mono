@@ -1,17 +1,21 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { AiAnalysisService } from '../ai/ai-analysis.service';
 
 const BUCKET = 'core-associates-documents';
 
 @Injectable()
 export class DocumentosService {
+  private readonly logger = new Logger(DocumentosService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly notificaciones: NotificacionesService,
+    private readonly aiAnalysis: AiAnalysisService,
   ) {}
 
   async uploadDocument(
@@ -30,10 +34,12 @@ export class DocumentosService {
       where: { asociadoId, tipo: tipo as any },
     });
 
+    let documento;
+
     if (existing) {
       // Eliminar archivo anterior de S3
       await this.storage.deleteFile(existing.s3Bucket, existing.s3Key).catch(() => {});
-      return this.prisma.documento.update({
+      documento = await this.prisma.documento.update({
         where: { id: existing.id },
         data: {
           s3Bucket: BUCKET,
@@ -47,26 +53,45 @@ export class DocumentosService {
           fechaRevision: null,
         },
       });
+    } else {
+      documento = await this.prisma.documento.create({
+        data: {
+          asociadoId,
+          tipo: tipo as any,
+          s3Bucket: BUCKET,
+          s3Key,
+          contentType: file.mimetype,
+          fileSize: file.size,
+          checksumSha256: checksum,
+          estado: 'pendiente',
+        },
+      });
     }
 
-    return this.prisma.documento.create({
-      data: {
-        asociadoId,
-        tipo: tipo as any,
-        s3Bucket: BUCKET,
-        s3Key,
-        contentType: file.mimetype,
-        fileSize: file.size,
-        checksumSha256: checksum,
-        estado: 'pendiente',
-      },
-    });
+    // Auto-trigger AI analysis (fire-and-forget)
+    this.aiAnalysis.analyzeDocument(documento.id).catch((err) =>
+      this.logger.warn(`AI analysis trigger failed for ${documento.id}: ${err.message}`),
+    );
+
+    return documento;
   }
 
   async getMyDocuments(asociadoId: string) {
     return this.prisma.documento.findMany({
       where: { asociadoId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        analisis: {
+          select: {
+            id: true,
+            estado: true,
+            confianza: true,
+            datosExtraidos: true,
+            validaciones: true,
+            createdAt: true,
+          },
+        },
+      },
     });
   }
 
@@ -140,6 +165,16 @@ export class DocumentosService {
         include: {
           asociado: {
             select: { id: true, idUnico: true, nombre: true, apellidoPat: true, telefono: true },
+          },
+          analisis: {
+            select: {
+              id: true,
+              estado: true,
+              confianza: true,
+              datosExtraidos: true,
+              validaciones: true,
+              createdAt: true,
+            },
           },
         },
       }),

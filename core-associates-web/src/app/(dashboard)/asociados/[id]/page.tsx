@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Car, FileText, Ticket, Eye, CheckCircle, XCircle, MessageSquare, Clock, Send, User } from 'lucide-react';
+import { ArrowLeft, Car, FileText, Ticket, Eye, CheckCircle, XCircle, MessageSquare, Clock, Send, User, Brain } from 'lucide-react';
 import { apiClient, apiImageUrl } from '@/lib/api-client';
 import type { Asociado, Documento, NotaAsociado } from '@/lib/api-types';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
 import { DocumentViewer } from '@/components/documentos/DocumentViewer';
 import { RejectDocumentDialog } from '@/components/documentos/RejectDocumentDialog';
+import { AIAnalysisPanel } from '@/components/documentos/AIAnalysisPanel';
 import { usePermisos } from '@/lib/permisos';
 
 export default function AsociadoDetailPage() {
@@ -345,6 +346,15 @@ export default function AsociadoDetailPage() {
                       </>
                     )}
                   </div>
+                  {/* AI Analysis */}
+                  <AIAnalysisPanel
+                    analisis={(d as any).analisis}
+                    documentoId={d.id}
+                    documentoTipo={d.tipo}
+                    onAnalysisUpdated={() => {
+                      apiClient<Asociado>(`/asociados/${id}`).then(setAsociado).catch(console.error);
+                    }}
+                  />
                 </div>
               ))
             ) : (

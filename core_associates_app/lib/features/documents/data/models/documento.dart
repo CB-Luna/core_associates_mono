@@ -1,3 +1,5 @@
+import 'ai_analysis.dart';
+
 class Documento {
   final String id;
   final String tipo;
@@ -6,6 +8,7 @@ class Documento {
   final int fileSize;
   final String? motivoRechazo;
   final String createdAt;
+  final AiAnalysis? analisis;
 
   const Documento({
     required this.id,
@@ -15,6 +18,7 @@ class Documento {
     required this.fileSize,
     this.motivoRechazo,
     required this.createdAt,
+    this.analisis,
   });
 
   factory Documento.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,9 @@ class Documento {
       fileSize: json['fileSize'] as int? ?? 0,
       motivoRechazo: json['motivoRechazo'] as String?,
       createdAt: json['createdAt'] as String,
+      analisis: json['analisis'] != null
+          ? AiAnalysis.fromJson(json['analisis'] as Map<String, dynamic>)
+          : null,
     );
   }
 
