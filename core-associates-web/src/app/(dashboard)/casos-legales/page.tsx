@@ -251,6 +251,12 @@ export default function CasosLegalesPage() {
           total={total}
           onPageChange={setPage}
           onRowClick={(row: any) => router.push(`/casos-legales/${row.id}`)}
+          searchable
+          searchPlaceholder="Buscar caso..."
+          columnToggle
+          exportable
+          exportFilename="casos-legales"
+          striped
         />
       </div>
     </div>

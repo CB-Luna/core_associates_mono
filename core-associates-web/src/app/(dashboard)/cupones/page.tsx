@@ -262,6 +262,12 @@ export default function CuponesPage() {
           total={total}
           onPageChange={setPage}
           onRowClick={(row) => setSelectedCupon(row)}
+          searchable
+          searchPlaceholder="Buscar cupon..."
+          columnToggle
+          exportable
+          exportFilename="cupones"
+          striped
         />
       </div>
 

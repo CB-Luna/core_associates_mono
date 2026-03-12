@@ -192,6 +192,12 @@ export default function ProveedoresPage() {
           totalPages={totalPages}
           total={total}
           onPageChange={setPage}
+          searchable
+          searchPlaceholder="Buscar proveedor..."
+          columnToggle
+          exportable
+          exportFilename="proveedores"
+          striped
         />
       </div>
 

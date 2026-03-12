@@ -223,6 +223,12 @@ export default function PromocionesPage() {
           total={total}
           onPageChange={setPage}
           onRowClick={handleRowClick}
+          searchable
+          searchPlaceholder="Buscar promocion..."
+          columnToggle
+          exportable
+          exportFilename="promociones"
+          striped
         />
       </div>
 

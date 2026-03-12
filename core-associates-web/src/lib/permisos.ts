@@ -5,7 +5,7 @@ type Rol = 'admin' | 'operador' | 'proveedor';
 /**
  * Permisos por rol. Cada permiso mapea a qué roles lo tienen.
  */
-const PERMISOS: Record<string, Rol[]> = {
+export const PERMISOS: Record<string, Rol[]> = {
   // Navegación
   'ver:dashboard': ['admin', 'operador', 'proveedor'],
   'ver:asociados': ['admin', 'operador'],

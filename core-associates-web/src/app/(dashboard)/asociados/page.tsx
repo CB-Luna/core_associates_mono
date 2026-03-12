@@ -199,6 +199,13 @@ export default function AsociadosPage() {
           totalPages={totalPages}
           total={total}
           onPageChange={setPage}
+          searchable
+          searchPlaceholder="Buscar asociado..."
+          columnToggle
+          exportable
+          exportFilename="asociados"
+          selectable
+          striped
         />
       </div>
     </div>
