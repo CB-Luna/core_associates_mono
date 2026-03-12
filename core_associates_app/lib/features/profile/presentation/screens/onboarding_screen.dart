@@ -245,6 +245,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget _buildDocumentsStep() {
     final docsAsync = ref.watch(documentsProvider);
 
+    final allUploaded =
+        docsAsync.whenOrNull(
+          data: (docs) => const [
+            'ine_frente',
+            'ine_reverso',
+            'selfie',
+            'tarjeta_circulacion',
+          ].every((tipo) => docs.any((d) => d.tipo == tipo)),
+        ) ??
+        false;
+
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -289,22 +300,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
 
           const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () => context.push('/documents'),
-            icon: const Icon(Icons.upload_file),
-            label: const Text('Ir a subir documentos'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+          if (!allUploaded) ...[
+            ElevatedButton.icon(
+              onPressed: () => context.push('/documents'),
+              icon: const Icon(Icons.upload_file),
+              label: const Text('Ir a subir documentos'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: _finishOnboarding,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            child: const Text('Hacer esto después'),
-          ),
+            const SizedBox(height: 12),
+          ],
+          allUploaded
+              ? ElevatedButton(
+                  onPressed: _finishOnboarding,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Continuar'),
+                )
+              : OutlinedButton(
+                  onPressed: _finishOnboarding,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Hacer esto después'),
+                ),
         ],
       ),
     );

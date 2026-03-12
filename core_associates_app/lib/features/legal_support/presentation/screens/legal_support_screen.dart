@@ -266,6 +266,7 @@ class LegalSupportScreen extends ConsumerWidget {
 
       double lat = 19.4326;
       double lng = -99.1332;
+      bool usedFallback = true;
 
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
@@ -277,6 +278,7 @@ class LegalSupportScreen extends ConsumerWidget {
           );
           lat = position.latitude;
           lng = position.longitude;
+          usedFallback = false;
         } catch (_) {
           // Use default coordinates if location fails
         }
@@ -294,8 +296,13 @@ class LegalSupportScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Caso creado: ${caso.codigo}'),
+            content: Text(
+              usedFallback
+                  ? 'Caso creado: ${caso.codigo} (ubicación aproximada — no se pudo obtener GPS)'
+                  : 'Caso creado: ${caso.codigo}',
+            ),
             backgroundColor: AppColors.secondary,
+            duration: Duration(seconds: usedFallback ? 5 : 3),
           ),
         );
       }

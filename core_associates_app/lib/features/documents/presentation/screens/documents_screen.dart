@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/api/api_client.dart';
@@ -240,6 +241,10 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
       appBar: AppBar(title: const Text('Mis Documentos')),
       body: docsAsync.when(
         data: (docs) {
+          final allUploaded = _requiredDocs.every(
+            (req) => docs.any((d) => d.tipo == req['tipo']),
+          );
+
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
@@ -265,6 +270,50 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                       _previewDocument(id, req['label'] as String),
                 ),
                 const SizedBox(height: 12),
+              ],
+              if (allUploaded) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.secondary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: AppColors.secondary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Todos los documentos han sido enviados. '
+                          'Serán revisados por un operador.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.secondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/home');
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Listo'),
+                ),
               ],
             ],
           );

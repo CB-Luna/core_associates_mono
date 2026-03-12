@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Post, Body, Param, Query, Res, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, StreamableFile } from '@nestjs/common';
+import { Controller, Get, Put, Post, Body, Param, Query, Res, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, StreamableFile, NotFoundException } from '@nestjs/common';
 import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiResponse } from '@nestjs/swagger';
@@ -92,7 +92,7 @@ export class AsociadosController {
   @ApiResponse({ status: 404, description: 'No tiene foto' })
   async getMyFoto(@CurrentUser('id') asociadoId: string, @Res({ passthrough: true }) res: Response) {
     const result = await this.asociadosService.getFotoBuffer(asociadoId);
-    if (!result) return { url: null };
+    if (!result) throw new NotFoundException('El asociado no tiene foto de perfil');
     res.setHeader('Content-Type', result.contentType);
     res.setHeader('Cache-Control', 'private, max-age=900');
     return new StreamableFile(result.buffer);
@@ -133,7 +133,7 @@ export class AsociadosController {
   @ApiResponse({ status: 404, description: 'No tiene foto' })
   async getFoto(@Param('id') id: string, @Res({ passthrough: true }) res: Response) {
     const result = await this.asociadosService.getFotoBuffer(id);
-    if (!result) return { url: null };
+    if (!result) throw new NotFoundException('El asociado no tiene foto de perfil');
     res.setHeader('Content-Type', result.contentType);
     res.setHeader('Cache-Control', 'private, max-age=900');
     return new StreamableFile(result.buffer);

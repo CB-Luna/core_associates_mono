@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../data/models/promocion.dart';
@@ -15,6 +16,7 @@ class PromotionsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedCategory = ref.watch(selectedCategoryProvider);
     final promosAsync = ref.watch(promocionesProvider);
+    final headers = ref.watch(authHeadersProvider).value ?? {};
 
     return SafeArea(
       child: Column(
@@ -117,6 +119,7 @@ class PromotionsScreen extends ConsumerWidget {
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) => _PromocionCard(
                     promocion: promos[index],
+                    httpHeaders: headers,
                     onGenerarCupon: () =>
                         _showGenerarCuponDialog(context, ref, promos[index]),
                   ),
@@ -239,9 +242,14 @@ class _CategoryChip extends StatelessWidget {
 
 class _PromocionCard extends StatelessWidget {
   final Promocion promocion;
+  final Map<String, String> httpHeaders;
   final VoidCallback onGenerarCupon;
 
-  const _PromocionCard({required this.promocion, required this.onGenerarCupon});
+  const _PromocionCard({
+    required this.promocion,
+    required this.httpHeaders,
+    required this.onGenerarCupon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -261,6 +269,7 @@ class _PromocionCard extends StatelessWidget {
               child: CachedNetworkImage(
                 imageUrl:
                     '${AppConstants.apiBaseUrl}${AppConstants.apiPrefix}/promociones/${promocion.id}/imagen',
+                httpHeaders: httpHeaders,
                 height: 140,
                 width: double.infinity,
                 fit: BoxFit.cover,

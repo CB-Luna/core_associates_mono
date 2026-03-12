@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 $APP_DIR   = Join-Path $PSScriptRoot "core_associates_app"
 $APK_REL   = "build/app/outputs/flutter-apk/app-arm64-v8a-prod-release.apk"
 $APK_PATH  = Join-Path $APP_DIR $APK_REL
-$KEYSTORE  = Join-Path $APP_DIR "android" "keystore.properties"
+$KEYSTORE  = Join-Path (Join-Path $APP_DIR "android") "keystore.properties"
 
 if (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {
     Write-Error "Flutter no encontrado en PATH."

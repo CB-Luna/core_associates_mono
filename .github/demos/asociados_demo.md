@@ -68,3 +68,7 @@ Los números demo están definidos en:
 - **Referencia**: `.env.example` tiene la lista completa documentada
 
 Para agregar más números: editar el array `defaultDemoPhones` en `auth.service.ts` y re-deployar, o bien agregar a la variable `DEMO_PHONES` en el `.env` del servidor y reiniciar el contenedor API.
+
+
+Provedor: edna_proveedor@gmail.com, Contra: Edna_proveedor1
+Operador: edna_operador@gmail.com, Contra: Edna_operador1

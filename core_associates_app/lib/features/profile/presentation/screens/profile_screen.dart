@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/profile_provider.dart';
@@ -10,11 +11,15 @@ import '../providers/profile_provider.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  Widget _buildAvatar(String iniciales, String fotoUrl) {
+  Widget _buildAvatar(
+    String iniciales,
+    String fotoUrl,
+    Map<String, String> headers,
+  ) {
     return CircleAvatar(
       radius: 40,
       backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-      backgroundImage: CachedNetworkImageProvider(fotoUrl),
+      backgroundImage: CachedNetworkImageProvider(fotoUrl, headers: headers),
       onBackgroundImageError: (_, __) {},
       child: null,
     );
@@ -24,6 +29,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
     final fotoUrl = ref.watch(fotoUrlProvider);
+    final imgHeaders = ref.watch(authHeadersProvider).value ?? {};
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -42,7 +48,7 @@ class ProfileScreen extends ConsumerWidget {
 
                 return Column(
                   children: [
-                    _buildAvatar(iniciales, fotoUrl),
+                    _buildAvatar(iniciales, fotoUrl, imgHeaders),
                     const SizedBox(height: 12),
                     Text(
                       nombre,

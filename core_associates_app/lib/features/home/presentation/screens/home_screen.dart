@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
@@ -16,6 +17,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
     final promosAsync = ref.watch(promocionesProvider);
+    final imgHeaders = ref.watch(authHeadersProvider).value ?? {};
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -155,6 +157,7 @@ class HomeScreen extends ConsumerWidget {
                           padding: const EdgeInsets.only(bottom: 8),
                           child: _PromocionCard(
                             promocion: p,
+                            httpHeaders: imgHeaders,
                             onTap: () => context.go('/promotions'),
                           ),
                         ),
@@ -432,9 +435,14 @@ class _QuickAction extends StatelessWidget {
 
 class _PromocionCard extends StatelessWidget {
   final Promocion promocion;
+  final Map<String, String> httpHeaders;
   final VoidCallback onTap;
 
-  const _PromocionCard({required this.promocion, required this.onTap});
+  const _PromocionCard({
+    required this.promocion,
+    required this.httpHeaders,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -456,6 +464,7 @@ class _PromocionCard extends StatelessWidget {
                 child: CachedNetworkImage(
                   imageUrl:
                       '${AppConstants.apiBaseUrl}${AppConstants.apiPrefix}/promociones/${promocion.id}/imagen',
+                  httpHeaders: httpHeaders,
                   width: 48,
                   height: 48,
                   fit: BoxFit.cover,

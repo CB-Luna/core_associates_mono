@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../providers/profile_provider.dart';
 
@@ -151,6 +152,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       Consumer(
                         builder: (context, ref, _) {
                           final fotoUrl = ref.watch(fotoUrlProvider);
+                          final imgHeaders =
+                              ref.watch(authHeadersProvider).value ?? {};
                           return CircleAvatar(
                             radius: 48,
                             backgroundColor: AppColors.primary.withValues(
@@ -158,6 +161,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             ),
                             backgroundImage: CachedNetworkImageProvider(
                               fotoUrl,
+                              headers: imgHeaders,
                             ),
                             onBackgroundImageError: (_, __) {},
                             child: null,

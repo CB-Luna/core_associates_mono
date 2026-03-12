@@ -168,3 +168,8 @@ class ApiClient {
     );
   }
 }
+
+/// Reactive provider for auth headers — use with CachedNetworkImage / CachedNetworkImageProvider.
+final authHeadersProvider = FutureProvider<Map<String, String>>((ref) {
+  return ref.watch(apiClientProvider).authHeaders;
+});
