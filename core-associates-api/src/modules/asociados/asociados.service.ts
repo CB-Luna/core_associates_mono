@@ -233,13 +233,22 @@ export class AsociadosService {
     if (!asociado) {
       throw new NotFoundException('Asociado no encontrado');
     }
-    if (!asociado.fotoUrl) {
-      return null;
+    if (asociado.fotoUrl) {
+      const buffer = await this.storage.getFile(BUCKET_FOTOS, asociado.fotoUrl);
+      const ext = asociado.fotoUrl.split('.').pop()?.toLowerCase() || 'jpg';
+      const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+      return { buffer, contentType: mimeMap[ext] || 'image/jpeg' };
     }
-    const buffer = await this.storage.getFile(BUCKET_FOTOS, asociado.fotoUrl);
-    const ext = asociado.fotoUrl.split('.').pop()?.toLowerCase() || 'jpg';
-    const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
-    return { buffer, contentType: mimeMap[ext] || 'image/jpeg' };
+    // Fallback: usar selfie del KYC como avatar
+    const selfie = await this.prisma.documento.findFirst({
+      where: { asociadoId, tipo: 'selfie' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (selfie) {
+      const buffer = await this.storage.getFile(selfie.s3Bucket, selfie.s3Key);
+      return { buffer, contentType: selfie.contentType };
+    }
+    return null;
   }
 
   // ── Notas del asociado ──

@@ -267,9 +267,27 @@ describe('AsociadosService', () => {
 
     it('should return null when no photo', async () => {
       prisma.asociado.findUnique.mockResolvedValue({ ...mockAsociado, fotoUrl: null });
+      prisma.documento = { ...prisma.documento, findFirst: jest.fn().mockResolvedValue(null) } as any;
 
       const result = await service.getFotoBuffer('uuid-1');
       expect(result).toBeNull();
+    });
+
+    it('should fallback to selfie document when no fotoUrl', async () => {
+      prisma.asociado.findUnique.mockResolvedValue({ ...mockAsociado, fotoUrl: null });
+      prisma.documento = {
+        ...prisma.documento,
+        findFirst: jest.fn().mockResolvedValue({
+          s3Bucket: 'core-associates-documents',
+          s3Key: 'uuid-1/selfie/123.jpg',
+          contentType: 'image/jpeg',
+        }),
+      } as any;
+      storage.getFile = jest.fn().mockResolvedValue(Buffer.from('selfie-image'));
+
+      const result = await service.getFotoBuffer('uuid-1');
+      expect(storage.getFile).toHaveBeenCalledWith('core-associates-documents', 'uuid-1/selfie/123.jpg');
+      expect(result).toEqual({ buffer: expect.any(Buffer), contentType: 'image/jpeg' });
     });
 
     it('should throw NotFoundException if asociado not found', async () => {
