@@ -49,6 +49,7 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<PromocionFormData>({
     resolver: zodResolver(promocionSchema),
@@ -103,6 +104,13 @@ export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: Pro
         .catch(() => {});
     }
   }, [open, promocion]);
+
+  // Re-set proveedorId once proveedores options are loaded (fixes race condition)
+  useEffect(() => {
+    if (open && promocion && proveedores.length > 0) {
+      setValue('proveedorId', promocion.proveedorId);
+    }
+  }, [open, promocion, proveedores, setValue]);
 
   const onSubmit = async (data: PromocionFormData) => {
     setServerError('');

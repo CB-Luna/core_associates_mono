@@ -193,7 +193,7 @@ class LegalSupportScreen extends ConsumerWidget {
               const Text('Tipo de percance:'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                initialValue: selectedTipo,
+                value: selectedTipo,
                 items: const [
                   DropdownMenuItem(
                     value: 'accidente',

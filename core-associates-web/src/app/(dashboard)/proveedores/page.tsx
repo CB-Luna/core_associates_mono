@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { type ColumnDef } from '@tanstack/react-table';
-import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import type { Proveedor } from '@/lib/api-types';
 import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
@@ -30,6 +30,32 @@ const tipoOptions = [
   { label: 'Capacitación', value: 'capacitacion' },
   { label: 'Otro', value: 'otro' },
 ];
+
+function ProveedorThumb({ proveedor }: { proveedor: Proveedor }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const TIcon = tipoIcon[proveedor.tipo] || Store;
+
+  useEffect(() => {
+    if (!proveedor.logotipoUrl) return;
+    let revoked = false;
+    apiImageUrl(`/proveedores/${proveedor.id}/logotipo`).then((url) => {
+      if (!revoked) setSrc(url);
+    }).catch(() => {});
+    return () => { revoked = true; if (src) URL.revokeObjectURL(src); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proveedor.id, proveedor.logotipoUrl]);
+
+  if (src) {
+    return (
+      <img src={src} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
+    );
+  }
+  return (
+    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tipoColorBg[proveedor.tipo] || 'bg-gray-100 text-gray-600'}`}>
+      <TIcon className="h-4 w-4" />
+    </div>
+  );
+}
 
 export default function ProveedoresPage() {
   const router = useRouter();
@@ -87,12 +113,9 @@ export default function ProveedoresPage() {
       header: 'Proveedor',
       cell: ({ row }) => {
         const p = row.original;
-        const TIcon = tipoIcon[p.tipo] || Store;
         return (
           <div className="flex items-center gap-3">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tipoColorBg[p.tipo] || 'bg-gray-100 text-gray-600'}`}>
-              <TIcon className="h-4 w-4" />
-            </div>
+            <ProveedorThumb proveedor={p} />
             <div className="min-w-0">
               <p className="truncate font-semibold text-gray-900">{p.razonSocial}</p>
               <p className="truncate font-mono text-[11px] text-gray-400">{p.idUnico}</p>
