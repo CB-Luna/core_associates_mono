@@ -117,17 +117,22 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
 
       {/* Right side controls */}
       <div className="flex items-center gap-3">
-        {/* Search placeholder */}
-        <button className="hidden items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-400 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500 dark:hover:bg-gray-600 md:flex">
+        {/* Search placeholder — no-op for now */}
+        <button
+          className="hidden items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-400 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500 dark:hover:bg-gray-600 md:flex"
+          title="Búsqueda (próximamente)"
+        >
           <Search className="h-3.5 w-3.5" />
           <span>Buscar...</span>
           <kbd className="ml-4 rounded border border-gray-300 bg-white px-1.5 py-0.5 text-[10px] font-medium text-gray-400 dark:border-gray-600 dark:bg-gray-800">⌘K</kbd>
         </button>
 
-        {/* Notifications stub */}
-        <button className="relative rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300">
+        {/* Notifications (coming soon) */}
+        <button
+          className="relative rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+          title="Notificaciones (próximamente)"
+        >
           <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
         </button>
 
         <DarkModeToggle />
@@ -162,13 +167,7 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
                 <Settings className="h-4 w-4" />
                 Configuración
               </button>
-              <button
-                onClick={() => { setDropdownOpen(false); router.push('/configuracion'); }}
-                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
-              >
-                <UserIcon className="h-4 w-4" />
-                Mi Perfil
-              </button>
+
               <div className="border-t border-gray-100 dark:border-gray-700">
                 <button
                   onClick={() => { setDropdownOpen(false); logout(); }}

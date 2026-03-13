@@ -48,6 +48,7 @@ function createIcon(color: string) {
 export function MapView({ markers, center, zoom = 13, className = '', height = '300px', onMarkerClick, activeMarkerId }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<L.Marker[]>([]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -57,7 +58,7 @@ export function MapView({ markers, center, zoom = 13, className = '', height = '
 
     const map = L.map(containerRef.current).setView(defaultCenter, zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+      attribution: '',
       maxZoom: 19,
     }).addTo(map);
 
@@ -98,7 +99,7 @@ export function MapView({ markers, center, zoom = 13, className = '', height = '
   return (
     <div
       ref={containerRef}
-      className={`w-full overflow-hidden rounded-lg ${className}`}
+      className={`relative z-0 w-full overflow-hidden rounded-lg ${className}`}
       style={{ height }}
     />
   );

@@ -1,41 +1,84 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { X, Phone, Mail, MapPin, Calendar, Tag, ExternalLink } from 'lucide-react';
+import { X, Phone, Mail, MapPin, Calendar, Tag, Pencil, Trash2, Upload, ImageIcon } from 'lucide-react';
 import { apiClient, apiImageUrl } from '@/lib/api-client';
 import type { Proveedor } from '@/lib/api-types';
 import { Badge, estadoProveedorVariant, tipoProveedorVariant } from '@/components/ui/Badge';
+import { ProveedorFormDialog } from '@/components/shared/ProveedorFormDialog';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { usePermisos } from '@/lib/permisos';
 import { formatFechaLegible } from '@/lib/utils';
 
 interface Props {
   proveedorId: string;
   onClose: () => void;
+  onUpdated?: () => void;
 }
 
-export function ProveedorDetailModal({ proveedorId, onClose }: Props) {
-  const router = useRouter();
+export function ProveedorDetailModal({ proveedorId, onClose, onUpdated }: Props) {
+  const { puede } = usePermisos();
   const [proveedor, setProveedor] = useState<Proveedor | null>(null);
   const [loading, setLoading] = useState(true);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [showDeactivate, setShowDeactivate] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  useEffect(() => {
+  const fetchData = () => {
+    setLoading(true);
     apiClient<Proveedor>(`/proveedores/${proveedorId}`)
       .then((p) => {
         setProveedor(p);
         if (p.logotipoUrl) {
-          apiImageUrl(`/proveedores/${proveedorId}/logotipo`).then(setLogoUrl).catch(() => {});
+          apiImageUrl(`/proveedores/${proveedorId}/logotipo`).then(setLogoUrl).catch(() => setLogoUrl(null));
+        } else {
+          setLogoUrl(null);
         }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [proveedorId]);
+  };
+
+  useEffect(() => { fetchData(); }, [proveedorId]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  const handleDeactivate = async () => {
+    setDeactivating(true);
+    try {
+      await apiClient(`/proveedores/${proveedorId}`, { method: 'PUT', body: JSON.stringify({ estado: 'inactivo' }) });
+      onUpdated?.();
+      onClose();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al desactivar');
+      setDeactivating(false);
+      setShowDeactivate(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      await apiClient(`/proveedores/${proveedorId}/logotipo`, { method: 'POST', body: fd });
+      const url = await apiImageUrl(`/proveedores/${proveedorId}/logotipo`);
+      setLogoUrl(url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al subir logotipo');
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = '';
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 pt-[5vh]" onClick={onClose}>
@@ -55,13 +98,23 @@ export function ProveedorDetailModal({ proveedorId, onClose }: Props) {
             </div>
           ) : proveedor ? (
             <div className="flex items-center gap-4">
-              {logoUrl ? (
-                <img src={logoUrl} alt="" className="h-14 w-14 rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 text-lg font-bold text-white">
-                  {proveedor.razonSocial?.[0]?.toUpperCase() || 'P'}
+              <div className="relative group flex-shrink-0">
+                <div className="h-14 w-14 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center dark:border-gray-600 dark:bg-gray-700">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 text-lg font-bold text-white">
+                      {proveedor.razonSocial?.[0]?.toUpperCase() || 'P'}
+                    </div>
+                  )}
                 </div>
-              )}
+                {puede('editar:proveedores') && (
+                  <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-lg bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                    {uploadingLogo ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Upload className="h-4 w-4 text-white" />}
+                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
+                  </label>
+                )}
+              </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">{proveedor.razonSocial}</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{proveedor.idUnico}</p>
@@ -131,22 +184,54 @@ export function ProveedorDetailModal({ proveedorId, onClose }: Props) {
 
         {/* Footer */}
         {proveedor && (
-          <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-5 py-4 dark:border-gray-700">
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4 dark:border-gray-700">
+            <div className="flex gap-2">
+              {puede('editar:proveedores') && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Editar
+                </button>
+              )}
+              {puede('eliminar:proveedores') && proveedor.estado !== 'inactivo' && (
+                <button
+                  onClick={() => setShowDeactivate(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Desactivar
+                </button>
+              )}
+            </div>
             <button
               onClick={onClose}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Cerrar
             </button>
-            <button
-              onClick={() => { onClose(); router.push(`/proveedores/${proveedorId}`); }}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Ver detalle completo
-            </button>
           </div>
         )}
+
+        {editing && proveedor && (
+          <ProveedorFormDialog
+            proveedor={proveedor}
+            onClose={() => setEditing(false)}
+            onSaved={() => { setEditing(false); fetchData(); onUpdated?.(); }}
+          />
+        )}
+
+        <ConfirmDialog
+          open={showDeactivate}
+          title="Desactivar proveedor"
+          message={`¿Estás seguro de desactivar a "${proveedor?.razonSocial}"? El proveedor quedará inactivo y podrá reactivarse después.`}
+          confirmLabel="Desactivar"
+          variant="danger"
+          loading={deactivating}
+          onConfirm={handleDeactivate}
+          onCancel={() => setShowDeactivate(false)}
+        />
       </div>
     </div>
   );

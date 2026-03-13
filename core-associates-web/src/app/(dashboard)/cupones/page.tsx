@@ -9,9 +9,8 @@ import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
-import { exportToCSV, exportToPDFNative } from '@/lib/export-utils';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
-import { Download, FileDown, X, QrCode, Eye, Ticket, Calendar } from 'lucide-react';
+import { X, QrCode, Eye, Ticket, Calendar } from 'lucide-react';
 import { QRDisplay } from '@/components/ui/QRDisplay';
 import type { Proveedor } from '@/lib/api-types';
 
@@ -175,17 +174,9 @@ export default function CuponesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Cupones</h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{esProveedor ? 'Cupones generados con tus promociones' : 'Seguimiento de cupones generados'}</p>
-        </div>
-        {!esProveedor && (
-        <div className="flex gap-2">
-          <button onClick={() => exportToCSV(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', promocion: c.promocion?.titulo || '', proveedor: c.proveedor?.razonSocial || '', vencimiento: formatFechaLegible(c.fechaVencimiento), estado: c.estado })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'promocion', header: 'Promoción' }, { key: 'proveedor', header: 'Proveedor' }, { key: 'vencimiento', header: 'Vencimiento' }, { key: 'estado', header: 'Estado' }], 'cupones')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
-          <button onClick={() => exportToPDFNative(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', promocion: c.promocion?.titulo || '', proveedor: c.proveedor?.razonSocial || '', vencimiento: formatFechaLegible(c.fechaVencimiento), estado: c.estado })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'promocion', header: 'Promoción' }, { key: 'proveedor', header: 'Proveedor' }, { key: 'vencimiento', header: 'Vencimiento' }, { key: 'estado', header: 'Estado' }], 'Reporte de Cupones', 'cupones')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><FileDown className="h-4 w-4" />PDF</button>
-        </div>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Cupones</h1>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{esProveedor ? 'Cupones generados con tus promociones' : 'Seguimiento de cupones generados'}</p>
       </div>
 
       <StatsCards
@@ -208,14 +199,14 @@ export default function CuponesPage() {
         />
 
         {/* Advanced filters row */}
-        <div className="mt-3 flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-3">
+        <div className="mt-3 flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
           {!esProveedor && (
           <div>
-            <label className="block text-xs font-medium text-gray-500">Proveedor</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Proveedor</label>
             <select
               value={proveedorFilter}
               onChange={(e) => { setProveedorFilter(e.target.value); setPage(1); }}
-              className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
             >
               <option value="">Todos</option>
               {proveedores.map((p) => (
@@ -225,27 +216,27 @@ export default function CuponesPage() {
           </div>
           )}
           <div>
-            <label className="block text-xs font-medium text-gray-500">Desde</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Desde</label>
             <input
               type="date"
               value={fechaDesde}
               onChange={(e) => { setFechaDesde(e.target.value); setPage(1); }}
-              className="mt-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500">Hasta</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Hasta</label>
             <input
               type="date"
               value={fechaHasta}
               onChange={(e) => { setFechaHasta(e.target.value); setPage(1); }}
-              className="mt-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
             />
           </div>
           {(proveedorFilter || fechaDesde || fechaHasta) && (
             <button
               onClick={() => { setProveedorFilter(''); setFechaDesde(''); setFechaHasta(''); setPage(1); }}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
             >
               Limpiar filtros
             </button>
@@ -305,11 +296,11 @@ export default function CuponesPage() {
       {/* Detail Modal */}
       {selectedCupon && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setSelectedCupon(null)}>
-          <div className="relative mx-4 max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setSelectedCupon(null)} className="absolute right-4 top-4 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+          <div className="relative mx-4 max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setSelectedCupon(null)} className="absolute right-4 top-4 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
               <X className="h-5 w-5" />
             </button>
-            <h2 className="text-lg font-bold text-gray-900">Detalle del Cupón</h2>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Detalle del Cupón</h2>
             <div className="mt-4 space-y-3">
               <DetailRow label="Código" value={selectedCupon.codigo} />
               <DetailRow label="Estado" value={<Badge variant={estadoVariant[selectedCupon.estado] || 'default'}>{selectedCupon.estado}</Badge>} />
@@ -344,9 +335,9 @@ export default function CuponesPage() {
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between border-b border-gray-100 pb-2">
-      <span className="text-sm font-medium text-gray-500">{label}</span>
-      <span className="text-sm text-gray-900">{value}</span>
+    <div className="flex items-start justify-between border-b border-gray-100 pb-2 dark:border-gray-700">
+      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="text-sm text-gray-900 dark:text-gray-200">{value}</span>
     </div>
   );
 }

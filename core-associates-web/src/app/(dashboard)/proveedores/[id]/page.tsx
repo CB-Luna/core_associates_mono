@@ -47,10 +47,13 @@ export default function ProveedorDetailPage() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await apiClient(`/proveedores/${id}`, { method: 'DELETE' });
+      await apiClient(`/proveedores/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ estado: 'inactivo' }),
+      });
       router.push('/proveedores');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al eliminar');
+      alert(err instanceof Error ? err.message : 'Error al desactivar');
       setDeleting(false);
       setShowDeleteConfirm(false);
     }
@@ -142,7 +145,7 @@ export default function ProveedorDetailPage() {
                 className="flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
               >
                 <Trash2 className="h-4 w-4" />
-                Eliminar
+                Desactivar
               </button>
             )}
           </div>
@@ -256,9 +259,9 @@ export default function ProveedorDetailPage() {
 
       <ConfirmDialog
         open={showDeleteConfirm}
-        title="Eliminar proveedor"
-        message={`¿Estás seguro de eliminar a "${proveedor.razonSocial}"? Esta acción no se puede deshacer.`}
-        confirmLabel="Eliminar"
+        title="Desactivar proveedor"
+        message={`¿Estás seguro de desactivar a "${proveedor.razonSocial}"? El proveedor quedará inactivo y podrá reactivarse después.`}
+        confirmLabel="Desactivar"
         variant="danger"
         loading={deleting}
         onConfirm={handleDelete}

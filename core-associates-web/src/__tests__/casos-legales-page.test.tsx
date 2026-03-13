@@ -14,12 +14,6 @@ vi.mock('@/lib/api-client', () => ({
   apiImageUrl: vi.fn(),
 }));
 
-// Mock export-utils
-vi.mock('@/lib/export-utils', () => ({
-  exportToCSV: vi.fn(),
-  exportToPrintPDF: vi.fn(),
-}));
-
 const mockCasos = {
   data: [
     {
@@ -103,14 +97,15 @@ describe('CasosLegalesPage', () => {
     });
   });
 
-  it('should render CSV and PDF export buttons', async () => {
+  it('should render DataTable export button', async () => {
     const { apiClient } = await import('@/lib/api-client');
     vi.mocked(apiClient).mockResolvedValue(mockCasos);
 
     render(<CasosLegalesPage />);
 
-    expect(screen.getByText('CSV')).toBeInTheDocument();
-    expect(screen.getByText('PDF')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Exportar CSV')).toBeInTheDocument();
+    });
   });
 
   it('should render filter dropdowns', async () => {

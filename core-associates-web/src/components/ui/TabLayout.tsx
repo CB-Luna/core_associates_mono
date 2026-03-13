@@ -40,7 +40,7 @@ export function TabLayout({ tabs, defaultTab, onTabChange }: TabLayoutProps) {
   return (
     <div>
       {/* Tab bar */}
-      <div className="rounded-xl border bg-white shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="flex gap-1 overflow-x-auto p-1.5 [&::-webkit-scrollbar]:hidden">
           {tabs.map((tab) => {
             const isActive = tab.key === activeKey;
@@ -53,8 +53,8 @@ export function TabLayout({ tabs, defaultTab, onTabChange }: TabLayoutProps) {
                 onClick={() => handleTabClick(tab.key)}
                 className={`flex shrink-0 items-center gap-2.5 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
                   isActive
-                    ? `${colors.activeBg} border-b-[3px] ${colors.border} ${colors.text}`
-                    : 'border-b-[3px] border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                    ? `${colors.activeBg} border-b-[3px] ${colors.border} ${colors.text} dark:bg-gray-700`
+                    : 'border-b-[3px] border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200'
                 }`}
               >
                 <span

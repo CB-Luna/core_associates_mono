@@ -5,6 +5,7 @@ import { ClientProviders } from '@/app/client-providers';
 export const metadata: Metadata = {
   title: 'Core Associates - CRM',
   description: 'Panel de administración de la Asociación Civil de Conductores',
+  icons: { icon: '/favicon.png' },
 };
 
 export default function RootLayout({

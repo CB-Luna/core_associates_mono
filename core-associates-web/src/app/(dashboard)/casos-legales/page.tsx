@@ -8,9 +8,8 @@ import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
-import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
 import { formatFechaLegible } from '@/lib/utils';
-import { Download, Printer, Eye, ExternalLink, Car, Gavel, ShieldAlert, AlertTriangle, HelpCircle, Calendar } from 'lucide-react';
+import { Eye, Car, Gavel, ShieldAlert, AlertTriangle, HelpCircle, Calendar } from 'lucide-react';
 
 const tipoIcon: Record<string, typeof AlertTriangle> = {
   accidente: Car, infraccion: Gavel, robo: ShieldAlert, asalto: AlertTriangle, otro: HelpCircle,
@@ -185,13 +184,6 @@ export default function CasosLegalesPage() {
           >
             <Eye className="h-4 w-4" />
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); window.open(`/casos-legales/${row.original.id}`, '_blank'); }}
-            title="Abrir en nueva pestaña"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:border-gray-700 dark:hover:bg-gray-700"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </button>
         </div>
       ),
     },
@@ -199,15 +191,9 @@ export default function CasosLegalesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Casos Legales</h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Gestión de percances y asistencia legal</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => exportToCSV(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', tipo: c.tipoPercance, prioridad: c.prioridad, estado: c.estado, apertura: formatFechaLegible(c.fechaApertura) })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'tipo', header: 'Tipo' }, { key: 'prioridad', header: 'Prioridad' }, { key: 'estado', header: 'Estado' }, { key: 'apertura', header: 'Apertura' }], 'casos-legales')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
-          <button onClick={() => exportToPrintPDF(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', tipo: c.tipoPercance, prioridad: c.prioridad, estado: c.estado, apertura: formatFechaLegible(c.fechaApertura) })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'tipo', header: 'Tipo' }, { key: 'prioridad', header: 'Prioridad' }, { key: 'estado', header: 'Estado' }, { key: 'apertura', header: 'Apertura' }], 'Reporte de Casos Legales')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Printer className="h-4 w-4" />PDF</button>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Casos Legales</h1>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Gestión de percances y asistencia legal</p>
       </div>
 
       <StatsCards
@@ -281,7 +267,6 @@ export default function CasosLegalesPage() {
                   </div>
                   <div className="mt-2 flex items-center gap-1">
                     <button onClick={(e) => { e.stopPropagation(); router.push(`/casos-legales/${c.id}`); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary-200 text-primary-500 hover:bg-primary-50"><Eye className="h-3.5 w-3.5" /></button>
-                    <button onClick={(e) => { e.stopPropagation(); window.open(`/casos-legales/${c.id}`, '_blank'); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50"><ExternalLink className="h-3 w-3" /></button>
                   </div>
                 </div>
               </div>

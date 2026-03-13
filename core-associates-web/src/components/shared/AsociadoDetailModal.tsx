@@ -1,23 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { X, Car, FileText, Ticket, Phone, Mail, Calendar, User, ExternalLink } from 'lucide-react';
+import { X, Car, FileText, Ticket, Phone, Mail, Calendar, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { apiClient, apiImageUrl } from '@/lib/api-client';
 import type { Asociado } from '@/lib/api-types';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
+import { usePermisos } from '@/lib/permisos';
 import { formatFechaLegible } from '@/lib/utils';
 
 interface Props {
   asociadoId: string;
   onClose: () => void;
+  onUpdated?: () => void;
 }
 
-export function AsociadoDetailModal({ asociadoId, onClose }: Props) {
-  const router = useRouter();
+export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
+  const { puede } = usePermisos();
   const [asociado, setAsociado] = useState<Asociado | null>(null);
   const [loading, setLoading] = useState(true);
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [suspendDialog, setSuspendDialog] = useState(false);
+  const [suspendMotivo, setSuspendMotivo] = useState('');
 
   useEffect(() => {
     apiClient<Asociado>(`/asociados/${asociadoId}`)
@@ -35,6 +39,32 @@ export function AsociadoDetailModal({ asociadoId, onClose }: Props) {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  const handleEstado = async (estado: string, motivo?: string) => {
+    if (!asociado) return;
+    setUpdating(true);
+    try {
+      const body: Record<string, string> = { estado };
+      if (motivo) body.motivo = motivo;
+      await apiClient(`/asociados/${asociado.id}/estado`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+      setAsociado({ ...asociado, estado: estado as Asociado['estado'] });
+      onUpdated?.();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al cambiar estado');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSuspend = async () => {
+    if (!suspendMotivo.trim()) return;
+    await handleEstado('suspendido', suspendMotivo.trim());
+    setSuspendDialog(false);
+    setSuspendMotivo('');
+  };
 
   const fullName = asociado
     ? `${asociado.nombre} ${asociado.apellidoPat} ${asociado.apellidoMat || ''}`.trim()
@@ -180,20 +210,79 @@ export function AsociadoDetailModal({ asociadoId, onClose }: Props) {
 
         {/* Footer */}
         {asociado && (
-          <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-5 py-4 dark:border-gray-700">
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4 dark:border-gray-700">
+            <div className="flex gap-2">
+              {puede('aprobar:asociados') && asociado.estado === 'pendiente' && (
+                <>
+                  <button
+                    onClick={() => handleEstado('activo')}
+                    disabled={updating}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                  >
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    Aprobar
+                  </button>
+                  <button
+                    onClick={() => handleEstado('rechazado')}
+                    disabled={updating}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                    Rechazar
+                  </button>
+                </>
+              )}
+              {puede('editar:asociados') && asociado.estado === 'activo' && (
+                <button
+                  onClick={() => setSuspendDialog(true)}
+                  disabled={updating}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700 disabled:opacity-50"
+                >
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Suspender
+                </button>
+              )}
+            </div>
             <button
               onClick={onClose}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Cerrar
             </button>
-            <button
-              onClick={() => { onClose(); router.push(`/asociados/${asociadoId}`); }}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Ver detalle completo
-            </button>
+          </div>
+        )}
+
+        {/* Suspend dialog */}
+        {suspendDialog && asociado && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Suspender Asociado</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Indica el motivo de la suspensión de {asociado.nombre} {asociado.apellidoPat}.
+              </p>
+              <textarea
+                value={suspendMotivo}
+                onChange={(e) => setSuspendMotivo(e.target.value)}
+                placeholder="Motivo de suspensión (requerido)"
+                rows={3}
+                className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
+              />
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  onClick={() => { setSuspendDialog(false); setSuspendMotivo(''); }}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSuspend}
+                  disabled={!suspendMotivo.trim() || updating}
+                  className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+                >
+                  Confirmar Suspensión
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

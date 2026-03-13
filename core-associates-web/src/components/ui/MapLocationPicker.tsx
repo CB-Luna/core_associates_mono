@@ -54,7 +54,7 @@ export function MapLocationPicker({ lat, lng, onChange, height = '250px' }: MapL
     const center: [number, number] = lat && lng ? [lat, lng] : CDMX_CENTER;
     const map = L.map(containerRef.current).setView(center, 14);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+      attribution: '',
       maxZoom: 19,
     }).addTo(map);
 
@@ -92,7 +92,7 @@ export function MapLocationPicker({ lat, lng, onChange, height = '250px' }: MapL
     <div>
       <div
         ref={containerRef}
-        className="w-full overflow-hidden rounded-lg border border-gray-300"
+        className="relative z-0 w-full overflow-hidden rounded-lg border border-gray-300"
         style={{ height }}
       />
       <p className="mt-1 text-xs text-gray-400">Haz clic en el mapa o arrastra el marcador para seleccionar la ubicación</p>

@@ -10,10 +10,9 @@ import { DataTable } from '@/components/ui/DataTable';
 import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
-import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
 import { formatFechaLegible } from '@/lib/utils';
 import { AsociadoDetailModal } from '@/components/shared/AsociadoDetailModal';
-import { Download, Printer, Eye, ExternalLink, Phone, Calendar, Mail } from 'lucide-react';
+import { Eye, Phone, Calendar } from 'lucide-react';
 
 function AsociadoPhoto({ asociado }: { asociado: Asociado }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -165,13 +164,6 @@ export default function AsociadosPage() {
           >
             <Eye className="h-4 w-4" />
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); window.open(`/asociados/${row.original.id}`, '_blank'); }}
-            title="Abrir en nueva pestaña"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:border-gray-700 dark:hover:bg-gray-700"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </button>
         </div>
       ),
     },
@@ -179,15 +171,9 @@ export default function AsociadosPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Asociados</h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Gestión de conductores asociados</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => exportToCSV(data.map(a => ({ id: a.idUnico, nombre: `${a.nombre} ${a.apellidoPat}`, telefono: a.telefono, estado: a.estado, registro: formatFechaLegible(a.fechaRegistro) })), [{ key: 'id', header: 'ID' }, { key: 'nombre', header: 'Nombre' }, { key: 'telefono', header: 'Teléfono' }, { key: 'estado', header: 'Estado' }, { key: 'registro', header: 'Registro' }], 'asociados')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
-          <button onClick={() => exportToPrintPDF(data.map(a => ({ id: a.idUnico, nombre: `${a.nombre} ${a.apellidoPat}`, telefono: a.telefono, estado: a.estado, registro: formatFechaLegible(a.fechaRegistro) })), [{ key: 'id', header: 'ID' }, { key: 'nombre', header: 'Nombre' }, { key: 'telefono', header: 'Teléfono' }, { key: 'estado', header: 'Estado' }, { key: 'registro', header: 'Registro' }], 'Reporte de Asociados')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Printer className="h-4 w-4" />PDF</button>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Asociados</h1>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Gestión de conductores asociados</p>
       </div>
 
       <StatsCards
@@ -245,7 +231,6 @@ export default function AsociadosPage() {
                   </div>
                   <div className="mt-2 flex items-center gap-1">
                     <button onClick={(e) => { e.stopPropagation(); setDetailId(a.id); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary-200 text-primary-500 hover:bg-primary-50"><Eye className="h-3.5 w-3.5" /></button>
-                    <button onClick={(e) => { e.stopPropagation(); window.open(`/asociados/${a.id}`, '_blank'); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50"><ExternalLink className="h-3 w-3" /></button>
                   </div>
                 </div>
               </div>
@@ -255,7 +240,7 @@ export default function AsociadosPage() {
       </div>
 
       {detailId && (
-        <AsociadoDetailModal asociadoId={detailId} onClose={() => setDetailId(null)} />
+        <AsociadoDetailModal asociadoId={detailId} onClose={() => setDetailId(null)} onUpdated={fetchData} />
       )}
     </div>
   );
