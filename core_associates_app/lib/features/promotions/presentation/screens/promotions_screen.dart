@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../data/models/promocion.dart';
 import '../providers/promotions_provider.dart';
@@ -210,7 +211,7 @@ class PromotionsScreen extends ConsumerWidget {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Error: $e'),
+                      content: Text(errorMessage(e)),
                       backgroundColor: AppColors.error,
                     ),
                   );

@@ -27,14 +27,29 @@ export class CuponesService {
       throw new NotFoundException('Promoción no encontrada');
     }
 
-    if (promocion.estado !== 'activa' || promocion.fechaFin < new Date()) {
+    // fechaFin es tipo Date (midnight UTC) — la promo es válida todo el día de fechaFin
+    const fechaFinCompleta = new Date(promocion.fechaFin);
+    fechaFinCompleta.setUTCDate(fechaFinCompleta.getUTCDate() + 1);
+
+    if (promocion.estado !== 'activa' || new Date() >= fechaFinCompleta) {
       throw new BadRequestException('Promoción no disponible');
     }
 
-    // Check max coupons limit
+    // Verificar que el asociado no tenga ya un cupón activo para esta promoción
+    const cuponActivo = await this.prisma.cupon.findFirst({
+      where: { asociadoId, promocionId, estado: 'activo' },
+    });
+    if (cuponActivo) {
+      throw new BadRequestException('Ya tienes un cupón activo para esta promoción');
+    }
+
+    // Verificar límite global de cupones (solo cuenta activos y canjeados)
     if (promocion.maxCupones) {
       const count = await this.prisma.cupon.count({
-        where: { promocionId },
+        where: {
+          promocionId,
+          estado: { in: ['activo', 'canjeado'] },
+        },
       });
       if (count >= promocion.maxCupones) {
         throw new BadRequestException('Se alcanzó el límite de cupones para esta promoción');
