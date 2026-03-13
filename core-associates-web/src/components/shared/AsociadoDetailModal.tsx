@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Car, FileText, Ticket, Phone, Mail, Calendar, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { X, Car, FileText, Ticket, Phone, Mail, Calendar, CheckCircle, XCircle, AlertTriangle, Eye, Clock, MessageSquare, Send } from 'lucide-react';
 import { apiClient, apiImageUrl } from '@/lib/api-client';
-import type { Asociado } from '@/lib/api-types';
+import type { Asociado, Documento, NotaAsociado } from '@/lib/api-types';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
+import { DocumentViewer } from '@/components/documentos/DocumentViewer';
+import { RejectDocumentDialog } from '@/components/documentos/RejectDocumentDialog';
+import { AIAnalysisPanel } from '@/components/documentos/AIAnalysisPanel';
 import { usePermisos } from '@/lib/permisos';
-import { formatFechaLegible } from '@/lib/utils';
+import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 
 interface Props {
   asociadoId: string;
@@ -22,6 +25,17 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
   const [updating, setUpdating] = useState(false);
   const [suspendDialog, setSuspendDialog] = useState(false);
   const [suspendMotivo, setSuspendMotivo] = useState('');
+  // Document actions
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerUrl, setViewerUrl] = useState('');
+  const [viewerTitle, setViewerTitle] = useState('');
+  const [rejectDialog, setRejectDialog] = useState<{ open: boolean; doc: Documento | null }>({ open: false, doc: null });
+  const [docUpdating, setDocUpdating] = useState<string | null>(null);
+  // Timeline / Notas
+  const [notas, setNotas] = useState<NotaAsociado[]>([]);
+  const [notasLoading, setNotasLoading] = useState(true);
+  const [nuevaNota, setNuevaNota] = useState('');
+  const [enviandoNota, setEnviandoNota] = useState(false);
 
   useEffect(() => {
     apiClient<Asociado>(`/asociados/${asociadoId}`)
@@ -31,6 +45,10 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
     apiImageUrl(`/asociados/${asociadoId}/foto`)
       .then(setFotoUrl)
       .catch(() => {});
+    apiClient<NotaAsociado[]>(`/asociados/${asociadoId}/notas`)
+      .then(setNotas)
+      .catch(console.error)
+      .finally(() => setNotasLoading(false));
   }, [asociadoId]);
 
   // Close on Escape
@@ -52,6 +70,10 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
       });
       setAsociado({ ...asociado, estado: estado as Asociado['estado'] });
       onUpdated?.();
+      // Refresh timeline (state change generates automatic note)
+      apiClient<NotaAsociado[]>(`/asociados/${asociado.id}/notas`)
+        .then(setNotas)
+        .catch(console.error);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error al cambiar estado');
     } finally {
@@ -66,6 +88,82 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
     setSuspendMotivo('');
   };
 
+  const handleViewDocument = async (doc: Documento) => {
+    try {
+      const blobUrl = await apiImageUrl(`/documentos/${doc.id}/url`);
+      setViewerUrl(blobUrl);
+      setViewerTitle(doc.tipo.replace(/_/g, ' '));
+      setViewerOpen(true);
+    } catch {
+      alert('No se pudo obtener el documento');
+    }
+  };
+
+  const handleApproveDocument = async (doc: Documento) => {
+    if (!asociado) return;
+    setDocUpdating(doc.id);
+    try {
+      await apiClient(`/documentos/${doc.id}/estado`, {
+        method: 'PUT',
+        body: JSON.stringify({ estado: 'aprobado' }),
+      });
+      setAsociado({
+        ...asociado,
+        documentos: asociado.documentos?.map((d) =>
+          d.id === doc.id ? { ...d, estado: 'aprobado' as const } : d
+        ),
+      });
+    } catch {
+      alert('Error al aprobar');
+    } finally {
+      setDocUpdating(null);
+    }
+  };
+
+  const handleRejectDocument = async (motivo: string) => {
+    if (!asociado || !rejectDialog.doc) return;
+    const doc = rejectDialog.doc;
+    setRejectDialog({ open: false, doc: null });
+    setDocUpdating(doc.id);
+    try {
+      await apiClient(`/documentos/${doc.id}/estado`, {
+        method: 'PUT',
+        body: JSON.stringify({ estado: 'rechazado', motivoRechazo: motivo }),
+      });
+      setAsociado({
+        ...asociado,
+        documentos: asociado.documentos?.map((d) =>
+          d.id === doc.id ? { ...d, estado: 'rechazado' as const, motivoRechazo: motivo } : d
+        ),
+      });
+    } catch {
+      alert('Error al rechazar');
+    } finally {
+      setDocUpdating(null);
+    }
+  };
+
+  const handleCrearNota = async () => {
+    if (!nuevaNota.trim()) return;
+    setEnviandoNota(true);
+    try {
+      const nota = await apiClient<NotaAsociado>(`/asociados/${asociadoId}/notas`, {
+        method: 'POST',
+        body: JSON.stringify({ contenido: nuevaNota.trim() }),
+      });
+      setNotas((prev) => [nota, ...prev]);
+      setNuevaNota('');
+    } catch {
+      alert('Error al guardar nota');
+    } finally {
+      setEnviandoNota(false);
+    }
+  };
+
+  const refreshAsociado = () => {
+    apiClient<Asociado>(`/asociados/${asociadoId}`).then(setAsociado).catch(console.error);
+  };
+
   const fullName = asociado
     ? `${asociado.nombre} ${asociado.apellidoPat} ${asociado.apellidoMat || ''}`.trim()
     : '';
@@ -76,7 +174,7 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="relative w-full max-w-2xl rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800"
+        className="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -119,7 +217,7 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
         ) : !asociado ? (
           <div className="p-8 text-center text-gray-500">Asociado no encontrado</div>
         ) : (
-          <div className="max-h-[65vh] overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-5">
             {/* Info rows */}
             <div className="grid gap-3 sm:grid-cols-2">
               <InfoRow icon={Phone} label="Teléfono" value={asociado.telefono} />
@@ -165,20 +263,61 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
               )}
             </div>
 
-            {/* Documents summary */}
+            {/* Documents — full actions */}
             <div className="mt-5">
               <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
                 <FileText className="h-4 w-4 text-gray-500" />
                 Documentos ({asociado.documentos?.length || 0})
               </h4>
               {asociado.documentos && asociado.documentos.length > 0 ? (
-                <div className="mt-2 space-y-1.5">
+                <div className="mt-2 space-y-2">
                   {asociado.documentos.map((d) => (
-                    <div key={d.id} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm dark:bg-gray-700/50">
-                      <span className="capitalize text-gray-700 dark:text-gray-300">{d.tipo.replace(/_/g, ' ')}</span>
-                      <Badge variant={d.estado === 'aprobado' ? 'success' : d.estado === 'rechazado' ? 'danger' : 'warning'}>
-                        {d.estado}
-                      </Badge>
+                    <div key={d.id} className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium capitalize text-gray-900 dark:text-gray-100">{d.tipo.replace(/_/g, ' ')}</span>
+                        <Badge variant={d.estado === 'aprobado' ? 'success' : d.estado === 'rechazado' ? 'danger' : 'warning'}>
+                          {d.estado}
+                        </Badge>
+                      </div>
+                      {d.estado === 'rechazado' && d.motivoRechazo && (
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">Motivo: {d.motivoRechazo}</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleViewDocument(d)}
+                          className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                        >
+                          <Eye className="h-3 w-3" />
+                          Ver
+                        </button>
+                        {d.estado === 'pendiente' && puede('aprobar:asociados') && (
+                          <>
+                            <button
+                              onClick={() => handleApproveDocument(d)}
+                              disabled={docUpdating === d.id}
+                              className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100 disabled:opacity-50 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
+                            >
+                              <CheckCircle className="h-3 w-3" />
+                              Aprobar
+                            </button>
+                            <button
+                              onClick={() => setRejectDialog({ open: true, doc: d })}
+                              disabled={docUpdating === d.id}
+                              className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                            >
+                              <XCircle className="h-3 w-3" />
+                              Rechazar
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      {/* AI Analysis */}
+                      <AIAnalysisPanel
+                        analisis={(d as any).analisis}
+                        documentoId={d.id}
+                        documentoTipo={d.tipo}
+                        onAnalysisUpdated={refreshAsociado}
+                      />
                     </div>
                   ))}
                 </div>
@@ -209,6 +348,87 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
                 </div>
               </div>
             )}
+
+            {/* Timeline / Notas Internas */}
+            <div className="mt-5">
+              <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                <Clock className="h-4 w-4 text-gray-500" />
+                Timeline / Notas Internas
+              </h4>
+
+              {/* Nueva nota */}
+              <div className="mt-3 flex gap-2">
+                <textarea
+                  value={nuevaNota}
+                  onChange={(e) => setNuevaNota(e.target.value)}
+                  placeholder="Agregar nota interna..."
+                  rows={2}
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
+                />
+                <button
+                  onClick={handleCrearNota}
+                  disabled={!nuevaNota.trim() || enviandoNota}
+                  className="self-end rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Lista de notas */}
+              <div className="mt-3 space-y-2">
+                {notasLoading ? (
+                  <div className="flex justify-center py-4">
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-200 border-t-primary-600" />
+                  </div>
+                ) : notas.length === 0 ? (
+                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">Sin actividad registrada</p>
+                ) : (
+                  notas.map((nota) => (
+                    <div
+                      key={nota.id}
+                      className={`rounded-lg border p-3 text-sm ${
+                        nota.tipo === 'cambio_estado'
+                          ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30'
+                          : 'border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {nota.tipo === 'cambio_estado' ? (
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                              <Clock className="h-3.5 w-3.5" />
+                            </span>
+                          ) : (
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300">
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            </span>
+                          )}
+                          <span className="font-medium text-gray-900 dark:text-gray-100">
+                            {nota.autor?.nombre || 'Sistema'}
+                          </span>
+                          {nota.autor?.rol && (
+                            <Badge variant="default" className="text-xs">{nota.autor.rol}</Badge>
+                          )}
+                        </div>
+                        <span className="whitespace-nowrap text-xs text-gray-400">
+                          {formatFechaConHora(nota.createdAt)}
+                        </span>
+                      </div>
+                      {nota.tipo === 'cambio_estado' && nota.metadatos && (
+                        <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                          Estado: <span className="font-semibold">{nota.metadatos.estadoAnterior}</span>{' '}
+                          → <span className="font-semibold">{nota.metadatos.estadoNuevo}</span>
+                          {nota.metadatos.motivo && (
+                            <span className="ml-1 text-blue-600 dark:text-blue-400">— {nota.metadatos.motivo}</span>
+                          )}
+                        </p>
+                      )}
+                      <p className="mt-1 text-gray-700 dark:text-gray-300">{nota.contenido}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -290,6 +510,20 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
           </div>
         )}
       </div>
+
+      <DocumentViewer
+        open={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        imageUrl={viewerUrl}
+        title={viewerTitle}
+      />
+
+      <RejectDocumentDialog
+        open={rejectDialog.open}
+        onClose={() => setRejectDialog({ open: false, doc: null })}
+        onConfirm={handleRejectDocument}
+        documentType={rejectDialog.doc?.tipo || ''}
+      />
     </div>
   );
 }
