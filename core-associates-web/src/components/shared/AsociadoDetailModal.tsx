@@ -74,7 +74,7 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
     : '';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 pt-[5vh]" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
       <div
         className="relative w-full max-w-2xl rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800"
         onClick={(e) => e.stopPropagation()}
@@ -143,12 +143,12 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
             )}
 
             {/* Vehicles */}
-            {asociado.vehiculos && asociado.vehiculos.length > 0 && (
-              <div className="mt-5">
-                <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                  <Car className="h-4 w-4 text-gray-500" />
-                  Vehículos ({asociado.vehiculos.length})
-                </h4>
+            <div className="mt-5">
+              <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                <Car className="h-4 w-4 text-gray-500" />
+                Vehículos ({asociado.vehiculos?.length || 0})
+              </h4>
+              {asociado.vehiculos && asociado.vehiculos.length > 0 ? (
                 <div className="mt-2 space-y-2">
                   {asociado.vehiculos.map((v) => (
                     <div key={v.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
@@ -160,16 +160,18 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="mt-2 text-sm text-gray-400 dark:text-gray-500 italic">Aún no ha registrado vehículos</p>
+              )}
+            </div>
 
             {/* Documents summary */}
-            {asociado.documentos && asociado.documentos.length > 0 && (
-              <div className="mt-5">
-                <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                  <FileText className="h-4 w-4 text-gray-500" />
-                  Documentos ({asociado.documentos.length})
-                </h4>
+            <div className="mt-5">
+              <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                <FileText className="h-4 w-4 text-gray-500" />
+                Documentos ({asociado.documentos?.length || 0})
+              </h4>
+              {asociado.documentos && asociado.documentos.length > 0 ? (
                 <div className="mt-2 space-y-1.5">
                   {asociado.documentos.map((d) => (
                     <div key={d.id} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm dark:bg-gray-700/50">
@@ -180,8 +182,10 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="mt-2 text-sm text-gray-400 dark:text-gray-500 italic">Aún no ha enviado documentos</p>
+              )}
+            </div>
 
             {/* Coupons summary */}
             {asociado.cupones && asociado.cupones.length > 0 && (
