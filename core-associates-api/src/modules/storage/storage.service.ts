@@ -22,6 +22,11 @@ export class StorageService {
     buffer: Buffer,
     contentType: string,
   ): Promise<string> {
+    // Ensure bucket exists
+    const exists = await this.minioClient.bucketExists(bucket);
+    if (!exists) {
+      await this.minioClient.makeBucket(bucket);
+    }
     await this.minioClient.putObject(bucket, objectName, buffer, buffer.length, {
       'Content-Type': contentType,
     });

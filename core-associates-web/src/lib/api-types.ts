@@ -19,6 +19,7 @@ export interface User {
   nombre: string;
   rol: 'admin' | 'operador' | 'proveedor';
   proveedorId?: string;
+  avatarUrl?: string;
 }
 
 // Asociado
@@ -317,6 +318,7 @@ export interface UsuarioCRM {
   nombre: string;
   rol: 'admin' | 'operador' | 'proveedor';
   proveedorId?: string;
+  avatarUrl?: string | null;
   estado: 'activo' | 'inactivo';
   ultimoAcceso: string | null;
   createdAt: string;

@@ -84,8 +84,9 @@ describe('CasosLegalesPage', () => {
     render(<CasosLegalesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('CL-001')).toBeInTheDocument();
-      expect(screen.getByText('CL-002')).toBeInTheDocument();
+      // DataTable renders both table and card views in the DOM — use getAllByText
+      expect(screen.getAllByText('CL-001').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('CL-002').length).toBeGreaterThan(0);
     });
   });
 
@@ -96,8 +97,9 @@ describe('CasosLegalesPage', () => {
     render(<CasosLegalesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Carlos Ruiz')).toBeInTheDocument();
-      expect(screen.getByText('Ana López')).toBeInTheDocument();
+      // DataTable renders both table and card views in the DOM — use getAllByText
+      expect(screen.getAllByText('Carlos Ruiz').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Ana López').length).toBeGreaterThan(0);
     });
   });
 

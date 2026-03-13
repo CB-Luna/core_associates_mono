@@ -13,6 +13,7 @@ import {
   User,
   Zap,
 } from 'lucide-react';
+import { formatFechaConHora } from '@/lib/utils';
 import { apiClient, apiImageUrl } from '@/lib/api-client';
 import type { DocumentoConAnalisis } from '@/lib/api-types';
 import type { PaginatedResponse } from '@/lib/api-client';
@@ -181,7 +182,7 @@ export default function DocumentosReviewPage() {
                     )}
 
                     <p className="mt-1 text-xs text-gray-400">
-                      Subido: {new Date(doc.createdAt).toLocaleString('es-MX')}
+                      Subido: {formatFechaConHora(doc.createdAt)}
                       {' · '}
                       {(doc.fileSize / 1024).toFixed(0)} KB
                     </p>

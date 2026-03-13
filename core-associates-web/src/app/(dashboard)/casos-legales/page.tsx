@@ -9,6 +9,7 @@ import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
 import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
+import { formatFechaLegible } from '@/lib/utils';
 import { Download, Printer, Eye, ExternalLink, Car, Gavel, ShieldAlert, AlertTriangle, HelpCircle, Calendar } from 'lucide-react';
 
 const tipoIcon: Record<string, typeof AlertTriangle> = {
@@ -160,7 +161,7 @@ export default function CasosLegalesPage() {
       cell: ({ getValue }) => (
         <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
           <Calendar className="h-3 w-3 text-gray-400" />
-          {new Date(getValue() as string).toLocaleDateString('es-MX')}
+          {formatFechaLegible(getValue() as string)}
         </span>
       ),
     },
@@ -174,20 +175,20 @@ export default function CasosLegalesPage() {
     },
     {
       id: 'actions',
-      header: '',
+      header: 'Acciones',
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); router.push(`/casos-legales/${row.original.id}`); }}
             title="Ver detalle"
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-primary-200 text-primary-500 transition-colors hover:bg-primary-50 hover:text-primary-700 dark:border-primary-800 dark:hover:bg-primary-950/30"
           >
             <Eye className="h-4 w-4" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); window.open(`/casos-legales/${row.original.id}`, '_blank'); }}
             title="Abrir en nueva pestaña"
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:border-gray-700 dark:hover:bg-gray-700"
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </button>
@@ -200,12 +201,12 @@ export default function CasosLegalesPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Casos Legales</h1>
-          <p className="mt-1 text-sm text-gray-600">Gestión de percances y asistencia legal</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Casos Legales</h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Gestión de percances y asistencia legal</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => exportToCSV(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', tipo: c.tipoPercance, prioridad: c.prioridad, estado: c.estado, apertura: new Date(c.fechaApertura).toLocaleDateString('es-MX') })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'tipo', header: 'Tipo' }, { key: 'prioridad', header: 'Prioridad' }, { key: 'estado', header: 'Estado' }, { key: 'apertura', header: 'Apertura' }], 'casos-legales')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
-          <button onClick={() => exportToPrintPDF(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', tipo: c.tipoPercance, prioridad: c.prioridad, estado: c.estado, apertura: new Date(c.fechaApertura).toLocaleDateString('es-MX') })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'tipo', header: 'Tipo' }, { key: 'prioridad', header: 'Prioridad' }, { key: 'estado', header: 'Estado' }, { key: 'apertura', header: 'Apertura' }], 'Reporte de Casos Legales')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Printer className="h-4 w-4" />PDF</button>
+          <button onClick={() => exportToCSV(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', tipo: c.tipoPercance, prioridad: c.prioridad, estado: c.estado, apertura: formatFechaLegible(c.fechaApertura) })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'tipo', header: 'Tipo' }, { key: 'prioridad', header: 'Prioridad' }, { key: 'estado', header: 'Estado' }, { key: 'apertura', header: 'Apertura' }], 'casos-legales')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
+          <button onClick={() => exportToPrintPDF(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', tipo: c.tipoPercance, prioridad: c.prioridad, estado: c.estado, apertura: formatFechaLegible(c.fechaApertura) })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'tipo', header: 'Tipo' }, { key: 'prioridad', header: 'Prioridad' }, { key: 'estado', header: 'Estado' }, { key: 'apertura', header: 'Apertura' }], 'Reporte de Casos Legales')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Printer className="h-4 w-4" />PDF</button>
         </div>
       </div>
 
@@ -232,7 +233,7 @@ export default function CasosLegalesPage() {
         <select
           value={prioridadFilter}
           onChange={(e) => { setPrioridadFilter(e.target.value); setPage(1); }}
-          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
         >
           <option value="">Todas las prioridades</option>
           {prioridadOptions.map((o) => (
@@ -251,12 +252,41 @@ export default function CasosLegalesPage() {
           total={total}
           onPageChange={setPage}
           onRowClick={(row: any) => router.push(`/casos-legales/${row.id}`)}
-          searchable
-          searchPlaceholder="Buscar caso..."
           columnToggle
           exportable
           exportFilename="casos-legales"
           striped
+          cardRenderer={(c: any) => {
+            const TIcon = tipoIcon[c.tipoPercance] || HelpCircle;
+            const asociado = c.asociado;
+            return (
+              <div className="flex items-start gap-3 px-4 py-3.5">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${tipoColorBg[c.tipoPercance] || 'bg-gray-50 text-gray-400'}`}>
+                  <TIcon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-xs font-bold text-gray-700 dark:text-gray-200">{c.codigo}</p>
+                      <p className="truncate text-[11px] capitalize text-gray-400">{c.tipoPercance}</p>
+                    </div>
+                    <Badge variant={estadoVariant[c.estado] || 'default'}>{c.estado?.replace('_', ' ')}</Badge>
+                  </div>
+                  {asociado && (
+                    <p className="mt-1 truncate text-xs text-gray-600">{asociado.nombre} {asociado.apellidoPat}</p>
+                  )}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                    <Badge variant={prioridadVariant[c.prioridad] || 'default'}>{c.prioridad}</Badge>
+                    <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{formatFechaLegible(c.fechaApertura)}</span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-1">
+                    <button onClick={(e) => { e.stopPropagation(); router.push(`/casos-legales/${c.id}`); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary-200 text-primary-500 hover:bg-primary-50"><Eye className="h-3.5 w-3.5" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); window.open(`/casos-legales/${c.id}`, '_blank'); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50"><ExternalLink className="h-3 w-3" /></button>
+                  </div>
+                </div>
+              </div>
+            );
+          }}
         />
       </div>
     </div>

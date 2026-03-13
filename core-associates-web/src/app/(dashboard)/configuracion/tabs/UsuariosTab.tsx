@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, apiImageUrl } from '@/lib/api-client';
+import { formatFechaLegible } from '@/lib/utils';
 import { useToast } from '@/components/ui/Toast';
 import { type ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { type UsuarioCRM, type Proveedor } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
-import { Pencil, KeyRound, Power } from 'lucide-react';
+import { Pencil, KeyRound, Power, Camera, Trash2 } from 'lucide-react';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
 
@@ -48,6 +49,29 @@ type CreateUserInput = z.input<typeof createUserSchema>;
 type EditUserData = z.infer<typeof editUserSchema>;
 type ResetPasswordInput = z.input<typeof resetPasswordSchema>;
 
+function UserAvatarCell({ user }: { user: UsuarioCRM }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user.avatarUrl) { setSrc(null); return; }
+    let revoked = false;
+    apiImageUrl(`/auth/users/${user.id}/avatar`)
+      .then((url) => { if (!revoked) setSrc(url); })
+      .catch(() => {});
+    return () => { revoked = true; if (src) URL.revokeObjectURL(src); };
+  }, [user.id, user.avatarUrl]);
+
+  const initials = user.nombre?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '??';
+
+  if (src) {
+    return <img src={src} alt={user.nombre} className="h-8 w-8 rounded-full object-cover ring-2 ring-white shadow-sm" />;
+  }
+  return (
+    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-xs font-bold text-white ring-2 ring-white shadow-sm">
+      {initials}
+    </div>
+  );
+}
+
 export function UsuariosTab() {
   const { toast } = useToast();
   const [users, setUsers] = useState<UsuarioCRM[]>([]);
@@ -57,6 +81,38 @@ export function UsuariosTab() {
   const [resetUserId, setResetUserId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [proveedoresList, setProveedoresList] = useState<Proveedor[]>([]);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const createAvatarInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [createAvatarFile, setCreateAvatarFile] = useState<File | null>(null);
+  const [createAvatarPreview, setCreateAvatarPreview] = useState<string | null>(null);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+
+  const handleAvatarUpload = async (userId: string, file: File) => {
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await apiClient(`/auth/users/${userId}/avatar`, { method: 'POST', body: formData });
+      toast('success', 'Avatar', 'Avatar actualizado');
+      fetchUsers();
+    } catch (err: any) {
+      toast('error', 'Error', err.message || 'Error al subir avatar');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarDelete = async (userId: string) => {
+    try {
+      await apiClient(`/auth/users/${userId}/avatar`, { method: 'DELETE' });
+      toast('success', 'Avatar', 'Avatar eliminado');
+      fetchUsers();
+    } catch (err: any) {
+      toast('error', 'Error', err.message || 'Error al eliminar avatar');
+    }
+  };
 
   const createForm = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
@@ -100,12 +156,19 @@ export function UsuariosTab() {
       if (data.rol === 'proveedor' && proveedorId) {
         payload.proveedorId = proveedorId;
       }
-      await apiClient('/auth/register-admin', {
+      const newUser = await apiClient<{ id: string }>('/auth/register-admin', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
+      if (createAvatarFile && newUser?.id) {
+        const formData = new FormData();
+        formData.append('file', createAvatarFile);
+        await apiClient(`/auth/users/${newUser.id}/avatar`, { method: 'POST', body: formData });
+      }
       setShowForm(false);
       createForm.reset();
+      setCreateAvatarFile(null);
+      setCreateAvatarPreview(null);
       fetchUsers();
     } catch (err: any) {
       toast('error', 'Error', err.message || 'Error al crear usuario');
@@ -122,7 +185,14 @@ export function UsuariosTab() {
         method: 'PUT',
         body: JSON.stringify(data),
       });
+      if (editAvatarFile) {
+        const formData = new FormData();
+        formData.append('file', editAvatarFile);
+        await apiClient(`/auth/users/${editingUser.id}/avatar`, { method: 'POST', body: formData });
+      }
       setEditingUser(null);
+      setEditAvatarFile(null);
+      setEditAvatarPreview(null);
       fetchUsers();
     } catch (err: any) {
       toast('error', 'Error', err.message || 'Error al actualizar usuario');
@@ -166,11 +236,19 @@ export function UsuariosTab() {
   const openEdit = (user: UsuarioCRM) => {
     setEditingUser(user);
     editForm.reset({ email: user.email, nombre: user.nombre, rol: user.rol as 'operador' | 'admin' });
+    setEditAvatarFile(null);
+    setEditAvatarPreview(null);
     setShowForm(false);
     setResetUserId(null);
   };
 
   const columns: ColumnDef<UsuarioCRM, unknown>[] = [
+    {
+      id: 'avatar',
+      header: '',
+      size: 50,
+      cell: ({ row }) => <UserAvatarCell user={row.original} />,
+    },
     { accessorKey: 'nombre', header: 'Nombre' },
     { accessorKey: 'email', header: 'Email' },
     {
@@ -199,12 +277,12 @@ export function UsuariosTab() {
       header: 'Creado',
       cell: ({ getValue }) => {
         const v = getValue();
-        return v ? new Date(v as string).toLocaleDateString('es-MX') : '—';
+        return v ? formatFechaLegible(v as string) : '—';
       },
     },
     {
       id: 'actions',
-      header: '',
+      header: 'Acciones',
       cell: ({ row }) => {
         const user = row.original;
         return (
@@ -241,7 +319,7 @@ export function UsuariosTab() {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">Usuarios del sistema</h3>
         <button
-          onClick={() => { setShowForm(!showForm); setEditingUser(null); setResetUserId(null); }}
+          onClick={() => { setShowForm(!showForm); setEditingUser(null); setResetUserId(null); if (showForm) { setCreateAvatarFile(null); setCreateAvatarPreview(null); } }}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           {showForm ? 'Cancelar' : 'Nuevo Usuario'}
@@ -251,6 +329,50 @@ export function UsuariosTab() {
       {showForm && (
         <form onSubmit={createForm.handleSubmit(handleCreateUser)} className="mt-4 rounded-xl border bg-white p-6 shadow-sm">
           <h4 className="mb-4 text-sm font-semibold text-gray-700">Crear nuevo usuario</h4>
+          {/* Avatar upload para nuevo usuario */}
+          <div className="mb-4 flex items-center gap-4">
+            {createAvatarPreview ? (
+              <img src={createAvatarPreview} alt="Preview" className="h-12 w-12 rounded-full object-cover ring-2 ring-white shadow-sm" />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400 ring-2 ring-white shadow-sm">
+                <Camera className="h-5 w-5" />
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                ref={createAvatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setCreateAvatarFile(file);
+                    setCreateAvatarPreview(URL.createObjectURL(file));
+                  }
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => createAvatarInputRef.current?.click()}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                {createAvatarFile ? 'Cambiar foto' : 'Agregar foto'}
+              </button>
+              {createAvatarFile && (
+                <button
+                  type="button"
+                  onClick={() => { setCreateAvatarFile(null); setCreateAvatarPreview(null); }}
+                  className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Quitar
+                </button>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">Nombre</label>
@@ -302,10 +424,62 @@ export function UsuariosTab() {
       )}
 
       {editingUser && (
-        <form onSubmit={editForm.handleSubmit(handleEditUser)} className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-6 shadow-sm">
+        <form onSubmit={editForm.handleSubmit(handleEditUser)} className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-6 shadow-sm dark:border-blue-800 dark:bg-blue-950/30">
           <div className="mb-4 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-blue-800">Editando: {editingUser.nombre}</h4>
-            <button type="button" onClick={() => setEditingUser(null)} className="text-sm text-gray-500 hover:text-gray-700">Cancelar</button>
+            <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300">Editando: {editingUser.nombre}</h4>
+            <button type="button" onClick={() => { setEditingUser(null); setEditAvatarFile(null); setEditAvatarPreview(null); }} className="text-sm text-gray-500 hover:text-gray-700">Cancelar</button>
+          </div>
+          {/* Avatar upload section — preview-first */}
+          <div className="mb-4 flex items-center gap-4">
+            {editAvatarPreview ? (
+              <img src={editAvatarPreview} alt="Preview" className="h-8 w-8 rounded-full object-cover ring-2 ring-white shadow-sm" />
+            ) : (
+              <UserAvatarCell user={editingUser} />
+            )}
+            <div className="flex gap-2">
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setEditAvatarFile(file);
+                    setEditAvatarPreview(URL.createObjectURL(file));
+                  }
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                {editAvatarFile ? 'Cambiar foto' : 'Cambiar avatar'}
+              </button>
+              {editAvatarFile && (
+                <button
+                  type="button"
+                  onClick={() => { setEditAvatarFile(null); setEditAvatarPreview(null); }}
+                  className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:bg-gray-700"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Quitar
+                </button>
+              )}
+              {!editAvatarFile && editingUser.avatarUrl && (
+                <button
+                  type="button"
+                  onClick={() => handleAvatarDelete(editingUser.id)}
+                  className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:bg-gray-700"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Eliminar
+                </button>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>

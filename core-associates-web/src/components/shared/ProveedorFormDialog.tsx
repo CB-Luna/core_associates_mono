@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X } from 'lucide-react';
+import { X, Camera, Trash2 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import type { Proveedor } from '@/lib/api-types';
 import { MapLocationPicker } from '@/components/ui/MapLocationPicker';
@@ -30,18 +30,26 @@ const proveedorSchema = z.object({
   // Campos opcionales para crear acceso CRM
   crmEmail: z.union([z.string().email('Email CRM inválido'), z.literal('')]).optional().default(''),
   crmPassword: z.string().optional().default(''),
+  crmConfirmPassword: z.string().optional().default(''),
 }).refine(
   (data) => {
-    // Si se llena uno, ambos son requeridos
     if (data.crmEmail && !data.crmPassword) return false;
     if (data.crmPassword && !data.crmEmail) return false;
-    // Si se llena password, validar complejidad
     if (data.crmPassword && data.crmPassword.length < 8) return false;
     return true;
   },
   {
     message: 'Email y contraseña CRM son requeridos juntos (mín. 8 caracteres)',
     path: ['crmPassword'],
+  },
+).refine(
+  (data) => {
+    if (data.crmPassword && data.crmPassword !== data.crmConfirmPassword) return false;
+    return true;
+  },
+  {
+    message: 'Las contraseñas no coinciden',
+    path: ['crmConfirmPassword'],
   },
 );
 
@@ -56,6 +64,9 @@ interface ProveedorFormDialogProps {
 export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFormDialogProps) {
   const isEdit = !!proveedor;
   const [serverError, setServerError] = useState('');
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   const {
     register,
@@ -76,6 +87,7 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
       contactoNombre: proveedor?.contactoNombre ?? '',
       crmEmail: '',
       crmPassword: '',
+      crmConfirmPassword: '',
     },
   });
 
@@ -84,7 +96,7 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
 
   const onSubmit = async (data: ProveedorFormData) => {
     setServerError('');
-    const { crmEmail, crmPassword, ...proveedorData } = data;
+    const { crmEmail, crmPassword, crmConfirmPassword: _, ...proveedorData } = data;
     const body: Record<string, unknown> = { ...proveedorData };
     // Remove empty optional strings
     if (!body.direccion) delete body.direccion;
@@ -100,16 +112,30 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
           method: 'PUT',
           body: JSON.stringify(body),
         });
+        if (logoFile) {
+          const formData = new FormData();
+          formData.append('file', logoFile);
+          await apiClient(`/proveedores/${proveedor!.id}/logotipo`, { method: 'POST', body: formData });
+        }
       } else {
         const nuevoProveedor = await apiClient<{ id: string }>('/proveedores', {
           method: 'POST',
           body: JSON.stringify(body),
         });
 
+        // Upload logo if provided
+        if (logoFile) {
+          try {
+            const formData = new FormData();
+            formData.append('file', logoFile);
+            await apiClient(`/proveedores/${nuevoProveedor.id}/logotipo`, { method: 'POST', body: formData });
+          } catch { /* proveedor created, logo upload failed — non-critical */ }
+        }
+
         // Si se proporcionaron credenciales CRM, crear el usuario vinculado
         if (crmEmail && crmPassword) {
           try {
-            await apiClient('/auth/register-admin', {
+            const newUser = await apiClient<{ id: string }>('/auth/register-admin', {
               method: 'POST',
               body: JSON.stringify({
                 email: crmEmail,
@@ -119,6 +145,14 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
                 proveedorId: nuevoProveedor.id,
               }),
             });
+            // Sincronizar logotipo como avatar del nuevo usuario CRM
+            if (logoFile && newUser?.id) {
+              try {
+                const avatarForm = new FormData();
+                avatarForm.append('file', logoFile);
+                await apiClient(`/auth/users/${newUser.id}/avatar`, { method: 'POST', body: avatarForm });
+              } catch { /* avatar sync failed — non-critical */ }
+            }
           } catch (crmErr) {
             // El proveedor ya se creó, informar del error parcial
             setServerError(
@@ -158,6 +192,51 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
           {serverError && (
             <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{serverError}</div>
           )}
+
+          {/* Logotipo upload */}
+          <div className="flex items-center gap-4">
+            {logoPreview ? (
+              <img src={logoPreview} alt="Preview" className="h-14 w-14 rounded-lg object-cover ring-2 ring-white shadow-sm" />
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gray-100 text-gray-400 ring-2 ring-white shadow-sm">
+                <Camera className="h-6 w-6" />
+              </div>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setLogoFile(file);
+                    setLogoPreview(URL.createObjectURL(file));
+                  }
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => logoInputRef.current?.click()}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                {logoFile ? 'Cambiar imagen' : 'Agregar logotipo'}
+              </button>
+              {logoFile && (
+                <button
+                  type="button"
+                  onClick={() => { setLogoFile(null); setLogoPreview(null); }}
+                  className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Quitar
+                </button>
+              )}
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700">Razón Social *</label>
@@ -243,7 +322,7 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
               <p className="mb-3 text-xs text-blue-600">
                 Si desea que este proveedor pueda iniciar sesión en el CRM, llene ambos campos.
               </p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className="block text-xs text-gray-600">Email de acceso</label>
                   <input
@@ -254,15 +333,27 @@ export function ProveedorFormDialog({ proveedor, onClose, onSaved }: ProveedorFo
                   />
                   {errors.crmEmail && <p className="mt-1 text-xs text-red-500">{errors.crmEmail.message}</p>}
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Contraseña</label>
-                  <input
-                    {...register('crmPassword')}
-                    type="password"
-                    placeholder="Mín. 8 caracteres"
-                    className={inputClass(!!errors.crmPassword)}
-                  />
-                  {errors.crmPassword && <p className="mt-1 text-xs text-red-500">{errors.crmPassword.message}</p>}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-600">Contraseña</label>
+                    <input
+                      {...register('crmPassword')}
+                      type="password"
+                      placeholder="Mín. 8 caracteres"
+                      className={inputClass(!!errors.crmPassword)}
+                    />
+                    {errors.crmPassword && <p className="mt-1 text-xs text-red-500">{errors.crmPassword.message}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600">Confirmar contraseña</label>
+                    <input
+                      {...register('crmConfirmPassword')}
+                      type="password"
+                      placeholder="Repite la contraseña"
+                      className={inputClass(!!errors.crmConfirmPassword)}
+                    />
+                    {errors.crmConfirmPassword && <p className="mt-1 text-xs text-red-500">{errors.crmConfirmPassword.message}</p>}
+                  </div>
                 </div>
               </div>
             </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Car, FileText, Ticket, Eye, CheckCircle, XCircle, MessageSquare, Clock, Send, User, Brain } from 'lucide-react';
 import { apiClient, apiImageUrl } from '@/lib/api-client';
+import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import type { Asociado, Documento, NotaAsociado } from '@/lib/api-types';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
 import { DocumentViewer } from '@/components/documentos/DocumentViewer';
@@ -167,7 +168,7 @@ export default function AsociadoDetailPage() {
     <div>
       <button
         onClick={() => router.back()}
-        className="mb-4 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+        className="mb-4 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
       >
         <ArrowLeft className="h-4 w-4" />
         Volver
@@ -183,10 +184,10 @@ export default function AsociadoDetailPage() {
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {asociado.nombre} {asociado.apellidoPat} {asociado.apellidoMat || ''}
             </h1>
-            <p className="mt-1 text-sm text-gray-500">{asociado.idUnico} &middot; {asociado.telefono}</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{asociado.idUnico} &middot; {asociado.telefono}</p>
           </div>
         </div>
         <Badge variant={estadoAsociadoVariant[asociado.estado]} className="text-sm px-3 py-1">
@@ -239,32 +240,32 @@ export default function AsociadoDetailPage() {
       {/* Info grid */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Personal info */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="text-sm font-semibold text-gray-900">Datos Personales</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Datos Personales</h3>
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">Email</dt>
-              <dd className="text-gray-900">{asociado.email || '—'}</dd>
+              <dt className="text-gray-500 dark:text-gray-400">Email</dt>
+              <dd className="text-gray-900 dark:text-gray-200">{asociado.email || '—'}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">Nacimiento</dt>
               <dd className="text-gray-900">
                 {asociado.fechaNacimiento
-                  ? new Date(asociado.fechaNacimiento).toLocaleDateString('es-MX')
+                  ? formatFechaLegible(asociado.fechaNacimiento)
                   : '—'}
               </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">Registro</dt>
               <dd className="text-gray-900">
-                {new Date(asociado.fechaRegistro).toLocaleDateString('es-MX')}
+                {formatFechaLegible(asociado.fechaRegistro)}
               </dd>
             </div>
             {asociado.fechaAprobacion && (
               <div className="flex justify-between">
                 <dt className="text-gray-500">Aprobación</dt>
                 <dd className="text-gray-900">
-                  {new Date(asociado.fechaAprobacion).toLocaleDateString('es-MX')}
+                  {formatFechaLegible(asociado.fechaAprobacion)}
                 </dd>
               </div>
             )}
@@ -272,17 +273,17 @@ export default function AsociadoDetailPage() {
         </div>
 
         {/* Vehicles */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
             <Car className="h-4 w-4" />
             Vehículos ({asociado.vehiculos?.length || 0})
           </h3>
           <div className="mt-3 space-y-3">
             {asociado.vehiculos?.length ? (
               asociado.vehiculos.map((v) => (
-                <div key={v.id} className="rounded-lg bg-gray-50 p-3 text-sm">
-                  <p className="font-medium text-gray-900">{v.marca} {v.modelo} {v.anio}</p>
-                  <p className="text-gray-500">Placas: {v.placas} &middot; {v.color}</p>
+                <div key={v.id} className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{v.marca} {v.modelo} {v.anio}</p>
+                  <p className="text-gray-500 dark:text-gray-400">Placas: {v.placas} &middot; {v.color}</p>
                   {v.esPrincipal && (
                     <Badge variant="info" className="mt-1">Principal</Badge>
                   )}
@@ -295,17 +296,17 @@ export default function AsociadoDetailPage() {
         </div>
 
         {/* Documents */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
             <FileText className="h-4 w-4" />
             Documentos ({asociado.documentos?.length || 0})
           </h3>
           <div className="mt-3 space-y-2">
             {asociado.documentos?.length ? (
               asociado.documentos.map((d) => (
-                <div key={d.id} className="rounded-lg bg-gray-50 p-3 text-sm">
+                <div key={d.id} className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-900 capitalize">{d.tipo.replace(/_/g, ' ')}</span>
+                    <span className="font-medium text-gray-900 capitalize dark:text-gray-100">{d.tipo.replace(/_/g, ' ')}</span>
                     <Badge
                       variant={
                         d.estado === 'aprobado' ? 'success' : d.estado === 'rechazado' ? 'danger' : 'warning'
@@ -366,8 +367,8 @@ export default function AsociadoDetailPage() {
 
       {/* Recent coupons */}
       {asociado.cupones && asociado.cupones.length > 0 && (
-        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
             <Ticket className="h-4 w-4" />
             Cupones Recientes
           </h3>
@@ -375,8 +376,8 @@ export default function AsociadoDetailPage() {
             {asociado.cupones.map((c) => (
               <div key={c.id} className="flex items-center justify-between text-sm">
                 <div>
-                  <span className="font-medium text-gray-900">{c.codigo}</span>
-                  <span className="ml-2 text-gray-500">{c.promocion?.titulo}</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{c.codigo}</span>
+                  <span className="ml-2 text-gray-500 dark:text-gray-400">{c.promocion?.titulo}</span>
                 </div>
                 <Badge
                   variant={
@@ -392,8 +393,8 @@ export default function AsociadoDetailPage() {
       )}
 
       {/* Timeline / Notas internas */}
-      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
           <Clock className="h-4 w-4" />
           Timeline / Notas Internas
         </h3>
@@ -405,7 +406,7 @@ export default function AsociadoDetailPage() {
             onChange={(e) => setNuevaNota(e.target.value)}
             placeholder="Agregar nota interna..."
             rows={2}
-            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
           />
           <button
             onClick={handleCrearNota}
@@ -445,7 +446,7 @@ export default function AsociadoDetailPage() {
                         <MessageSquare className="h-3.5 w-3.5" />
                       </span>
                     )}
-                    <span className="font-medium text-gray-900">
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
                       {nota.autor?.nombre || 'Sistema'}
                     </span>
                     {nota.autor?.rol && (
@@ -455,13 +456,7 @@ export default function AsociadoDetailPage() {
                     )}
                   </div>
                   <span className="whitespace-nowrap text-xs text-gray-400">
-                    {new Date(nota.createdAt).toLocaleString('es-MX', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatFechaConHora(nota.createdAt)}
                   </span>
                 </div>
                 {nota.tipo === 'cambio_estado' && nota.metadatos && (
@@ -473,7 +468,7 @@ export default function AsociadoDetailPage() {
                     )}
                   </p>
                 )}
-                <p className="mt-1 text-gray-700">{nota.contenido}</p>
+                <p className="mt-1 text-gray-700 dark:text-gray-300">{nota.contenido}</p>
               </div>
             ))
           )}
@@ -497,9 +492,9 @@ export default function AsociadoDetailPage() {
       {/* Suspend dialog */}
       {suspendDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Suspender Asociado</h3>
-            <p className="mt-1 text-sm text-gray-500">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Suspender Asociado</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Indica el motivo de la suspensión de {asociado.nombre} {asociado.apellidoPat}.
             </p>
             <textarea
@@ -507,12 +502,12 @@ export default function AsociadoDetailPage() {
               onChange={(e) => setSuspendMotivo(e.target.value)}
               placeholder="Motivo de suspensión (requerido)"
               rows={3}
-              className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+              className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
             />
             <div className="mt-4 flex justify-end gap-3">
               <button
                 onClick={() => { setSuspendDialog(false); setSuspendMotivo(''); }}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 Cancelar
               </button>

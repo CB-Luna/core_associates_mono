@@ -29,8 +29,15 @@ const config: Config = {
         'drive-left': 'driveLeft 14s linear infinite',
         'drive-right-slow': 'driveRight 18s linear infinite',
         'twinkle': 'twinkle 3s ease-in-out infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'pulse-glow': 'pulseGlow 4s ease-in-out infinite',
+        'slide-in-left': 'slideInLeft 0.25s ease-out',
       },
       keyframes: {
+        slideInLeft: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
         driveRight: {
           '0%': { transform: 'translateX(-100px)' },
           '100%': { transform: 'translateX(700px)' },
@@ -42,6 +49,14 @@ const config: Config = {
         twinkle: {
           '0%, 100%': { opacity: '0.3' },
           '50%': { opacity: '0.8' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-8px)' },
+        },
+        pulseGlow: {
+          '0%, 100%': { opacity: '0.6' },
+          '50%': { opacity: '1' },
         },
       },
     },

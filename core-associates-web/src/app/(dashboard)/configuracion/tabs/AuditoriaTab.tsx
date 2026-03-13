@@ -6,6 +6,7 @@ import { type ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/DataTable';
 import { type AuditoriaRecord } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
+import { formatFechaConHora } from '@/lib/utils';
 
 export function AuditoriaTab() {
   const [auditLogs, setAuditLogs] = useState<AuditoriaRecord[]>([]);
@@ -41,7 +42,7 @@ export function AuditoriaTab() {
       header: 'Fecha',
       cell: ({ getValue }) => {
         const v = getValue();
-        return v ? new Date(v as string).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+        return v ? formatFechaConHora(v as string) : '—';
       },
     },
     {

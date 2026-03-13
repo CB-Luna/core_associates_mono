@@ -25,8 +25,8 @@ const tabs: TabItem[] = [
 export default function ConfiguracionPage() {
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Configuracion</h1>
-      <p className="mt-1 text-sm text-gray-600">Gestion de usuarios, roles, permisos y sistema</p>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Configuracion</h1>
+      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Gestion de usuarios, roles, permisos y sistema</p>
 
       <div className="mt-6">
         <TabLayout tabs={tabs} defaultTab="usuarios" />

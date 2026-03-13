@@ -1,6 +1,8 @@
-import { Controller, Post, Get, Put, Param, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Get, Put, Delete, Param, Body, HttpCode, HttpStatus, UseGuards, UseInterceptors, UploadedFile, Res, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -137,5 +139,49 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(id, dto.password);
+  }
+
+  // ── Avatar de Usuario ──
+
+  @Post('users/:id/avatar')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Subir avatar de usuario' })
+  @ApiResponse({ status: 200, description: 'Avatar subido' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  uploadAvatar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.authService.uploadAvatar(id, file);
+  }
+
+  @Get('users/:id/avatar')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener avatar de usuario' })
+  @ApiResponse({ status: 200, description: 'Imagen del avatar' })
+  @ApiResponse({ status: 404, description: 'Avatar no encontrado' })
+  async getAvatar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res() res: Response,
+  ) {
+    const { buffer, contentType } = await this.authService.getAvatar(id);
+    res.set({ 'Content-Type': contentType, 'Cache-Control': 'private, max-age=3600' });
+    res.send(buffer);
+  }
+
+  @Delete('users/:id/avatar')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Eliminar avatar de usuario' })
+  @ApiResponse({ status: 200, description: 'Avatar eliminado' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  deleteAvatar(@Param('id', ParseUUIDPipe) id: string) {
+    return this.authService.deleteAvatar(id);
   }
 }

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send } from 'lucide-react';
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import type { CasoLegal, NotaCaso, Proveedor } from '@/lib/api-types';
 import { Badge } from '@/components/ui/Badge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -196,13 +197,7 @@ export default function CasoLegalDetailPage() {
           </h1>
           <p className="mt-1 text-sm text-gray-500">
             {tipoPercanceLabels[caso.tipoPercance] || caso.tipoPercance} &middot;{' '}
-            {new Date(caso.fechaApertura).toLocaleDateString('es-MX', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
+            {formatFechaConHora(caso.fechaApertura)}
           </p>
         </div>
         <div className="flex gap-2">
@@ -359,12 +354,7 @@ export default function CasoLegalDetailPage() {
                           <span className="text-xs text-yellow-600">Privada</span>
                         )}
                         <span className="text-xs text-gray-400">
-                          {new Date(nota.createdAt).toLocaleDateString('es-MX', {
-                            day: 'numeric',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {formatFechaConHora(nota.createdAt)}
                         </span>
                       </div>
                     </div>
@@ -430,7 +420,7 @@ export default function CasoLegalDetailPage() {
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Asignado</dt>
                     <dd className="text-gray-900">
-                      {new Date(caso.fechaAsignacion).toLocaleDateString('es-MX')}
+                      {formatFechaLegible(caso.fechaAsignacion)}
                     </dd>
                   </div>
                 )}
@@ -477,14 +467,14 @@ export default function CasoLegalDetailPage() {
               <div className="flex justify-between">
                 <dt className="text-gray-500">Apertura</dt>
                 <dd className="text-gray-900">
-                  {new Date(caso.fechaApertura).toLocaleDateString('es-MX')}
+                  {formatFechaLegible(caso.fechaApertura)}
                 </dd>
               </div>
               {caso.fechaAsignacion && (
                 <div className="flex justify-between">
                   <dt className="text-gray-500">Asignación</dt>
                   <dd className="text-gray-900">
-                    {new Date(caso.fechaAsignacion).toLocaleDateString('es-MX')}
+                    {formatFechaLegible(caso.fechaAsignacion)}
                   </dd>
                 </div>
               )}
@@ -492,7 +482,7 @@ export default function CasoLegalDetailPage() {
                 <div className="flex justify-between">
                   <dt className="text-gray-500">Cierre</dt>
                   <dd className="text-gray-900">
-                    {new Date(caso.fechaCierre).toLocaleDateString('es-MX')}
+                    {formatFechaLegible(caso.fechaCierre)}
                   </dd>
                 </div>
               )}

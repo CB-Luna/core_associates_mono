@@ -379,6 +379,7 @@ model Usuario {
   nombre        String        @db.VarChar(100)
   rol           RolUsuario
   proveedorId   String?       @map("proveedor_id") @db.Uuid
+  avatarUrl     String?       @map("avatar_url") @db.VarChar(255)
   estado        EstadoUsuario @default(activo)
   ultimoAcceso  DateTime?     @map("ultimo_acceso")
   createdAt     DateTime      @default(now()) @map("created_at")

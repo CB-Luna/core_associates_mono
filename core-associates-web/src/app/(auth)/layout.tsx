@@ -95,8 +95,8 @@ export default function AuthLayout({
         </div>
 
         {/* Form container */}
-        <div className="flex flex-1 items-center justify-center p-6 sm:p-8 lg:p-12 bg-gray-50">
-          <div className="w-full max-w-md">
+        <div className="flex flex-1 items-center justify-center p-6 sm:p-8 lg:p-12 bg-gray-50 dark:bg-gray-900">
+          <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl ring-1 ring-gray-200/50 dark:bg-gray-800 dark:ring-gray-700/50">
             {children}
           </div>
         </div>

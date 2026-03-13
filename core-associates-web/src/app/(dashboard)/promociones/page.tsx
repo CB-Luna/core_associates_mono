@@ -10,6 +10,7 @@ import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { Badge } from '@/components/ui/Badge';
 import { PromocionFormDialog } from '@/components/promociones/PromocionFormDialog';
 import { usePermisos } from '@/lib/permisos';
+import { formatFechaLegible } from '@/lib/utils';
 import { Pause, Play, StopCircle, Percent, DollarSign, Calendar, Tag, ImageIcon } from 'lucide-react';
 
 const estadoOptions = [
@@ -139,7 +140,7 @@ export default function PromocionesPage() {
         return (
           <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
             <Calendar className="h-3 w-3 text-gray-400" />
-            {new Date(p.fechaInicio).toLocaleDateString('es-MX')} — {new Date(p.fechaFin).toLocaleDateString('es-MX')}
+            {formatFechaLegible(p.fechaInicio)} — {formatFechaLegible(p.fechaFin)}
           </span>
         );
       },
@@ -170,7 +171,7 @@ export default function PromocionesPage() {
     },
     {
       id: 'acciones',
-      header: '',
+      header: 'Acciones',
       cell: ({ row }) => {
         const p = row.original;
         return (
@@ -198,8 +199,8 @@ export default function PromocionesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Promociones</h1>
-      <p className="mt-1 text-sm text-gray-600">Gestión de promociones y descuentos</p>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Promociones</h1>
+      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Gestión de promociones y descuentos</p>
 
       <div className="mt-6">
         <SearchToolbar
@@ -223,12 +224,47 @@ export default function PromocionesPage() {
           total={total}
           onPageChange={setPage}
           onRowClick={handleRowClick}
-          searchable
-          searchPlaceholder="Buscar promocion..."
           columnToggle
           exportable
           exportFilename="promociones"
           striped
+          cardRenderer={(p: Promocion) => {
+            const isPct = p.tipoDescuento === 'porcentaje';
+            return (
+              <div className="flex items-start gap-3 px-4 py-3.5">
+                <PromocionThumbnail promocionId={p.id} imagenUrl={p.imagenUrl} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900 dark:text-gray-100">{p.titulo}</p>
+                      <p className="truncate text-[11px] text-gray-400">{p.proveedor?.razonSocial || '—'}</p>
+                    </div>
+                    <Badge variant={p.estado === 'activa' ? 'success' : p.estado === 'pausada' ? 'warning' : 'default'}>{p.estado}</Badge>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${isPct ? 'bg-green-50 text-green-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                      {isPct ? <Percent className="h-3 w-3" /> : <DollarSign className="h-3 w-3" />}
+                      {isPct ? `${p.valorDescuento}%` : `$${p.valorDescuento}`}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                      <Calendar className="h-3 w-3" />{formatFechaLegible(p.fechaInicio)} — {formatFechaLegible(p.fechaFin)}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    {p.estado === 'activa' && (
+                      <button onClick={() => handleEstadoChange(p.id, 'pausada')} title="Pausar" className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-amber-200 text-amber-500 hover:bg-amber-50"><Pause className="h-3.5 w-3.5" /></button>
+                    )}
+                    {p.estado === 'pausada' && (
+                      <button onClick={() => handleEstadoChange(p.id, 'activa')} title="Activar" className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-green-200 text-green-500 hover:bg-green-50"><Play className="h-3.5 w-3.5" /></button>
+                    )}
+                    {p.estado !== 'finalizada' && (
+                      <button onClick={() => handleEstadoChange(p.id, 'finalizada')} title="Finalizar" className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50"><StopCircle className="h-3.5 w-3.5" /></button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          }}
         />
       </div>
 

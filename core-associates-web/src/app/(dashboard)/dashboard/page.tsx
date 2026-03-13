@@ -25,13 +25,13 @@ const PIE_COLORS = ['#22c55e', '#f59e0b', '#ef4444', '#6b7280', '#dc2626'];
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg">
-      <p className="mb-1 text-xs font-semibold text-gray-500">{label}</p>
+    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+      <p className="mb-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{label}</p>
       {payload.map((entry: any, i: number) => (
         <div key={i} className="flex items-center gap-2 text-sm">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-          <span className="text-gray-600">{entry.name}:</span>
-          <span className="font-bold text-gray-900">{entry.value?.toLocaleString()}</span>
+          <span className="text-gray-600 dark:text-gray-400">{entry.name}:</span>
+          <span className="font-bold text-gray-900 dark:text-gray-100">{entry.value?.toLocaleString()}</span>
         </div>
       ))}
     </div>
@@ -42,11 +42,11 @@ function PieTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   const d = payload[0];
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg">
+    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-center gap-2 text-sm">
         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.payload.fill }} />
-        <span className="text-gray-600">{d.name}:</span>
-        <span className="font-bold text-gray-900">{d.value?.toLocaleString()}</span>
+        <span className="text-gray-600 dark:text-gray-400">{d.name}:</span>
+        <span className="font-bold text-gray-900 dark:text-gray-100">{d.value?.toLocaleString()}</span>
       </div>
     </div>
   );
@@ -88,7 +88,7 @@ export default function DashboardPage() {
   }
 
   if (!metrics) {
-    return <p className="text-gray-500">Error cargando métricas</p>;
+    return <p className="text-gray-500 dark:text-gray-400">Error cargando métricas</p>;
   }
 
   const pieData = [
@@ -101,8 +101,8 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-      <p className="mt-1 text-sm text-gray-600">Resumen general de la plataforma</p>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Resumen general de la plataforma</p>
 
       <StatsCards
         className="mt-6"
@@ -116,9 +116,9 @@ export default function DashboardPage() {
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Monthly trend bar chart */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900">Tendencia Mensual</h3>
-          <p className="text-xs text-gray-500">Registros y cupones de los últimos 6 meses</p>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tendencia Mensual</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Registros y cupones de los últimos 6 meses</p>
           <div className="mt-4 h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={metrics.trend} barGap={4}>
@@ -145,9 +145,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Asociados by estado pie chart */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900">Asociados por Estado</h3>
-          <p className="text-xs text-gray-500">Distribución actual</p>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Asociados por Estado</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Distribución actual</p>
           <div className="mt-4 h-72">
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -172,7 +172,7 @@ export default function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-gray-400">
+              <div className="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500">
                 Sin datos de asociados
               </div>
             )}
@@ -198,8 +198,8 @@ export default function DashboardPage() {
 function DashboardProveedor({ metrics }: { metrics: DashboardProveedorMetrics }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-      <p className="mt-1 text-sm text-gray-600">Resumen de tu negocio</p>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Resumen de tu negocio</p>
 
       <StatsCards
         className="mt-6"
@@ -213,9 +213,9 @@ function DashboardProveedor({ metrics }: { metrics: DashboardProveedorMetrics })
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Monthly trend bar chart */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900">Tendencia Mensual</h3>
-          <p className="text-xs text-gray-500">Cupones emitidos y canjeados de los últimos 6 meses</p>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tendencia Mensual</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Cupones emitidos y canjeados de los últimos 6 meses</p>
           <div className="mt-4 h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={metrics.trend} barGap={4}>
@@ -242,9 +242,9 @@ function DashboardProveedor({ metrics }: { metrics: DashboardProveedorMetrics })
         </div>
 
         {/* Promociones summary */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900">Estado de Promociones</h3>
-          <p className="text-xs text-gray-500">Distribución actual</p>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Estado de Promociones</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Distribución actual</p>
           <div className="mt-4 h-72">
             {metrics.promociones.total > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -273,7 +273,7 @@ function DashboardProveedor({ metrics }: { metrics: DashboardProveedorMetrics })
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-gray-400">
+              <div className="flex h-full items-center justify-center text-sm text-gray-400 dark:text-gray-500">
                 Sin promociones creadas
               </div>
             )}

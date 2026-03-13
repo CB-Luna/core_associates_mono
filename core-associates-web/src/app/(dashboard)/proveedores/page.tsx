@@ -11,6 +11,8 @@ import { Badge, estadoProveedorVariant, tipoProveedorVariant } from '@/component
 import { ProveedorFormDialog } from '@/components/shared/ProveedorFormDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
+import { formatFechaLegible } from '@/lib/utils';
+import { ProveedorDetailModal } from '@/components/shared/ProveedorDetailModal';
 import { usePermisos } from '@/lib/permisos';
 import { Download, Printer, Eye, ExternalLink, Trash2, Store, Utensils, Wrench, Droplets, GraduationCap, Gavel, HelpCircle } from 'lucide-react';
 
@@ -70,6 +72,7 @@ export default function ProveedoresPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Proveedor | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -150,20 +153,20 @@ export default function ProveedoresPage() {
     },
     {
       id: 'actions',
-      header: '',
+      header: 'Acciones',
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1">
           <button
-            onClick={(e) => { e.stopPropagation(); router.push(`/proveedores/${row.original.id}`); }}
+            onClick={(e) => { e.stopPropagation(); setDetailId(row.original.id); }}
             title="Ver detalle"
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-primary-200 text-primary-500 transition-colors hover:bg-primary-50 hover:text-primary-700 dark:border-primary-800 dark:hover:bg-primary-950/30"
           >
             <Eye className="h-4 w-4" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); window.open(`/proveedores/${row.original.id}`, '_blank'); }}
             title="Abrir en nueva pestaña"
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:border-gray-700 dark:hover:bg-gray-700"
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </button>
@@ -171,7 +174,7 @@ export default function ProveedoresPage() {
             <button
               onClick={(e) => { e.stopPropagation(); setDeleteTarget(row.original); }}
               title="Eliminar"
-              className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 text-red-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:border-red-800 dark:hover:bg-red-950/30"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -185,8 +188,8 @@ export default function ProveedoresPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Proveedores</h1>
-          <p className="mt-1 text-sm text-gray-600">Gestión de proveedores y aliados</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Proveedores</h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Gestión de proveedores y aliados</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => exportToCSV(data.map(p => ({ id: p.idUnico, razonSocial: p.razonSocial, tipo: p.tipo, contacto: p.contactoNombre || '', estado: p.estado })), [{ key: 'id', header: 'ID' }, { key: 'razonSocial', header: 'Razón Social' }, { key: 'tipo', header: 'Tipo' }, { key: 'contacto', header: 'Contacto' }, { key: 'estado', header: 'Estado' }], 'proveedores')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
@@ -215,12 +218,35 @@ export default function ProveedoresPage() {
           totalPages={totalPages}
           total={total}
           onPageChange={setPage}
-          searchable
-          searchPlaceholder="Buscar proveedor..."
           columnToggle
           exportable
           exportFilename="proveedores"
           striped
+          cardRenderer={(p: Proveedor) => (
+            <div className="flex items-start gap-3 px-4 py-3.5">
+              <ProveedorThumb proveedor={p} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-gray-900 dark:text-gray-100">{p.razonSocial}</p>
+                    <p className="font-mono text-[11px] text-gray-400">{p.idUnico}</p>
+                  </div>
+                  <Badge variant={estadoProveedorVariant[p.estado] || 'default'}>{p.estado}</Badge>
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                  <Badge variant={tipoProveedorVariant[p.tipo] || 'default'}>{p.tipo}</Badge>
+                  {p.contactoNombre && <span className="text-gray-600">{p.contactoNombre}</span>}
+                </div>
+                <div className="mt-2 flex items-center gap-1">
+                  <button onClick={(e) => { e.stopPropagation(); setDetailId(p.id); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary-200 text-primary-500 hover:bg-primary-50"><Eye className="h-3.5 w-3.5" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); window.open(`/proveedores/${p.id}`, '_blank'); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50"><ExternalLink className="h-3 w-3" /></button>
+                  {puede('eliminar:proveedores') && (
+                    <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(p); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-red-200 text-red-400 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         />
       </div>
 
@@ -244,6 +270,10 @@ export default function ProveedoresPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      {detailId && (
+        <ProveedorDetailModal proveedorId={detailId} onClose={() => setDetailId(null)} />
+      )}
     </div>
   );
 }

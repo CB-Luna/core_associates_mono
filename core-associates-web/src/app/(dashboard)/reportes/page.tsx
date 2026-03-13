@@ -18,13 +18,13 @@ const PIE_COLORS = ['#22c55e', '#3b82f6', '#eab308', '#ef4444', '#8b5cf6', '#6b7
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg">
-      {label && <p className="mb-1 text-xs font-semibold text-gray-500">{label}</p>}
+    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+      {label && <p className="mb-1 text-xs font-semibold text-gray-500 dark:text-gray-400">{label}</p>}
       {payload.map((entry: any, i: number) => (
         <div key={i} className="flex items-center gap-2 text-sm">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-          <span className="text-gray-600">{entry.name}:</span>
-          <span className="font-bold text-gray-900">{entry.value?.toLocaleString()}</span>
+          <span className="text-gray-600 dark:text-gray-400">{entry.name}:</span>
+          <span className="font-bold text-gray-900 dark:text-gray-100">{entry.value?.toLocaleString()}</span>
         </div>
       ))}
     </div>
@@ -35,11 +35,11 @@ function PieTooltipCustom({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   const d = payload[0];
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg">
+    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-center gap-2 text-sm">
         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.payload.fill }} />
-        <span className="text-gray-600">{d.name}:</span>
-        <span className="font-bold text-gray-900">{d.value?.toLocaleString()}</span>
+        <span className="text-gray-600 dark:text-gray-400">{d.name}:</span>
+        <span className="font-bold text-gray-900 dark:text-gray-100">{d.value?.toLocaleString()}</span>
       </div>
     </div>
   );
@@ -254,8 +254,8 @@ export default function ReportesPage() {
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reportes Avanzados</h1>
-          <p className="mt-1 text-sm text-gray-600">Análisis detallado con filtros por período</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Reportes Avanzados</h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Análisis detallado con filtros por período</p>
         </div>
         {puede('exportar:reportes') && (
           <div className="flex gap-2">
@@ -278,23 +278,23 @@ export default function ReportesPage() {
       </div>
 
       {/* Date Filters */}
-      <div className="mt-4 flex flex-wrap items-end gap-4 rounded-xl border bg-white p-4 shadow-sm">
+      <div className="mt-4 flex flex-wrap items-end gap-4 rounded-xl border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div>
-          <label className="block text-xs font-medium text-gray-500">Desde</label>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Desde</label>
           <input
             type="date"
             value={desde}
             onChange={(e) => setDesde(e.target.value)}
-            className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500">Hasta</label>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Hasta</label>
           <input
             type="date"
             value={hasta}
             onChange={(e) => setHasta(e.target.value)}
-            className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
           />
         </div>
         <button
@@ -317,9 +317,9 @@ export default function ReportesPage() {
       />
 
       {/* Trend Area Chart */}
-      <div className="mt-8 rounded-xl border bg-white p-6 shadow-sm">
-        <h3 className="mb-1 text-sm font-semibold text-gray-900">Tendencia mensual</h3>
-        <p className="mb-4 text-xs text-gray-500">Evolución de registros, cupones y casos en el período</p>
+      <div className="mt-8 rounded-xl border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-gray-100">Tendencia mensual</h3>
+        <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Evolución de registros, cupones y casos en el período</p>
         <ResponsiveContainer width="100%" height={320}>
           <AreaChart data={reporte.trend}>
             <defs>
@@ -351,9 +351,9 @@ export default function ReportesPage() {
       {/* Charts Row */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Cupones por Estado */}
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h3 className="mb-1 text-sm font-semibold text-gray-900">Cupones por estado</h3>
-          <p className="mb-4 text-xs text-gray-500">Distribución actual</p>
+        <div className="rounded-xl border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-gray-100">Cupones por estado</h3>
+          <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Distribución actual</p>
           {cuponesPie.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
@@ -382,9 +382,9 @@ export default function ReportesPage() {
         </div>
 
         {/* Casos por Tipo */}
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h3 className="mb-1 text-sm font-semibold text-gray-900">Casos por tipo de percance</h3>
-          <p className="mb-4 text-xs text-gray-500">Clasificación de incidentes</p>
+        <div className="rounded-xl border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-gray-100">Casos por tipo de percance</h3>
+          <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Clasificación de incidentes</p>
           {casosPorTipoPie.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
@@ -413,9 +413,9 @@ export default function ReportesPage() {
         </div>
 
         {/* Asociados por Estado */}
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h3 className="mb-1 text-sm font-semibold text-gray-900">Asociados por estado</h3>
-          <p className="mb-4 text-xs text-gray-500">Distribución de membresías</p>
+        <div className="rounded-xl border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-gray-100">Asociados por estado</h3>
+          <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Distribución de membresías</p>
           {asociadosPorEstado.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={asociadosPorEstado} layout="vertical" barSize={20}>
@@ -440,21 +440,21 @@ export default function ReportesPage() {
 
       {/* Documentos y Casos por Estado */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h3 className="mb-1 text-sm font-semibold text-gray-900">Documentos por estado</h3>
-          <p className="mb-4 text-xs text-gray-500">Revisión de documentación KYC</p>
+        <div className="rounded-xl border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-gray-100">Documentos por estado</h3>
+          <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Revisión de documentación KYC</p>
           <div className="space-y-2">
             {Object.entries(reporte.documentos.porEstado).map(([estado, count]) => {
               const total = Object.values(reporte.documentos.porEstado).reduce((a, b) => a + b, 0);
               const pct = total > 0 ? (count / total) * 100 : 0;
               const barColors: Record<string, string> = { aprobado: 'bg-green-500', pendiente: 'bg-yellow-500', rechazado: 'bg-red-500' };
               return (
-                <div key={estado} className="rounded-lg bg-gray-50 px-4 py-3">
+                <div key={estado} className="rounded-lg bg-gray-50 px-4 py-3 dark:bg-gray-700/50">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium capitalize text-gray-700">{estado}</span>
-                    <span className="text-sm font-bold text-gray-900">{count}</span>
+                    <span className="text-sm font-medium capitalize text-gray-700 dark:text-gray-300">{estado}</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{count}</span>
                   </div>
-                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
                     <div className={`h-full rounded-full transition-all ${barColors[estado] || 'bg-gray-400'}`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
@@ -466,21 +466,21 @@ export default function ReportesPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h3 className="mb-1 text-sm font-semibold text-gray-900">Casos legales por estado</h3>
-          <p className="mb-4 text-xs text-gray-500">Seguimiento de casos activos</p>
+        <div className="rounded-xl border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-gray-100">Casos legales por estado</h3>
+          <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Seguimiento de casos activos</p>
           <div className="space-y-2">
             {Object.entries(reporte.casosLegales.porEstado).map(([estado, count]) => {
               const total = Object.values(reporte.casosLegales.porEstado).reduce((a, b) => a + b, 0);
               const pct = total > 0 ? (count / total) * 100 : 0;
               const barColors: Record<string, string> = { abierto: 'bg-blue-500', en_atencion: 'bg-yellow-500', escalado: 'bg-orange-500', resuelto: 'bg-green-500', cerrado: 'bg-gray-400', cancelado: 'bg-red-500' };
               return (
-                <div key={estado} className="rounded-lg bg-gray-50 px-4 py-3">
+                <div key={estado} className="rounded-lg bg-gray-50 px-4 py-3 dark:bg-gray-700/50">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium capitalize text-gray-700">{estado.replace('_', ' ')}</span>
-                    <span className="text-sm font-bold text-gray-900">{count}</span>
+                    <span className="text-sm font-medium capitalize text-gray-700 dark:text-gray-300">{estado.replace('_', ' ')}</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{count}</span>
                   </div>
-                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-600">
                     <div className={`h-full rounded-full transition-all ${barColors[estado] || 'bg-gray-400'}`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
@@ -496,9 +496,9 @@ export default function ReportesPage() {
       {/* Tiempo de Resolución + Tasa de Aprobación */}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Tiempo promedio de resolución de casos */}
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h3 className="mb-1 text-sm font-semibold text-gray-900">Tiempo promedio de resolución</h3>
-          <p className="mb-4 text-xs text-gray-500">Días promedio para resolver/cerrar casos legales por mes</p>
+        <div className="rounded-xl border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-gray-100">Tiempo promedio de resolución</h3>
+          <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Días promedio para resolver/cerrar casos legales por mes</p>
           {reporte.tiempoResolucionCasos?.some((d) => d.casosResueltos > 0) ? (
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={reporte.tiempoResolucionCasos}>
@@ -517,9 +517,9 @@ export default function ReportesPage() {
         </div>
 
         {/* Tasa de aprobación de asociados */}
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h3 className="mb-1 text-sm font-semibold text-gray-900">Tasa de aprobación de asociados</h3>
-          <p className="mb-4 text-xs text-gray-500">Porcentaje de asociados aprobados vs registrados por mes</p>
+        <div className="rounded-xl border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="mb-1 text-sm font-semibold text-gray-900 dark:text-gray-100">Tasa de aprobación de asociados</h3>
+          <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">Porcentaje de asociados aprobados vs registrados por mes</p>
           {reporte.tasaAprobacion?.some((d) => d.registrados > 0) ? (
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={reporte.tasaAprobacion}>
@@ -541,12 +541,12 @@ export default function ReportesPage() {
 
       {/* Top Proveedores */}
       {reporte.topProveedores && reporte.topProveedores.length > 0 && (
-        <div className="mt-6 rounded-xl border bg-white p-6 shadow-sm">
+        <div className="mt-6 rounded-xl border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div className="mb-4 flex items-center gap-2">
             <Trophy className="h-5 w-5 text-amber-500" />
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">Top Proveedores</h3>
-              <p className="text-xs text-gray-500">Proveedores con mayor actividad de cupones en el período</p>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Top Proveedores</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Proveedores con mayor actividad de cupones en el período</p>
             </div>
           </div>
 
@@ -580,7 +580,7 @@ export default function ReportesPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 text-xs font-medium uppercase text-gray-500">
+                  <tr className="border-b border-gray-100 text-xs font-medium uppercase text-gray-500 dark:border-gray-700 dark:text-gray-400">
                     <th className="pb-2 pr-4">#</th>
                     <th className="pb-2 pr-4">Proveedor</th>
                     <th className="pb-2 pr-4">Tipo</th>
@@ -591,13 +591,13 @@ export default function ReportesPage() {
                 </thead>
                 <tbody>
                   {reporte.topProveedores.map((p, i) => (
-                    <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50">
                       <td className="py-2 pr-4">
                         <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${i < 3 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
                           {i + 1}
                         </span>
                       </td>
-                      <td className="py-2 pr-4 font-medium text-gray-900">{p.razonSocial}</td>
+                      <td className="py-2 pr-4 font-medium text-gray-900 dark:text-gray-100">{p.razonSocial}</td>
                       <td className="py-2 pr-4">
                         <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
                           <Store className="h-3 w-3" />

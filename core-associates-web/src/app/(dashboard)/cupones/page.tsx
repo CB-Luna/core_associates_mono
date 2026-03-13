@@ -10,6 +10,7 @@ import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
 import { exportToCSV, exportToPDFNative } from '@/lib/export-utils';
+import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import { Download, FileDown, X, QrCode, Eye, Ticket, Calendar } from 'lucide-react';
 import { QRDisplay } from '@/components/ui/QRDisplay';
 import type { Proveedor } from '@/lib/api-types';
@@ -145,7 +146,7 @@ export default function CuponesPage() {
       cell: ({ getValue }) => (
         <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
           <Calendar className="h-3 w-3 text-gray-400" />
-          {new Date(getValue() as string).toLocaleDateString('es-MX')}
+          {formatFechaLegible(getValue() as string)}
         </span>
       ),
     },
@@ -159,12 +160,12 @@ export default function CuponesPage() {
     },
     {
       id: 'actions',
-      header: '',
+      header: 'Acciones',
       cell: ({ row }) => (
         <button
           onClick={(e) => { e.stopPropagation(); setSelectedCupon(row.original); }}
           title="Ver detalle"
-          className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-primary-200 text-primary-500 transition-colors hover:bg-primary-50 hover:text-primary-700 dark:border-primary-800 dark:hover:bg-primary-950/30"
         >
           <Eye className="h-4 w-4" />
         </button>
@@ -176,13 +177,13 @@ export default function CuponesPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Cupones</h1>
-          <p className="mt-1 text-sm text-gray-600">{esProveedor ? 'Cupones generados con tus promociones' : 'Seguimiento de cupones generados'}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Cupones</h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{esProveedor ? 'Cupones generados con tus promociones' : 'Seguimiento de cupones generados'}</p>
         </div>
         {!esProveedor && (
         <div className="flex gap-2">
-          <button onClick={() => exportToCSV(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', promocion: c.promocion?.titulo || '', proveedor: c.proveedor?.razonSocial || '', vencimiento: new Date(c.fechaVencimiento).toLocaleDateString('es-MX'), estado: c.estado })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'promocion', header: 'Promoción' }, { key: 'proveedor', header: 'Proveedor' }, { key: 'vencimiento', header: 'Vencimiento' }, { key: 'estado', header: 'Estado' }], 'cupones')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
-          <button onClick={() => exportToPDFNative(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', promocion: c.promocion?.titulo || '', proveedor: c.proveedor?.razonSocial || '', vencimiento: new Date(c.fechaVencimiento).toLocaleDateString('es-MX'), estado: c.estado })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'promocion', header: 'Promoción' }, { key: 'proveedor', header: 'Proveedor' }, { key: 'vencimiento', header: 'Vencimiento' }, { key: 'estado', header: 'Estado' }], 'Reporte de Cupones', 'cupones')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><FileDown className="h-4 w-4" />PDF</button>
+          <button onClick={() => exportToCSV(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', promocion: c.promocion?.titulo || '', proveedor: c.proveedor?.razonSocial || '', vencimiento: formatFechaLegible(c.fechaVencimiento), estado: c.estado })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'promocion', header: 'Promoción' }, { key: 'proveedor', header: 'Proveedor' }, { key: 'vencimiento', header: 'Vencimiento' }, { key: 'estado', header: 'Estado' }], 'cupones')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
+          <button onClick={() => exportToPDFNative(data.map((c: any) => ({ codigo: c.codigo, asociado: c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '', promocion: c.promocion?.titulo || '', proveedor: c.proveedor?.razonSocial || '', vencimiento: formatFechaLegible(c.fechaVencimiento), estado: c.estado })), [{ key: 'codigo', header: 'Código' }, { key: 'asociado', header: 'Asociado' }, { key: 'promocion', header: 'Promoción' }, { key: 'proveedor', header: 'Proveedor' }, { key: 'vencimiento', header: 'Vencimiento' }, { key: 'estado', header: 'Estado' }], 'Reporte de Cupones', 'cupones')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><FileDown className="h-4 w-4" />PDF</button>
         </div>
         )}
       </div>
@@ -262,12 +263,42 @@ export default function CuponesPage() {
           total={total}
           onPageChange={setPage}
           onRowClick={(row) => setSelectedCupon(row)}
-          searchable
-          searchPlaceholder="Buscar cupon..."
           columnToggle
           exportable
           exportFilename="cupones"
           striped
+          cardRenderer={(c: any) => {
+            const asociado = c.asociado;
+            return (
+              <div className="flex items-start gap-3 px-4 py-3.5">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                  c.estado === 'activo' ? 'bg-green-50 text-green-600' :
+                  c.estado === 'canjeado' ? 'bg-blue-50 text-blue-600' :
+                  'bg-gray-50 text-gray-400'
+                }`}>
+                  <Ticket className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-xs font-bold text-gray-700 dark:text-gray-200">{c.codigo}</p>
+                      <p className="truncate text-[11px] text-gray-400">{c.promocion?.titulo || '—'}</p>
+                    </div>
+                    <Badge variant={estadoVariant[c.estado] || 'default'}>{c.estado}</Badge>
+                  </div>
+                  {asociado && (
+                    <p className="mt-1 truncate text-xs text-gray-600">{asociado.nombre} {asociado.apellidoPat}</p>
+                  )}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                    <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />Vence: {formatFechaLegible(c.fechaVencimiento)}</span>
+                  </div>
+                  <div className="mt-2">
+                    <button onClick={(e) => { e.stopPropagation(); setSelectedCupon(c); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary-200 text-primary-500 hover:bg-primary-50"><Eye className="h-3.5 w-3.5" /></button>
+                  </div>
+                </div>
+              </div>
+            );
+          }}
         />
       </div>
 
@@ -286,9 +317,9 @@ export default function CuponesPage() {
               {selectedCupon.asociado?.idUnico && <DetailRow label="ID Asociado" value={selectedCupon.asociado.idUnico} />}
               <DetailRow label="Promoción" value={selectedCupon.promocion?.titulo || '—'} />
               <DetailRow label="Proveedor" value={selectedCupon.proveedor?.razonSocial || '—'} />
-              <DetailRow label="Fecha Generación" value={selectedCupon.fechaGeneracion ? new Date(selectedCupon.fechaGeneracion).toLocaleString('es-MX') : '—'} />
-              <DetailRow label="Fecha Vencimiento" value={selectedCupon.fechaVencimiento ? new Date(selectedCupon.fechaVencimiento).toLocaleString('es-MX') : '—'} />
-              {selectedCupon.fechaCanje && <DetailRow label="Fecha Canje" value={new Date(selectedCupon.fechaCanje).toLocaleString('es-MX')} />}
+              <DetailRow label="Fecha Generación" value={selectedCupon.fechaGeneracion ? formatFechaConHora(selectedCupon.fechaGeneracion) : '—'} />
+              <DetailRow label="Fecha Vencimiento" value={selectedCupon.fechaVencimiento ? formatFechaConHora(selectedCupon.fechaVencimiento) : '—'} />
+              {selectedCupon.fechaCanje && <DetailRow label="Fecha Canje" value={formatFechaConHora(selectedCupon.fechaCanje)} />}
               {selectedCupon.qrPayload && (
                 <div className="mt-4 flex flex-col items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 py-4">
                   <QRDisplay value={selectedCupon.qrPayload} size={160} />

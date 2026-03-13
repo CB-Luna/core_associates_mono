@@ -19,6 +19,7 @@ export default function DashboardLayout({
   const user = useAuthStore((s) => s.user);
   const loadFromStorage = useAuthStore((s) => s.loadFromStorage);
   const [ready, setReady] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -29,6 +30,11 @@ export default function DashboardLayout({
       setReady(true);
     }
   }, [router, loadFromStorage]);
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   // Route guard: redirect proveedor away from restricted routes
   useEffect(() => {
@@ -51,10 +57,24 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      {/* Desktop sidebar */}
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+
+      {/* Mobile sidebar drawer */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-y-0 left-0 z-50 w-64 animate-slide-in-left">
+            <Sidebar onClose={() => setSidebarOpen(false)} />
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-1 flex-col">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-6 dark:bg-gray-900">{children}</main>
+        <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 dark:bg-gray-900">{children}</main>
       </div>
     </div>
   );

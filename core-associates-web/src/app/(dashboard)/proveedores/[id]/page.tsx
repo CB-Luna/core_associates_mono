@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Tag, Ticket, Pencil, Trash2, MapPin, Upload, ImageIcon } from 'lucide-react';
 import { apiClient, apiImageUrl } from '@/lib/api-client';
+import { formatFechaLegible } from '@/lib/utils';
 import type { Proveedor } from '@/lib/api-types';
 import { Badge, estadoProveedorVariant, tipoProveedorVariant } from '@/components/ui/Badge';
 import { ProveedorFormDialog } from '@/components/shared/ProveedorFormDialog';
@@ -89,7 +90,7 @@ export default function ProveedorDetailPage() {
     <div>
       <button
         onClick={() => router.back()}
-        className="mb-4 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+        className="mb-4 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
       >
         <ArrowLeft className="h-4 w-4" />
         Volver
@@ -118,9 +119,9 @@ export default function ProveedorDetailPage() {
             )}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{proveedor.razonSocial}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{proveedor.razonSocial}</h1>
             <div className="mt-1 flex items-center gap-2">
-              <span className="text-sm text-gray-500">{proveedor.idUnico}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{proveedor.idUnico}</span>
               <Badge variant={tipoProveedorVariant[proveedor.tipo]}>{proveedor.tipo}</Badge>
               <Badge variant={estadoProveedorVariant[proveedor.estado]}>{proveedor.estado}</Badge>
             </div>
@@ -130,7 +131,7 @@ export default function ProveedorDetailPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setEditing(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               <Pencil className="h-4 w-4" />
               Editar
@@ -150,43 +151,43 @@ export default function ProveedorDetailPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Contact info */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="text-sm font-semibold text-gray-900">Información de Contacto</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Información de Contacto</h3>
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">Contacto</dt>
-              <dd className="text-gray-900">{proveedor.contactoNombre || '—'}</dd>
+              <dt className="text-gray-500 dark:text-gray-400">Contacto</dt>
+              <dd className="text-gray-900 dark:text-gray-200">{proveedor.contactoNombre || '—'}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Teléfono</dt>
-              <dd className="text-gray-900">{proveedor.telefono || '—'}</dd>
+              <dt className="text-gray-500 dark:text-gray-400">Teléfono</dt>
+              <dd className="text-gray-900 dark:text-gray-200">{proveedor.telefono || '—'}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Email</dt>
-              <dd className="text-gray-900">{proveedor.email || '—'}</dd>
+              <dt className="text-gray-500 dark:text-gray-400">Email</dt>
+              <dd className="text-gray-900 dark:text-gray-200">{proveedor.email || '—'}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Dirección</dt>
-              <dd className="text-gray-900">{proveedor.direccion || '—'}</dd>
+              <dt className="text-gray-500 dark:text-gray-400">Dirección</dt>
+              <dd className="text-gray-900 dark:text-gray-200">{proveedor.direccion || '—'}</dd>
             </div>
           </dl>
         </div>
 
         {/* Stats */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="text-sm font-semibold text-gray-900">Estadísticas</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Estadísticas</h3>
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">Cupones Emitidos</dt>
-              <dd className="text-gray-900 font-medium">{proveedor._count?.cuponesEmitidos || 0}</dd>
+              <dt className="text-gray-500 dark:text-gray-400">Cupones Emitidos</dt>
+              <dd className="text-gray-900 font-medium dark:text-gray-200">{proveedor._count?.cuponesEmitidos || 0}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Cupones Canjeados</dt>
-              <dd className="text-gray-900 font-medium">{proveedor._count?.cuponesCanjeados || 0}</dd>
+              <dt className="text-gray-500 dark:text-gray-400">Cupones Canjeados</dt>
+              <dd className="text-gray-900 font-medium dark:text-gray-200">{proveedor._count?.cuponesCanjeados || 0}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">Promociones</dt>
-              <dd className="text-gray-900 font-medium">{proveedor._count?.promociones || proveedor.promociones?.length || 0}</dd>
+              <dt className="text-gray-500 dark:text-gray-400">Promociones</dt>
+              <dd className="text-gray-900 font-medium dark:text-gray-200">{proveedor._count?.promociones || proveedor.promociones?.length || 0}</dd>
             </div>
           </dl>
         </div>
@@ -194,20 +195,20 @@ export default function ProveedorDetailPage() {
 
       {/* Promotions */}
       {proveedor.promociones && proveedor.promociones.length > 0 && (
-        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
             <Tag className="h-4 w-4" />
             Promociones ({proveedor.promociones.length})
           </h3>
           <div className="mt-3 space-y-3">
             {proveedor.promociones.map((p) => (
-              <div key={p.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-3 text-sm">
+              <div key={p.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
                 <div>
-                  <p className="font-medium text-gray-900">{p.titulo}</p>
-                  <p className="text-gray-500">
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{p.titulo}</p>
+                  <p className="text-gray-500 dark:text-gray-400">
                     {p.tipoDescuento === 'porcentaje' ? `${p.valorDescuento}%` : `$${p.valorDescuento}`}
                     {' · '}
-                    {new Date(p.fechaInicio).toLocaleDateString('es-MX')} - {new Date(p.fechaFin).toLocaleDateString('es-MX')}
+                    {formatFechaLegible(p.fechaInicio)} - {formatFechaLegible(p.fechaFin)}
                   </p>
                 </div>
                 <Badge

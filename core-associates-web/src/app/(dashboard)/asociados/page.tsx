@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { type ColumnDef } from '@tanstack/react-table';
-import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import { useToast } from '@/components/ui/Toast';
 import type { Asociado } from '@/lib/api-types';
 import { DataTable } from '@/components/ui/DataTable';
@@ -11,7 +11,31 @@ import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
 import { exportToCSV, exportToPrintPDF } from '@/lib/export-utils';
-import { Download, Printer, Eye, ExternalLink, Phone, Calendar } from 'lucide-react';
+import { formatFechaLegible } from '@/lib/utils';
+import { AsociadoDetailModal } from '@/components/shared/AsociadoDetailModal';
+import { Download, Printer, Eye, ExternalLink, Phone, Calendar, Mail } from 'lucide-react';
+
+function AsociadoPhoto({ asociado }: { asociado: Asociado }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const initials = `${asociado.nombre?.[0] || ''}${asociado.apellidoPat?.[0] || ''}`.toUpperCase();
+
+  useEffect(() => {
+    let revoked = false;
+    apiImageUrl(`/asociados/${asociado.id}/foto`)
+      .then((url) => { if (!revoked) setSrc(url); })
+      .catch(() => {});
+    return () => { revoked = true; if (src) URL.revokeObjectURL(src); };
+  }, [asociado.id]);
+
+  if (src) {
+    return <img src={src} alt={initials} className="h-9 w-9 rounded-full object-cover ring-2 ring-white shadow-sm" />;
+  }
+  return (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-xs font-bold text-white shadow-sm">
+      {initials}
+    </div>
+  );
+}
 
 const estadoOptions = [
   { label: 'Activo', value: 'activo' },
@@ -31,6 +55,7 @@ export default function AsociadosPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('');
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   // Stats
   const [stats, setStats] = useState({ total: 0, activos: 0, pendientes: 0 });
@@ -85,13 +110,10 @@ export default function AsociadosPage() {
       header: 'Asociado',
       cell: ({ row }) => {
         const a = row.original;
-        const initials = `${a.nombre?.[0] || ''}${a.apellidoPat?.[0] || ''}`.toUpperCase();
         const fullName = `${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''}`.trim();
         return (
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-xs font-bold text-white shadow-sm">
-              {initials}
-            </div>
+            <AsociadoPhoto asociado={a} />
             <div className="min-w-0">
               <p className="truncate font-semibold text-gray-900">{fullName}</p>
               <p className="truncate font-mono text-[11px] text-gray-400">{a.idUnico}</p>
@@ -127,26 +149,26 @@ export default function AsociadosPage() {
       cell: ({ getValue }) => (
         <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
           <Calendar className="h-3 w-3 text-gray-400" />
-          {new Date(getValue() as string).toLocaleDateString('es-MX')}
+          {formatFechaLegible(getValue() as string)}
         </span>
       ),
     },
     {
       id: 'actions',
-      header: '',
+      header: 'Acciones',
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1">
           <button
-            onClick={(e) => { e.stopPropagation(); router.push(`/asociados/${row.original.id}`); }}
+            onClick={(e) => { e.stopPropagation(); setDetailId(row.original.id); }}
             title="Ver detalle"
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-primary-200 text-primary-500 transition-colors hover:bg-primary-50 hover:text-primary-700 dark:border-primary-800 dark:hover:bg-primary-950/30"
           >
             <Eye className="h-4 w-4" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); window.open(`/asociados/${row.original.id}`, '_blank'); }}
             title="Abrir en nueva pestaña"
-            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:border-gray-700 dark:hover:bg-gray-700"
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </button>
@@ -159,12 +181,12 @@ export default function AsociadosPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Asociados</h1>
-          <p className="mt-1 text-sm text-gray-600">Gestión de conductores asociados</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Asociados</h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Gestión de conductores asociados</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => exportToCSV(data.map(a => ({ id: a.idUnico, nombre: `${a.nombre} ${a.apellidoPat}`, telefono: a.telefono, estado: a.estado, registro: new Date(a.fechaRegistro).toLocaleDateString('es-MX') })), [{ key: 'id', header: 'ID' }, { key: 'nombre', header: 'Nombre' }, { key: 'telefono', header: 'Teléfono' }, { key: 'estado', header: 'Estado' }, { key: 'registro', header: 'Registro' }], 'asociados')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
-          <button onClick={() => exportToPrintPDF(data.map(a => ({ id: a.idUnico, nombre: `${a.nombre} ${a.apellidoPat}`, telefono: a.telefono, estado: a.estado, registro: new Date(a.fechaRegistro).toLocaleDateString('es-MX') })), [{ key: 'id', header: 'ID' }, { key: 'nombre', header: 'Nombre' }, { key: 'telefono', header: 'Teléfono' }, { key: 'estado', header: 'Estado' }, { key: 'registro', header: 'Registro' }], 'Reporte de Asociados')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Printer className="h-4 w-4" />PDF</button>
+          <button onClick={() => exportToCSV(data.map(a => ({ id: a.idUnico, nombre: `${a.nombre} ${a.apellidoPat}`, telefono: a.telefono, estado: a.estado, registro: formatFechaLegible(a.fechaRegistro) })), [{ key: 'id', header: 'ID' }, { key: 'nombre', header: 'Nombre' }, { key: 'telefono', header: 'Teléfono' }, { key: 'estado', header: 'Estado' }, { key: 'registro', header: 'Registro' }], 'asociados')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Download className="h-4 w-4" />CSV</button>
+          <button onClick={() => exportToPrintPDF(data.map(a => ({ id: a.idUnico, nombre: `${a.nombre} ${a.apellidoPat}`, telefono: a.telefono, estado: a.estado, registro: formatFechaLegible(a.fechaRegistro) })), [{ key: 'id', header: 'ID' }, { key: 'nombre', header: 'Nombre' }, { key: 'telefono', header: 'Teléfono' }, { key: 'estado', header: 'Estado' }, { key: 'registro', header: 'Registro' }], 'Reporte de Asociados')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"><Printer className="h-4 w-4" />PDF</button>
         </div>
       </div>
 
@@ -199,15 +221,42 @@ export default function AsociadosPage() {
           totalPages={totalPages}
           total={total}
           onPageChange={setPage}
-          searchable
-          searchPlaceholder="Buscar asociado..."
           columnToggle
           exportable
           exportFilename="asociados"
           selectable
           striped
+          cardRenderer={(a: Asociado) => {
+            const fullName = `${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''}`.trim();
+            return (
+              <div className="flex items-start gap-3 px-4 py-3.5">
+                <AsociadoPhoto asociado={a} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900 dark:text-gray-100">{fullName}</p>
+                      <p className="font-mono text-[11px] text-gray-400">{a.idUnico}</p>
+                    </div>
+                    <Badge variant={estadoAsociadoVariant[a.estado] || 'default'}>{a.estado}</Badge>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                    <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{a.telefono}</span>
+                    <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{formatFechaLegible(a.fechaRegistro)}</span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-1">
+                    <button onClick={(e) => { e.stopPropagation(); setDetailId(a.id); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary-200 text-primary-500 hover:bg-primary-50"><Eye className="h-3.5 w-3.5" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); window.open(`/asociados/${a.id}`, '_blank'); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50"><ExternalLink className="h-3 w-3" /></button>
+                  </div>
+                </div>
+              </div>
+            );
+          }}
         />
       </div>
+
+      {detailId && (
+        <AsociadoDetailModal asociadoId={detailId} onClose={() => setDetailId(null)} />
+      )}
     </div>
   );
 }

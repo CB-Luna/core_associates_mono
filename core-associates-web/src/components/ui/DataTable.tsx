@@ -66,6 +66,8 @@ interface DataTableProps<T> {
   compact?: boolean;
   /** Sticky header */
   stickyHeader?: boolean;
+  /** Custom card renderer for mobile view — receives each data row */
+  cardRenderer?: (row: T) => React.ReactNode;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -135,7 +137,7 @@ function Dropdown({ trigger, children, align = 'right' }: {
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
-            className={`absolute z-40 mt-1 min-w-[200px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg ${
+            className={`absolute z-40 mt-1 min-w-[200px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800 ${
               align === 'right' ? 'right-0' : 'left-0'
             }`}
           >
@@ -171,6 +173,7 @@ export function DataTable<T>({
   striped = false,
   compact = false,
   stickyHeader = false,
+  cardRenderer,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -245,23 +248,38 @@ export function DataTable<T>({
   // ─── Loading skeleton ───
   if (loading) {
     return (
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <table className="min-w-full">
-          <thead className="bg-gray-50/80">
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        {/* Mobile skeleton */}
+        {cardRenderer && (
+          <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-4">
+                <div className="h-10 w-10 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                  <div className="h-3 w-1/2 animate-pulse rounded bg-gray-100 dark:bg-gray-700" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Desktop skeleton */}
+        <table className={`min-w-full ${cardRenderer ? 'hidden md:table' : ''}`}>
+          <thead className="bg-gray-50/80 dark:bg-gray-800/80">
             <tr>
               {columns.map((_, i) => (
                 <th key={i} className={headerPadding}>
-                  <div className="h-3 w-20 animate-pulse rounded-full bg-gray-200" />
+                  <div className="h-3 w-20 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {Array.from({ length: 6 }).map((_, rowIdx) => (
-              <tr key={rowIdx} className="border-t border-gray-100">
+              <tr key={rowIdx} className="border-t border-gray-100 dark:border-gray-700">
                 {columns.map((_, colIdx) => (
                   <td key={colIdx} className={cellPadding}>
-                    <div className="h-4 w-full animate-pulse rounded-full bg-gray-100" />
+                    <div className="h-4 w-full animate-pulse rounded-full bg-gray-100 dark:bg-gray-700" />
                   </td>
                 ))}
               </tr>
@@ -276,10 +294,10 @@ export function DataTable<T>({
   const allTableColumns = table.getAllColumns().filter((c) => c.getCanHide());
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
       {/* ─── Toolbar ─── */}
       {hasToolbar && (
-        <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 bg-gray-50/40 px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 bg-gray-50/40 px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800/60">
           {/* Global search */}
           {searchable && (
             <div className="relative">
@@ -289,7 +307,7 @@ export function DataTable<T>({
                 value={globalFilter}
                 onChange={(e) => setGlobalFilter(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="h-9 rounded-lg border border-gray-200 bg-white pl-9 pr-8 text-sm text-gray-700 placeholder-gray-400 transition-colors focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                className="h-9 rounded-lg border border-gray-200 bg-white pl-9 pr-8 text-sm text-gray-700 placeholder-gray-400 transition-colors focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-500"
               />
               {globalFilter && (
                 <button
@@ -373,12 +391,36 @@ export function DataTable<T>({
         </div>
       )}
 
-      {/* ─── Table ─── */}
-      <div className={`overflow-x-auto ${stickyHeader ? 'max-h-[600px] overflow-y-auto' : ''}`}>
+      {/* ─── Mobile Card View ─── */}
+      {cardRenderer && (
+        <div className="md:hidden">
+          {table.getRowModel().rows.length === 0 ? (
+            <div className="px-5 py-12 text-center">
+              <Inbox className="mx-auto h-11 w-11 text-gray-200 dark:text-gray-600" />
+              <p className="mt-3 text-sm font-medium text-gray-400 dark:text-gray-500">{emptyMessage}</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              {table.getRowModel().rows.map((row) => (
+                <div
+                  key={row.id}
+                  className={onRowClick ? 'cursor-pointer' : ''}
+                  onClick={() => onRowClick?.(row.original)}
+                >
+                  {cardRenderer(row.original)}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── Desktop Table ─── */}
+      <div className={`overflow-x-auto ${stickyHeader ? 'max-h-[600px] overflow-y-auto' : ''} ${cardRenderer ? 'hidden md:block' : ''}`}>
         <table className="min-w-full">
           <thead className={stickyHeader ? 'sticky top-0 z-10' : ''}>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} className="border-b border-gray-200 bg-gray-50/70">
+              <tr key={headerGroup.id} className="border-b border-gray-200 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-800/70">
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
@@ -424,13 +466,13 @@ export function DataTable<T>({
               </tr>
             ))}
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {table.getRowModel().rows.length === 0 ? (
               <tr>
                 <td colSpan={finalColumns.length} className="px-5 py-20 text-center">
-                  <Inbox className="mx-auto h-11 w-11 text-gray-200" />
-                  <p className="mt-3 text-sm font-medium text-gray-400">{emptyMessage}</p>
-                  <p className="mt-1 text-xs text-gray-300">Intenta con otros filtros de busqueda</p>
+                  <Inbox className="mx-auto h-11 w-11 text-gray-200 dark:text-gray-600" />
+                  <p className="mt-3 text-sm font-medium text-gray-400 dark:text-gray-500">{emptyMessage}</p>
+                  <p className="mt-1 text-xs text-gray-300 dark:text-gray-600">Intenta con otros filtros de busqueda</p>
                 </td>
               </tr>
             ) : (
@@ -442,10 +484,10 @@ export function DataTable<T>({
                     className={[
                       'group transition-colors',
                       isSelected && 'bg-primary-50/60',
-                      !isSelected && striped && idx % 2 === 1 && 'bg-gray-50/40',
+                      !isSelected && striped && idx % 2 === 1 && 'bg-gray-50/40 dark:bg-gray-750/30',
                       onRowClick
-                        ? 'cursor-pointer border-l-2 border-l-transparent hover:border-l-primary-500 hover:bg-primary-50/40'
-                        : 'hover:bg-gray-50/60',
+                        ? 'cursor-pointer border-l-2 border-l-transparent hover:border-l-primary-500 hover:bg-primary-50/40 dark:hover:bg-primary-950/20'
+                        : 'hover:bg-gray-50/60 dark:hover:bg-gray-700/40',
                     ]
                       .filter(Boolean)
                       .join(' ')}
@@ -457,7 +499,7 @@ export function DataTable<T>({
                       return (
                         <td
                           key={cell.id}
-                          className={`whitespace-nowrap ${cellPadding} text-sm text-gray-600 ${isActions ? 'text-right' : ''} ${isSelect ? 'w-10' : ''}`}
+                          className={`whitespace-nowrap ${cellPadding} text-sm text-gray-600 dark:text-gray-300 ${isActions ? 'text-right' : ''} ${isSelect ? 'w-10' : ''}`}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
@@ -473,7 +515,7 @@ export function DataTable<T>({
 
       {/* ─── Footer / Pagination ─── */}
       {(onPageChange && totalPages > 0) && (
-        <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50/40 px-5 py-3">
+        <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50/40 px-5 py-3 dark:border-gray-700 dark:bg-gray-800/60">
           <div className="text-xs text-gray-400">
             {total !== undefined && (
               <span>

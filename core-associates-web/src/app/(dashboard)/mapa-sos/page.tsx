@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { apiClient, type PaginatedResponse } from '@/lib/api-client';
 import { useToast } from '@/components/ui/Toast';
+import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
 import {
@@ -256,12 +257,12 @@ export default function MapaSosPage() {
 
                 {/* Fechas */}
                 <PanelSection title="Fechas">
-                  <PanelField icon={Calendar} label="Apertura" value={new Date(selectedCaso.fechaApertura).toLocaleString('es-MX')} />
+                  <PanelField icon={Calendar} label="Apertura" value={formatFechaConHora(selectedCaso.fechaApertura)} />
                   {selectedCaso.fechaAsignacion && (
-                    <PanelField icon={Clock} label="Asignación" value={new Date(selectedCaso.fechaAsignacion).toLocaleString('es-MX')} />
+                    <PanelField icon={Clock} label="Asignación" value={formatFechaConHora(selectedCaso.fechaAsignacion)} />
                   )}
                   {selectedCaso.fechaCierre && (
-                    <PanelField icon={Clock} label="Cierre" value={new Date(selectedCaso.fechaCierre).toLocaleString('es-MX')} />
+                    <PanelField icon={Clock} label="Cierre" value={formatFechaConHora(selectedCaso.fechaCierre)} />
                   )}
                 </PanelSection>
 
@@ -321,7 +322,7 @@ export default function MapaSosPage() {
                     <p className="mt-0.5 truncate text-sm text-gray-700">
                       {c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : 'Sin asociado'}
                       <span className="mx-1.5 text-gray-300">&middot;</span>
-                      <span className="text-gray-400">{new Date(c.fechaApertura).toLocaleDateString('es-MX')}</span>
+                      <span className="text-gray-400">{formatFechaLegible(c.fechaApertura)}</span>
                     </p>
                   </div>
                   <Badge variant={(estadoVariant[c.estado] as any) || 'default'}>{c.estado?.replace('_', ' ')}</Badge>

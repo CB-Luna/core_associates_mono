@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { SmsService } from '../../common/sms/sms.service';
+import { StorageService } from '../storage/storage.service';
 import { RolUsuario, EstadoUsuario } from '@prisma/client';
 
 const OTP_TTL_SECONDS = 300; // 5 minutos
@@ -12,12 +13,15 @@ const OTP_KEY_PREFIX = 'otp:';
 
 @Injectable()
 export class AuthService {
+  private readonly AVATAR_BUCKET = 'core-associates-avatars';
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly redis: RedisService,
     private readonly smsService: SmsService,
+    private readonly storageService: StorageService,
   ) {}
 
   // ── OTP para App Móvil ──
@@ -142,6 +146,7 @@ export class AuthService {
         nombre: usuario.nombre,
         rol: usuario.rol,
         ...(usuario.proveedorId && { proveedorId: usuario.proveedorId }),
+        ...(usuario.avatarUrl && { avatarUrl: usuario.avatarUrl }),
       },
     };
   }
@@ -174,6 +179,7 @@ export class AuthService {
         rol: true,
         estado: true,
         proveedorId: true,
+        avatarUrl: true,
         ultimoAcceso: true,
         createdAt: true,
       },
@@ -211,6 +217,7 @@ export class AuthService {
         nombre: true,
         rol: true,
         estado: true,
+        avatarUrl: true,
         createdAt: true,
       },
     });
@@ -241,6 +248,7 @@ export class AuthService {
         nombre: true,
         rol: true,
         estado: true,
+        avatarUrl: true,
         createdAt: true,
       },
     });
@@ -257,6 +265,58 @@ export class AuthService {
     });
 
     return { message: 'Contraseña actualizada correctamente' };
+  }
+
+  // ── Avatar de Usuario ──
+
+  async uploadAvatar(userId: string, file: Express.Multer.File): Promise<{ avatarUrl: string }> {
+    const usuario = await this.prisma.usuario.findUnique({ where: { id: userId } });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    // Delete old avatar if exists
+    if (usuario.avatarUrl) {
+      try {
+        await this.storageService.deleteFile(this.AVATAR_BUCKET, usuario.avatarUrl);
+      } catch { /* ignore if old file doesn't exist */ }
+    }
+
+    const ext = file.originalname.split('.').pop() || 'jpg';
+    const objectName = `${userId}/${Date.now()}.${ext}`;
+    await this.storageService.uploadFile(this.AVATAR_BUCKET, objectName, file.buffer, file.mimetype);
+
+    await this.prisma.usuario.update({
+      where: { id: userId },
+      data: { avatarUrl: objectName },
+    });
+
+    return { avatarUrl: objectName };
+  }
+
+  async getAvatar(userId: string): Promise<{ buffer: Buffer; contentType: string }> {
+    const usuario = await this.prisma.usuario.findUnique({ where: { id: userId } });
+    if (!usuario || !usuario.avatarUrl) throw new NotFoundException('Avatar no encontrado');
+
+    const buffer = await this.storageService.getFile(this.AVATAR_BUCKET, usuario.avatarUrl);
+    const ext = usuario.avatarUrl.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+    return { buffer, contentType: mimeMap[ext] || 'image/jpeg' };
+  }
+
+  async deleteAvatar(userId: string): Promise<{ message: string }> {
+    const usuario = await this.prisma.usuario.findUnique({ where: { id: userId } });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    if (usuario.avatarUrl) {
+      try {
+        await this.storageService.deleteFile(this.AVATAR_BUCKET, usuario.avatarUrl);
+      } catch { /* ignore */ }
+      await this.prisma.usuario.update({
+        where: { id: userId },
+        data: { avatarUrl: null },
+      });
+    }
+
+    return { message: 'Avatar eliminado' };
   }
 
   // ── OTP Peek (para que la app móvil muestre el código pendiente) ──
