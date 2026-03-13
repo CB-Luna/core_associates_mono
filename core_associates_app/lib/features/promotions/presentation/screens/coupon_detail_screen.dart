@@ -17,15 +17,13 @@ class CouponDetailScreen extends ConsumerWidget {
     final cuponesAsync = ref.watch(misCuponesProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detalle del Cupón'),
-      ),
+      appBar: AppBar(title: const Text('Detalle del Cupón')),
       body: cuponesAsync.when(
         data: (cupones) {
           final cupon = cupones.cast<Cupon?>().firstWhere(
-                (c) => c?.id == cuponId,
-                orElse: () => null,
-              );
+            (c) => c?.id == cuponId,
+            orElse: () => null,
+          );
 
           if (cupon == null) {
             return const Center(child: Text('Cupón no encontrado'));
@@ -68,100 +66,163 @@ class _CouponDetailContent extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          // Status badge
+          // Ticket-style card
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
-              color: _estadoColor().withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              cupon.estado.toUpperCase(),
-              style: TextStyle(
-                color: _estadoColor(),
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // QR Code
-          GestureDetector(
-            onTap: () => _showFullScreenQr(context),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  QrImageView(
-                    data: cupon.qrData,
-                    version: QrVersions.auto,
-                    size: 220,
-                    eyeStyle: const QrEyeStyle(
-                      eyeShape: QrEyeShape.circle,
-                      color: AppColors.textPrimary,
-                    ),
-                    dataModuleStyle: const QrDataModuleStyle(
-                      dataModuleShape: QrDataModuleShape.circle,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Toca para ampliar',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Coupon code
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              boxShadow: AppShadows.lg,
             ),
             child: Column(
               children: [
-                Text(
-                  'Código',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
+                // Top section with gradient
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                  decoration: BoxDecoration(
+                    gradient: cupon.estado == 'activo'
+                        ? AppGradients.primary
+                        : cupon.estado == 'canjeado'
+                        ? AppGradients.success
+                        : AppGradients.surfaceSubtle,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(AppRadius.xl),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                        ),
+                        child: Text(
+                          cupon.estado.toUpperCase(),
+                          style: TextStyle(
+                            color:
+                                cupon.estado == 'activo' ||
+                                    cupon.estado == 'canjeado'
+                                ? Colors.white
+                                : _estadoColor(),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
+                      const SizedBox(height: 16),
+                      Text(
+                        cupon.promocion.titulo,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  cupon.estado == 'activo' ||
+                                      cupon.estado == 'canjeado'
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        cupon.proveedor.razonSocial,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color:
+                              cupon.estado == 'activo' ||
+                                  cupon.estado == 'canjeado'
+                              ? Colors.white70
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  cupon.codigo,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
+
+                // Dashed divider effect
+                Row(
+                  children: List.generate(
+                    30,
+                    (i) => Expanded(
+                      child: Container(
+                        height: 1,
+                        color: i % 2 == 0
+                            ? AppColors.border
+                            : Colors.transparent,
                       ),
+                    ),
+                  ),
+                ),
+
+                // QR Code section
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showFullScreenQr(context),
+                        child: QrImageView(
+                          data: cupon.qrData,
+                          version: QrVersions.auto,
+                          size: 200,
+                          eyeStyle: const QrEyeStyle(
+                            eyeShape: QrEyeShape.circle,
+                            color: AppColors.textPrimary,
+                          ),
+                          dataModuleStyle: const QrDataModuleStyle(
+                            dataModuleShape: QrDataModuleShape.circle,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Toca para ampliar',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Code
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary50,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Código',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: AppColors.textSecondary),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              cupon.codigo,
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 2,
+                                    color: AppColors.primary,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // Info card
           Container(
@@ -169,17 +230,12 @@ class _CouponDetailContent extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              boxShadow: AppShadows.sm,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _InfoRow(
-                  label: 'Promoción',
-                  value: cupon.promocion.titulo,
-                ),
-                const Divider(height: 20),
                 _InfoRow(
                   label: 'Descuento',
                   value: cupon.promocion.tipoDescuento == 'porcentaje'
@@ -188,13 +244,10 @@ class _CouponDetailContent extends StatelessWidget {
                 ),
                 const Divider(height: 20),
                 _InfoRow(
-                  label: 'Proveedor',
-                  value: cupon.proveedor.razonSocial,
-                ),
-                const Divider(height: 20),
-                _InfoRow(
                   label: 'Generado',
-                  value: dateFormat.format(DateTime.parse(cupon.fechaGeneracion)),
+                  value: dateFormat.format(
+                    DateTime.parse(cupon.fechaGeneracion),
+                  ),
                 ),
                 const Divider(height: 20),
                 _InfoRow(
@@ -257,11 +310,7 @@ class _InfoRow extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
-  const _InfoRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _InfoRow({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -270,17 +319,17 @@ class _InfoRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
         ),
         Flexible(
           child: Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: valueColor,
-                ),
+              fontWeight: FontWeight.w600,
+              color: valueColor,
+            ),
             textAlign: TextAlign.end,
           ),
         ),

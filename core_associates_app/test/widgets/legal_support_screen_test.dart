@@ -42,7 +42,7 @@ void main() {
   group('LegalSupportScreen', () {
     testWidgets('renders title and subtitle', (tester) async {
       await tester.pumpWidget(createLegalScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Soporte Legal'), findsOneWidget);
       expect(find.text('Asistencia en caso de percance vial'), findsOneWidget);
@@ -50,7 +50,7 @@ void main() {
 
     testWidgets('renders SOS button', (tester) async {
       await tester.pumpWidget(createLegalScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('REPORTAR'), findsOneWidget);
       expect(find.byIcon(Icons.sos), findsOneWidget);
@@ -58,7 +58,7 @@ void main() {
 
     testWidgets('renders coverage cards', (tester) async {
       await tester.pumpWidget(createLegalScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Cobertura incluida'), findsOneWidget);
       expect(find.text('Asesoría Legal'), findsOneWidget);
@@ -68,14 +68,14 @@ void main() {
 
     testWidgets('renders Mis Casos section heading', (tester) async {
       await tester.pumpWidget(createLegalScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Mis Casos'), findsOneWidget);
     });
 
     testWidgets('shows empty state when no cases', (tester) async {
       await tester.pumpWidget(createLegalScreen(casos: []));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('No tienes casos registrados'), findsOneWidget);
       expect(find.byIcon(Icons.folder_open_outlined), findsOneWidget);
@@ -83,7 +83,7 @@ void main() {
 
     testWidgets('shows case card with caso data', (tester) async {
       await tester.pumpWidget(createLegalScreen(casos: [testCaso]));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // Card renders 'Accidente - LEG-001'
       expect(find.textContaining('LEG-001'), findsOneWidget);
@@ -92,11 +92,11 @@ void main() {
 
     testWidgets('tapping SOS button opens report dialog', (tester) async {
       await tester.pumpWidget(createLegalScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // Tap the SOS circle
       await tester.tap(find.text('REPORTAR'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Reportar Percance'), findsOneWidget);
       expect(find.text('Tipo de percance:'), findsOneWidget);
@@ -106,13 +106,13 @@ void main() {
 
     testWidgets('SOS dialog can be dismissed with Cancelar', (tester) async {
       await tester.pumpWidget(createLegalScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       await tester.tap(find.text('REPORTAR'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       await tester.tap(find.text('Cancelar'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // Dialog is gone
       expect(find.text('Reportar Percance'), findsNothing);
@@ -120,10 +120,10 @@ void main() {
 
     testWidgets('shows description field in SOS dialog', (tester) async {
       await tester.pumpWidget(createLegalScreen());
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       await tester.tap(find.text('REPORTAR'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Descripción (opcional)'), findsOneWidget);
     });

@@ -170,10 +170,19 @@ class HomeScreen extends ConsumerWidget {
                       .toList(),
                 );
               },
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: CircularProgressIndicator(),
+              loading: () => Column(
+                children: List.generate(
+                  2,
+                  (_) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
+                    ),
+                  ),
                 ),
               ),
               error: (_, _) => _PromotionPlaceholder(),
@@ -208,25 +217,17 @@ class _MembershipCard extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: estado == 'activo'
-              ? [AppColors.primary, AppColors.primaryDark]
-              : [const Color(0xFF64748B), const Color(0xFF475569)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color:
-                (estado == 'activo'
-                        ? AppColors.primary
-                        : const Color(0xFF64748B))
-                    .withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        gradient: estado == 'activo'
+            ? AppGradients.primary
+            : const LinearGradient(
+                colors: [Color(0xFF64748B), Color(0xFF475569)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: estado == 'activo'
+            ? AppShadows.colored(AppColors.primary)
+            : AppShadows.md,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,7 +357,7 @@ class _KycBanner extends ConsumerWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(
@@ -416,19 +417,9 @@ class _PendingOtpBanner extends ConsumerWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF6366F1).withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          gradient: AppGradients.accent,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.colored(AppColors.accent),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,23 +481,31 @@ class _QuickAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.sm,
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(height: 10),
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: color,
+                color: AppColors.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -532,63 +531,31 @@ class _PromocionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.sm,
         ),
         child: Row(
           children: [
             if (promocion.imagenUrl != null)
               ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 child: CachedNetworkImage(
                   imageUrl:
                       '${AppConstants.apiBaseUrl}${AppConstants.apiPrefix}/promociones/${promocion.id}/imagen',
                   httpHeaders: httpHeaders,
-                  width: 48,
-                  height: 48,
+                  width: 52,
+                  height: 52,
                   fit: BoxFit.cover,
-                  errorWidget: (_, _, _) => Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.secondary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(
-                      child: Text(
-                        promocion.descuentoFormateado,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppColors.secondary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
+                  errorWidget: (_, _, _) => _discountBadge(context),
                 ),
               )
             else
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    promocion.descuentoFormateado,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppColors.secondary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
+              _discountBadge(context),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -612,8 +579,41 @@ class _PromocionCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.secondary50,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Text(
+                promocion.descuentoFormateado,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColors.secondary700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _discountBadge(BuildContext context) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: AppColors.secondary50,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Center(
+        child: Text(
+          promocion.descuentoFormateado,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: AppColors.secondary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -627,18 +627,26 @@ class _PromotionPlaceholder extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.sm,
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.local_offer_outlined,
-            size: 40,
-            color: AppColors.textSecondary,
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.primary50,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.local_offer_outlined,
+              size: 28,
+              color: AppColors.primary300,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             'Las promociones disponibles aparecerán aquí',
             style: Theme.of(

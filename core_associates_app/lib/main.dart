@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'app/router.dart';
@@ -29,11 +30,14 @@ class CoreAssociatesApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final theme = AppTheme.light;
 
     return MaterialApp.router(
       title: 'Core Associates',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: theme.copyWith(
+        textTheme: GoogleFonts.interTextTheme(theme.textTheme),
+      ),
       scaffoldMessengerKey: rootScaffoldMessengerKey,
       routerConfig: router,
       builder: (context, child) {

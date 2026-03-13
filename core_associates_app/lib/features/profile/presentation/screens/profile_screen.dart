@@ -16,12 +16,18 @@ class ProfileScreen extends ConsumerWidget {
     String fotoUrl,
     Map<String, String> headers,
   ) {
-    return CircleAvatar(
-      radius: 40,
-      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-      backgroundImage: CachedNetworkImageProvider(fotoUrl, headers: headers),
-      onBackgroundImageError: (_, __) {},
-      child: null,
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: AppShadows.colored(AppColors.primary),
+      ),
+      child: CircleAvatar(
+        radius: 48,
+        backgroundColor: AppColors.primary100,
+        backgroundImage: CachedNetworkImageProvider(fotoUrl, headers: headers),
+        onBackgroundImageError: (_, __) {},
+        child: null,
+      ),
     );
   }
 
@@ -33,173 +39,204 @@ class ProfileScreen extends ConsumerWidget {
 
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            const SizedBox(height: 8),
-
-            // Avatar & name
-            profileAsync.when(
-              data: (asociado) {
-                final nombre = asociado?.nombreCompleto ?? 'Asociado';
-                final iniciales = asociado?.iniciales ?? '?';
-                final estado = asociado?.estado ?? '---';
-                final idUnico = asociado?.idUnico ?? '';
-
-                return Column(
-                  children: [
-                    _buildAvatar(iniciales, fotoUrl, imgHeaders),
-                    const SizedBox(height: 12),
-                    Text(
-                      nombre,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      estado == 'activo' ? 'Miembro activo' : 'Estado: $estado',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: estado == 'activo'
-                            ? AppColors.secondary
-                            : AppColors.warning,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    if (idUnico.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        idUnico,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ],
-                );
-              },
-              loading: () => Column(
-                children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: const CircularProgressIndicator(),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Cargando...',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ],
-              ),
-              error: (_, _) => Column(
-                children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: const Icon(
-                      Icons.person,
-                      size: 40,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Asociado',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // Menu items
-            _ProfileMenuItem(
-              icon: Icons.person_outline,
-              title: 'Datos Personales',
-              onTap: () => context.push('/edit-profile'),
-            ),
-            _ProfileMenuItem(
-              icon: Icons.directions_car_outlined,
-              title: 'Mis Vehículos',
-              onTap: () => context.push('/vehicles'),
-            ),
-            _ProfileMenuItem(
-              icon: Icons.description_outlined,
-              title: 'Mis Documentos',
-              onTap: () => context.push('/documents'),
-            ),
-            _ProfileMenuItem(
-              icon: Icons.credit_card_outlined,
-              title: 'Mi Membresía',
-              onTap: () {},
-            ),
-            _ProfileMenuItem(
-              icon: Icons.notifications_outlined,
-              title: 'Notificaciones',
-              onTap: () {},
-            ),
-            _ProfileMenuItem(
-              icon: Icons.help_outline,
-              title: 'Ayuda y Soporte',
-              onTap: () {},
-            ),
-
-            const SizedBox(height: 16),
-
-            // Logout
-            SizedBox(
+            // Gradient header
+            Container(
               width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Cerrar Sesión'),
-                      content: const Text(
-                        '¿Estás seguro de que quieres cerrar sesión?',
+              padding: const EdgeInsets.fromLTRB(20, 32, 20, 28),
+              decoration: const BoxDecoration(
+                gradient: AppGradients.primary,
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(AppRadius.xl),
+                ),
+              ),
+              child: profileAsync.when(
+                data: (asociado) {
+                  final nombre = asociado?.nombreCompleto ?? 'Asociado';
+                  final estado = asociado?.estado ?? '---';
+                  final idUnico = asociado?.idUnico ?? '';
+
+                  return Column(
+                    children: [
+                      _buildAvatar(
+                        asociado?.iniciales ?? '?',
+                        fotoUrl,
+                        imgHeaders,
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('Cancelar'),
+                      const SizedBox(height: 14),
+                      Text(
+                        nombre,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Cerrar Sesión'),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                        ),
+                        child: Text(
+                          estado == 'activo'
+                              ? 'Miembro activo'
+                              : 'Estado: $estado',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ),
+                      if (idUnico.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          idUnico,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: Colors.white70),
                         ),
                       ],
-                    ),
+                    ],
                   );
-
-                  if (confirmed == true) {
-                    await ref.read(authStateProvider.notifier).logout();
-                    if (context.mounted) {
-                      context.go('/login');
-                    }
-                  }
                 },
-                icon: const Icon(Icons.logout, color: AppColors.error),
-                label: const Text(
-                  'Cerrar Sesión',
-                  style: TextStyle(color: AppColors.error),
+                loading: () => Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 48,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      child: const CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Cargando...',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleLarge?.copyWith(color: Colors.white),
+                    ),
+                  ],
                 ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.error),
+                error: (_, _) => Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 48,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      child: const Icon(
+                        Icons.person,
+                        size: 48,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Asociado',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 24),
+            // Menu items
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  _ProfileMenuItem(
+                    icon: Icons.person_outline,
+                    title: 'Datos Personales',
+                    onTap: () => context.push('/edit-profile'),
+                  ),
+                  _ProfileMenuItem(
+                    icon: Icons.directions_car_outlined,
+                    title: 'Mis Vehículos',
+                    onTap: () => context.push('/vehicles'),
+                  ),
+                  _ProfileMenuItem(
+                    icon: Icons.description_outlined,
+                    title: 'Mis Documentos',
+                    onTap: () => context.push('/documents'),
+                  ),
+                  _ProfileMenuItem(
+                    icon: Icons.credit_card_outlined,
+                    title: 'Mi Membresía',
+                    onTap: () {},
+                  ),
+                  _ProfileMenuItem(
+                    icon: Icons.notifications_outlined,
+                    title: 'Notificaciones',
+                    onTap: () {},
+                  ),
+                  _ProfileMenuItem(
+                    icon: Icons.help_outline,
+                    title: 'Ayuda y Soporte',
+                    onTap: () {},
+                  ),
 
-            Text(
-              'Core Associates v1.0.0',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                  const SizedBox(height: 16),
+
+                  // Logout
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Cerrar Sesión'),
+                            content: const Text(
+                              '¿Estás seguro de que quieres cerrar sesión?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancelar'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Cerrar Sesión'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirmed == true) {
+                          await ref.read(authStateProvider.notifier).logout();
+                          if (context.mounted) {
+                            context.go('/login');
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.logout, color: AppColors.error),
+                      label: const Text(
+                        'Cerrar Sesión',
+                        style: TextStyle(color: AppColors.error),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.error),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  Text(
+                    'Core Associates v1.0.0',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -226,13 +263,13 @@ class _ProfileMenuItem extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(8),
+          color: AppColors.primary50,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
-        child: Icon(icon, color: AppColors.textPrimary, size: 22),
+        child: Icon(icon, color: AppColors.primary, size: 22),
       ),
       title: Text(title),
-      trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+      trailing: const Icon(Icons.chevron_right, color: AppColors.textTertiary),
       contentPadding: EdgeInsets.zero,
     );
   }

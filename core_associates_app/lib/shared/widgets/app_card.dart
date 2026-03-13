@@ -6,6 +6,8 @@ class AppCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
   final Color? borderColor;
+  final List<BoxShadow>? shadow;
+  final Gradient? gradient;
 
   const AppCard({
     super.key,
@@ -13,28 +15,30 @@ class AppCard extends StatelessWidget {
     this.padding,
     this.onTap,
     this.borderColor,
+    this.shadow,
+    this.gradient,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: padding ?? const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor ?? AppColors.border),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: child,
+    final card = Container(
+      padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: gradient == null ? Colors.white : null,
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: gradient == null
+            ? Border.all(
+                color: borderColor ?? AppColors.border.withValues(alpha: 0.5),
+              )
+            : null,
+        boxShadow: shadow ?? AppShadows.sm,
       ),
+      child: child,
     );
+
+    if (onTap == null) return card;
+
+    return GestureDetector(onTap: onTap, child: card);
   }
 }

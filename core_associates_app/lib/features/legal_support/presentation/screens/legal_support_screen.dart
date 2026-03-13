@@ -37,44 +37,11 @@ class LegalSupportScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
-            // SOS Button
+            // SOS Button with pulse effect
             Center(
               child: Column(
                 children: [
-                  InkWell(
-                    onTap: () => _showSOSDialog(context, ref),
-                    borderRadius: BorderRadius.circular(60),
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.error,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.error.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.sos, color: Colors.white, size: 36),
-                          SizedBox(height: 4),
-                          Text(
-                            'REPORTAR',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _SOSButton(onTap: () => _showSOSDialog(context, ref)),
                   const SizedBox(height: 12),
                   Text(
                     'Toca para reportar un percance',
@@ -133,22 +100,36 @@ class LegalSupportScreen extends ConsumerWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      boxShadow: AppShadows.sm,
                     ),
                     child: Column(
                       children: [
-                        Icon(
-                          Icons.folder_open_outlined,
-                          size: 40,
-                          color: AppColors.textSecondary,
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.folder_open_outlined,
+                            size: 28,
+                            color: AppColors.primary,
+                          ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Text(
                           'No tienes casos registrados',
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Aquí aparecerán tus reportes de percances',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textTertiary),
                         ),
                       ],
                     ),
@@ -168,7 +149,22 @@ class LegalSupportScreen extends ConsumerWidget {
                       .toList(),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => Column(
+                children: List.generate(
+                  2,
+                  (_) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        boxShadow: AppShadows.sm,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               error: (_, _) => const Text('Error al cargar casos'),
             ),
           ],
@@ -319,6 +315,101 @@ class LegalSupportScreen extends ConsumerWidget {
   }
 }
 
+class _SOSButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const _SOSButton({required this.onTap});
+
+  @override
+  State<_SOSButton> createState() => _SOSButtonState();
+}
+
+class _SOSButtonState extends State<_SOSButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulseAnim,
+      builder: (context, child) {
+        final pulseValue = _pulseAnim.value;
+        return Container(
+          width: 140,
+          height: 140,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.error.withValues(
+                  alpha: 0.15 + 0.15 * pulseValue,
+                ),
+                blurRadius: 24 + 16 * pulseValue,
+                spreadRadius: 4 + 8 * pulseValue,
+              ),
+            ],
+          ),
+          child: child,
+        );
+      },
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(70),
+        child: Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: AppGradients.danger,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.error.withValues(alpha: 0.4),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.sos, color: Colors.white, size: 36),
+              SizedBox(height: 4),
+              Text(
+                'REPORTAR',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CoverageCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -336,18 +427,19 @@ class _CoverageCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.sm,
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.primary50,
+              shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: AppColors.primary, size: 24),
+            child: Icon(icon, color: AppColors.primary, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -402,23 +494,24 @@ class _CasoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.sm,
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: _estadoColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                shape: BoxShape.circle,
               ),
-              child: Icon(Icons.gavel, color: _estadoColor, size: 24),
+              child: Icon(Icons.gavel, color: _estadoColor, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -441,7 +534,7 @@ class _CasoCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: _estadoColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
                         ),
                         child: Text(
                           caso.estadoLabel,
@@ -464,7 +557,7 @@ class _CasoCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+            const Icon(Icons.chevron_right, color: AppColors.textTertiary),
           ],
         ),
       ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/services/push_notification_service.dart';
+import '../../../../shared/theme/app_theme.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
@@ -68,31 +69,48 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
     return Scaffold(
       body: widget.child,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: index,
-        onTap: _onTap,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Inicio',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_offer_outlined),
-            activeIcon: Icon(Icons.local_offer),
-            label: 'Promociones',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shield_outlined),
-            activeIcon: Icon(Icons.shield),
-            label: 'Legal SOS',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Perfil',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 16,
+              offset: Offset(0, -4),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: index,
+          onTap: _onTap,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: AppColors.textTertiary,
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Inicio',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.local_offer_outlined),
+              activeIcon: Icon(Icons.local_offer),
+              label: 'Promociones',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shield_outlined),
+              activeIcon: Icon(Icons.shield),
+              label: 'Legal SOS',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Perfil',
+            ),
+          ],
+        ),
       ),
     );
   }

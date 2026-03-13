@@ -130,13 +130,48 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
+
+              // Circular countdown indicator
+              Center(
+                child: SizedBox(
+                  width: 72,
+                  height: 72,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 72,
+                        height: 72,
+                        child: CircularProgressIndicator(
+                          value: _resendSeconds / 60,
+                          strokeWidth: 4,
+                          backgroundColor: AppColors.border,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _resendSeconds > 10
+                                ? AppColors.primary
+                                : AppColors.warning,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.sms_outlined,
+                        size: 28,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
 
               Text(
                 'Verificación',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
@@ -144,9 +179,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 style: Theme.of(
                   context,
                 ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
 
               // OTP Pin fields
               MaterialPinField(
@@ -158,7 +194,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 theme: MaterialPinTheme(
                   shape: MaterialPinShape.outlined,
                   cellSize: const Size(48, 56),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   borderColor: AppColors.border,
                   focusedBorderColor: AppColors.primary,
                   filledBorderColor: AppColors.primary,
@@ -169,13 +205,36 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               const SizedBox(height: 24),
 
               if (_isVerifying)
-                const Center(child: CircularProgressIndicator())
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(12),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
               else
-                ElevatedButton(
-                  onPressed: _pinController.text.length == 6
-                      ? () => _verifyOtp(_pinController.text)
-                      : null,
-                  child: const Text('Verificar'),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: AppGradients.primary,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      boxShadow: AppShadows.colored(AppColors.primary),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: _pinController.text.length == 6
+                          ? () => _verifyOtp(_pinController.text)
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                      ),
+                      child: const Text('Verificar'),
+                    ),
+                  ),
                 ),
 
               const SizedBox(height: 24),
@@ -185,17 +244,17 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF6366F1).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.accent50,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(
-                      color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                      color: AppColors.accent.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
                     children: [
                       const Icon(
                         Icons.phone_android,
-                        color: Color(0xFF6366F1),
+                        color: AppColors.accent,
                         size: 28,
                       ),
                       const SizedBox(width: 12),
@@ -208,7 +267,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF6366F1),
+                                    color: AppColors.accent700,
                                   ),
                             ),
                             const SizedBox(height: 2),
@@ -256,7 +315,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     ? Text(
                         'Reenviar código en $_resendSeconds s',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary,
+                          color: AppColors.textTertiary,
                         ),
                       )
                     : TextButton(

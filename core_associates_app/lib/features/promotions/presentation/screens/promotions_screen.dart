@@ -125,7 +125,22 @@ class PromotionsScreen extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: List.generate(
+                  3,
+                  (_) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Container(
+                      height: 160,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               error: (e, _) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -254,18 +269,20 @@ class _PromocionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.sm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (promocion.imagenUrl != null) ...[
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppRadius.lg),
+              ),
               child: CachedNetworkImage(
                 imageUrl:
                     '${AppConstants.apiBaseUrl}${AppConstants.apiPrefix}/promociones/${promocion.id}/imagen',
@@ -283,72 +300,97 @@ class _PromocionCard extends StatelessWidget {
                 errorWidget: (_, _, _) => const SizedBox.shrink(),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 0),
           ],
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondary50,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Text(
+                        promocion.descuentoFormateado,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: AppColors.secondary700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        promocion.titulo,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  promocion.descuentoFormateado,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.secondary,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(height: 8),
+                Text(
+                  promocion.descripcion,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  promocion.titulo,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            promocion.descripcion,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                promocion.proveedor.razonSocial,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w500,
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      promocion.proveedor.razonSocial,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: AppGradients.primary,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: onGenerarCupon,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            child: Text(
+                              'Obtener cupón',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              FilledButton.tonal(
-                onPressed: onGenerarCupon,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 0,
-                  ),
-                  minimumSize: const Size(0, 32),
-                ),
-                child: const Text('Obtener cupón'),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

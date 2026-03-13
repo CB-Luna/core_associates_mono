@@ -280,11 +280,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.secondary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.secondary.withValues(alpha: 0.3),
-                    ),
+                    color: AppColors.success50,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    boxShadow: AppShadows.sm,
                   ),
                   child: Row(
                     children: [
@@ -305,24 +303,58 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    if (context.canPop()) {
-                      context.pop();
-                    } else {
-                      context.go('/home');
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: AppGradients.primary,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    boxShadow: AppShadows.colored(AppColors.primary),
                   ),
-                  child: const Text('Listo'),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/home');
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Listo',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => ListView(
+          padding: const EdgeInsets.all(20),
+          children: List.generate(
+            4,
+            (_) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  boxShadow: AppShadows.sm,
+                ),
+              ),
+            ),
+          ),
+        ),
         error: (e, _) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -390,29 +422,27 @@ class _DocumentTile extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: document != null
-              ? _estadoColor(document!.estado).withValues(alpha: 0.3)
-              : AppColors.border,
-        ),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.sm,
       ),
       child: Column(
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color:
                       (document != null
                               ? _estadoColor(document!.estado)
                               : AppColors.primary)
                           .withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  shape: BoxShape.circle,
                 ),
                 child: Icon(
                   icon,
+                  size: 22,
                   color: document != null
                       ? _estadoColor(document!.estado)
                       : AppColors.primary,
@@ -425,9 +455,9 @@ class _DocumentTile extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     if (document != null) ...[
