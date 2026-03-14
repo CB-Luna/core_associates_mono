@@ -39,12 +39,16 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
 
   useEffect(() => {
     apiClient<Asociado>(`/asociados/${asociadoId}`)
-      .then(setAsociado)
+      .then((data) => {
+        setAsociado(data);
+        if (data.fotoUrl) {
+          apiImageUrl(`/asociados/${asociadoId}/foto`)
+            .then(setFotoUrl)
+            .catch(() => {});
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-    apiImageUrl(`/asociados/${asociadoId}/foto`)
-      .then(setFotoUrl)
-      .catch(() => {});
     apiClient<NotaAsociado[]>(`/asociados/${asociadoId}/notas`)
       .then(setNotas)
       .catch(console.error)
