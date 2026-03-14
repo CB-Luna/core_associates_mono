@@ -19,13 +19,15 @@ function AsociadoPhoto({ asociado }: { asociado: Asociado }) {
   const initials = `${asociado.nombre?.[0] || ''}${asociado.apellidoPat?.[0] || ''}`.toUpperCase();
 
   useEffect(() => {
-    if (!asociado.fotoUrl) return; // sin foto registrada → no hacer fetch
+    // fotoUrl directo o posible selfie-fallback si tiene documentos
+    const puedeCargar = asociado.fotoUrl || (asociado._count?.documentos ?? 0) > 0;
+    if (!puedeCargar) return;
     let revoked = false;
     apiImageUrl(`/asociados/${asociado.id}/foto`)
       .then((url) => { if (!revoked) setSrc(url); })
       .catch(() => {});
     return () => { revoked = true; if (src) URL.revokeObjectURL(src); };
-  }, [asociado.id, asociado.fotoUrl]);
+  }, [asociado.id, asociado.fotoUrl, asociado._count?.documentos]);
 
   if (src) {
     return <img src={src} alt={initials} className="h-9 w-9 rounded-full object-cover ring-2 ring-white shadow-sm" />;

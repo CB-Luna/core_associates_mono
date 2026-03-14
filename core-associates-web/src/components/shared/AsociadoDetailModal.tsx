@@ -41,11 +41,10 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
     apiClient<Asociado>(`/asociados/${asociadoId}`)
       .then((data) => {
         setAsociado(data);
-        if (data.fotoUrl) {
-          apiImageUrl(`/asociados/${asociadoId}/foto`)
-            .then(setFotoUrl)
-            .catch(() => {});
-        }
+        // Siempre intentar: el backend hace fallback a selfie si no hay fotoUrl
+        apiImageUrl(`/asociados/${asociadoId}/foto`)
+          .then(setFotoUrl)
+          .catch(() => {});
       })
       .catch(console.error)
       .finally(() => setLoading(false));
