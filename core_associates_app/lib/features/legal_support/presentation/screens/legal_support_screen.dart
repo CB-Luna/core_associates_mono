@@ -177,51 +177,113 @@ class LegalSupportScreen extends ConsumerWidget {
     String selectedTipo = 'accidente';
     final descripcionController = TextEditingController();
 
+    const tiposPercance = [
+      {
+        'value': 'accidente',
+        'label': 'Accidente',
+        'icon': Icons.car_crash,
+        'color': Color(0xFFEF4444),
+      },
+      {
+        'value': 'infraccion',
+        'label': 'Infracción',
+        'icon': Icons.receipt_long,
+        'color': Color(0xFFF59E0B),
+      },
+      {
+        'value': 'robo',
+        'label': 'Robo',
+        'icon': Icons.lock_outlined,
+        'color': Color(0xFF8B5CF6),
+      },
+      {
+        'value': 'asalto',
+        'label': 'Asalto',
+        'icon': Icons.warning_amber_rounded,
+        'color': Color(0xFFEC4899),
+      },
+      {
+        'value': 'otro',
+        'label': 'Otro',
+        'icon': Icons.help_outline,
+        'color': Color(0xFF6B7280),
+      },
+    ];
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: const Text('Reportar Percance'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Tipo de percance:'),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: selectedTipo,
-                items: const [
-                  DropdownMenuItem(
-                    value: 'accidente',
-                    child: Text('Accidente'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'infraccion',
-                    child: Text('Infracción'),
-                  ),
-                  DropdownMenuItem(value: 'robo', child: Text('Robo')),
-                  DropdownMenuItem(value: 'asalto', child: Text('Asalto')),
-                  DropdownMenuItem(value: 'otro', child: Text('Otro')),
-                ],
-                onChanged: (v) => setState(() => selectedTipo = v!),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Tipo de percance:'),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: tiposPercance.map((tipo) {
+                    final isSelected = selectedTipo == tipo['value'];
+                    final color = tipo['color'] as Color;
+                    return GestureDetector(
+                      onTap: () => setState(
+                        () => selectedTipo = tipo['value'] as String,
+                      ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 90,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? color.withValues(alpha: 0.15)
+                              : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? color : Colors.grey.shade300,
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              tipo['icon'] as IconData,
+                              size: 28,
+                              color: isSelected ? color : Colors.grey.shade500,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              tipo['label'] as String,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: isSelected
+                                    ? color
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descripcionController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    hintText: 'Descripción (opcional)',
+                    border: OutlineInputBorder(),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descripcionController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  hintText: 'Descripción (opcional)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(

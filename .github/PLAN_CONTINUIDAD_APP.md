@@ -1,7 +1,8 @@
 # Plan de Continuidad — Core Associates App (Flutter)
 
 > Documento generado tras auditoría completa de la app móvil.  
-> Fecha: 2025-03-10  
+> Fecha original: 2025-03-10  
+> **Última actualización: 2026-03-15**  
 > Alcance: Funcionalidad, lógica de negocio, errores detectados, tareas pendientes.
 
 ---
@@ -150,27 +151,94 @@
 
 ---
 
-## 5. Recomendaciones de Siguientes Pasos
+## 5. Cambios Requeridos — Sprint Actual (Marzo 2026)
 
-### Prioridad 1 — Inmediato (antes del siguiente release)
-1. **Verificar permisos iOS**: Confirmar `Info.plist` tiene location usage descriptions
-2. **Test end-to-end en dispositivo físico**: Verificar GPS real, subida de fotos, carga de imágenes con la build de producción
-3. **Rebuild y deploy**: `build-apk-prod.ps1` + `deploy-ionos.ps1` para que los fixes lleguen a producción
+### 5.1 Eliminar menciones de IA en pantalla de Documentos (APP-01)
+- **Prioridad**: Alta
+- **Contexto**: En `documents_screen.dart` se importa y muestra `AiAnalysisCard` — un card expandible por documento que muestra estado de análisis IA (confianza %, validaciones, datos extraídos).
+- **Problema**: El usuario (asociado) NO debe ver nada relacionado con IA. El análisis IA es exclusivo del CRM (operador/admin revisa los documentos). La app solo debe permitir subir documentos y ver su estado (pendiente/aprobado/rechazado).
+- **Archivos a modificar**:
+  - `lib/features/documents/presentation/screens/documents_screen.dart` — Eliminar import y uso de `AiAnalysisCard`
+  - `lib/features/documents/presentation/widgets/ai_analysis_card.dart` — Se puede conservar el archivo pero no debe ser referenciado desde la pantalla de documentos
+  - `lib/features/documents/data/models/ai_analysis.dart` — No necesariamente eliminar (puede usarse internamente), pero no debe haber UI visible
+- **Criterio de aceptación**: La pantalla de documentos muestra solo: tipo de documento, estado, preview de imagen, botón de resubir si rechazado. Sin stepper, card ni texto que mencione "IA", "análisis", "confianza" o "validaciones".
 
-### Prioridad 2 — Corto Plazo
-4. **Notificaciones push**: Verificar recepción de notificaciones cuando operador aprueba/rechaza documentos o asigna abogado
-5. **Manejo de errores mejorado**: Agregar retry automático en requests fallidos por timeout de red
-6. **Test de integración**: Crear tests que cubran el flujo completo OTP → onboarding → documentos → home
+### 5.2 Imagen opcional de vehículo al registrar (APP-02)
+- **Prioridad**: Media
+- **Contexto**: Actualmente `add_vehicle_screen.dart` es un formulario de solo texto (marca, modelo, año, color, placas, número de serie, switch principal). No hay carga de imagen.
+- **Cambio requerido**: Agregar campo opcional para subir foto del vehículo (cámara o galería), con preview antes de guardar.
+- **Impacto Backend**: 
+  - Modelo `Vehiculo` en `schema.prisma` necesita campo `fotoUrl String? @map("foto_url")`. 
+  - Nuevo endpoint `POST /vehiculos/:id/foto` y `GET /vehiculos/:id/foto` (similar al patrón de foto de asociado).
+  - Bucket de MinIO: `core-associates-vehicles` (o reutilizar bucket existente con path `vehiculos/{id}/`).
+- **Impacto App**:
+  - Modelo `vehiculo.dart` — agregar `fotoUrl` campo opcional
+  - `add_vehicle_screen.dart` — agregar `ImagePicker` (cámara/galería) con preview, compresión similar a fotos de perfil (800px, 85%)
+  - `vehicles_screen.dart` — mostrar thumbnail de foto en la lista si existe
+  - `vehicle_repository.dart` — método `uploadFoto(vehiculoId, file)`
+- **Criterio de aceptación**: Al crear/editar vehículo, aparece un área para agregar foto (opcional). Si se sube, se persiste en MinIO y se muestra como thumbnail en la lista de vehículos.
 
-### Prioridad 3 — Mediano Plazo
-7. **Modo offline**: Cachear datos del perfil y cupones activos para acceso sin conexión
-8. **Deep links**: Habilitar compartir cupones/promociones vía URL
-9. **Analytics**: Integrar tracking de eventos para entender uso real de features
-10. **Accesibilidad**: Agregar `Semantics` labels, contrast ratios, font scaling
+### 5.3 SOS — Iconos de tipo de incidente en vez de dropdown (APP-03)
+- **Prioridad**: Alta
+- **Contexto**: `_showSOSDialog()` en `legal_support_screen.dart` (L170-244) usa un `DropdownButtonFormField` con 5 opciones: accidente, infracción, robo, asalto, otro.
+- **Cambio requerido**: Reemplazar el dropdown por una grilla de **iconos grandes tocables** para selección rápida del tipo de incidente. En una emergencia, el usuario necesita taps rápidos, no un dropdown.
+- **Diseño propuesto**:
+  ```
+  ┌─────────┐ ┌─────────┐ ┌─────────┐
+  │  🚗💥   │ │  🚫📝   │ │  🔒🚗   │
+  │Accidente│ │Infracción│ │  Robo   │
+  └─────────┘ └─────────┘ └─────────┘
+  ┌─────────┐ ┌─────────┐
+  │  ⚠️🔫   │ │  ❓❓   │
+  │ Asalto  │ │  Otro   │
+  └─────────┘ └─────────┘
+  ```
+  - Cada tipo es un card/tile con icono grande (Material Icons o custom) + label debajo
+  - Al tocar se marca visualmente (borde de color, background highlight)
+  - El campo de descripción permanece debajo
+- **Archivos a modificar**:
+  - `lib/features/legal_support/presentation/screens/legal_support_screen.dart` — `_showSOSDialog()`
+- **Iconos sugeridos**: `Icons.car_crash` (accidente), `Icons.description` (infracción), `Icons.lock` (robo), `Icons.warning` (asalto), `Icons.help_outline` (otro). Pueden ser Material Icons con fondo de color semántico (rojo para asalto, naranja para accidente, etc.).
+- **Criterio de aceptación**: El modal SOS muestra iconos grandes tocables en grid. Selección instantánea con feedback visual. No hay dropdown. Botón "Enviar SOS" sigue funcionando igual.
+
+### 5.4 OTP — Mostrar código de verificación en pantalla correcta (APP-04)
+- **Prioridad**: Alta
+- **Contexto**: Actualmente existe un sistema de "OTP peek" (`otpPeekProvider`) que hace polling cada 5s al endpoint `/auth/otp-peek`. El widget `_PendingOtpBanner` se muestra en la **pantalla Home** (`home_screen.dart`, L398-462), mostrando el código OTP en texto grande. Es un workaround para los casos donde la notificación SMS no llega.
+- **Problema**: El código se muestra en la pantalla de Home/Menú, pero el usuario está en la **pantalla de login/OTP** cuando necesita ver el código. Debería aparecer en la misma pantalla donde se ingresa el teléfono o donde se teclea el código OTP.
+- **Cambio requerido**: Mover el banner de OTP peek a la pantalla de ingreso del número de teléfono (`login_screen.dart`) o la pantalla OTP (`otp_screen.dart`). Ideal: mostrarlo justo **debajo del campo de teléfono** o **arriba del campo de código OTP**, según dónde se encuentre el usuario en el flujo.
+- **Archivos a modificar**:
+  - `lib/features/home/presentation/screens/home_screen.dart` — **Eliminar** `_PendingOtpBanner` y su referencia
+  - `lib/features/auth/presentation/screens/login_screen.dart` — **Agregar** banner de OTP peek visible después de enviar el OTP
+  - O bien `lib/features/auth/presentation/screens/otp_screen.dart` — Agregar banner aquí (más lógico: el usuario ya está esperando el código)
+- **Nota**: Este es un workaround temporal para números que no reciben SMS. El flujo ideal es que el SMS llegue. Sin embargo, mientras no se resuelva el delivery de SMS, este peek es necesario.
+- **Criterio de aceptación**: Al solicitar OTP, si el polling devuelve un código pendiente, este aparece visible en la misma pantalla donde el usuario está (login o OTP). Ya no aparece en Home.
 
 ---
 
-## 6. Registro de Cambios por Archivo
+## 6. Recomendaciones de Siguientes Pasos
+
+### Prioridad 1 — Inmediato (cambios de este sprint)
+1. **APP-01**: Eliminar IA de pantalla de documentos
+2. **APP-03**: SOS con iconos en vez de dropdown
+3. **APP-04**: Mover OTP peek a pantalla de login/OTP
+
+### Prioridad 2 — Corto Plazo
+4. **APP-02**: Imagen de vehículo (requiere cambio en backend + app)
+5. **Verificar permisos iOS**: Confirmar `Info.plist` tiene location usage descriptions
+6. **Test end-to-end en dispositivo físico**: GPS real, fotos, build producción
+7. **Notificaciones push**: Verificar recepción cuando operador aprueba/rechaza docs
+
+### Prioridad 3 — Mediano Plazo
+8. **Manejo de errores**: Retry automático en requests fallidos por timeout
+9. **Modo offline**: Cache de perfil y cupones activos
+10. **Deep links**: Compartir cupones/promociones vía URL
+11. **Accesibilidad**: Semantics labels, contrast ratios, font scaling
+
+---
+
+## 7. Registro de Cambios por Archivo
+
+### Auditoría original (2025-03-10)
 
 | Archivo | Tipo de Cambio |
 |---------|---------------|
@@ -185,9 +253,18 @@
 | `lib/features/legal_support/.../legal_support_screen.dart` | Feedback de ubicación fallback en SOS |
 | `../core-associates-api/.../asociados.controller.ts` | NotFoundException en endpoints de foto sin imagen |
 
+### Pendientes este sprint
+
+| Tarea | Archivos principales | Estado |
+|-------|---------------------|--------|
+| APP-01: Eliminar IA de documentos | `documents_screen.dart`, `ai_analysis_card.dart` | ⏳ Pendiente |
+| APP-02: Foto de vehículo | `add_vehicle_screen.dart`, `vehiculo.dart`, `schema.prisma` | ⏳ Pendiente |
+| APP-03: SOS iconos | `legal_support_screen.dart` | ⏳ Pendiente |
+| APP-04: OTP peek en login | `home_screen.dart`, `login_screen.dart`/`otp_screen.dart` | ⏳ Pendiente |
+
 ---
 
-## 7. Comandos de Verificación
+## 8. Comandos de Verificación
 
 ```bash
 # Tests unitarios (desde core_associates_app/)

@@ -11,7 +11,6 @@ import '../../../../shared/theme/app_theme.dart';
 import '../../data/documents_repository.dart';
 import '../../data/models/documento.dart';
 import '../providers/documents_provider.dart';
-import '../widgets/ai_analysis_card.dart';
 import '../widgets/document_progress.dart';
 
 const _requiredDocs = [
@@ -535,9 +534,6 @@ class _DocumentTile extends StatelessWidget {
                 ),
             ],
           ),
-          // AI Analysis card (shows only when analysis data is available)
-          if (document?.analisis != null)
-            AiAnalysisCard(analisis: document!.analisis),
         ],
       ),
     );

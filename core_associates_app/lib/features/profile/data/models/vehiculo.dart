@@ -6,6 +6,7 @@ class Vehiculo {
   final String color;
   final String placas;
   final String? numeroSerie;
+  final String? fotoUrl;
   final bool esPrincipal;
 
   const Vehiculo({
@@ -16,6 +17,7 @@ class Vehiculo {
     required this.color,
     required this.placas,
     this.numeroSerie,
+    this.fotoUrl,
     required this.esPrincipal,
   });
 
@@ -28,6 +30,7 @@ class Vehiculo {
       color: json['color'] as String,
       placas: json['placas'] as String,
       numeroSerie: json['numeroSerie'] as String?,
+      fotoUrl: json['fotoUrl'] as String?,
       esPrincipal: json['esPrincipal'] as bool? ?? false,
     );
   }

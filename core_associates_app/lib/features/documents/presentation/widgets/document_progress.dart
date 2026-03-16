@@ -3,7 +3,7 @@ import '../../../../shared/theme/app_theme.dart';
 import '../../data/models/documento.dart';
 
 /// Shows the overall document verification progress for the asociado.
-/// Steps: Subidos → Analizados por IA → Aprobados
+/// Steps: Subidos → En revisión → Aprobados
 class DocumentProgress extends StatelessWidget {
   final List<Documento> documents;
   final int requiredCount;
@@ -17,7 +17,7 @@ class DocumentProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final uploaded = documents.length;
-    final analyzed = documents.where((d) => d.analisis != null && d.analisis!.isCompleted).length;
+    final enRevision = documents.where((d) => d.estado == 'pendiente').length;
     final approved = documents.where((d) => d.estado == 'aprobado').length;
     final rejected = documents.where((d) => d.estado == 'rechazado').length;
 
@@ -33,13 +33,17 @@ class DocumentProgress extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.fact_check_outlined, size: 20, color: AppColors.primary),
+              const Icon(
+                Icons.fact_check_outlined,
+                size: 20,
+                color: AppColors.primary,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Progreso de Verificación',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -53,7 +57,9 @@ class DocumentProgress extends StatelessWidget {
               minHeight: 8,
               backgroundColor: Colors.grey.shade200,
               valueColor: AlwaysStoppedAnimation<Color>(
-                approved == requiredCount ? AppColors.secondary : AppColors.primary,
+                approved == requiredCount
+                    ? AppColors.secondary
+                    : AppColors.primary,
               ),
             ),
           ),
@@ -71,11 +77,11 @@ class DocumentProgress extends StatelessWidget {
               ),
               const _StepArrow(),
               _StepBadge(
-                icon: Icons.psychology,
-                label: 'IA',
-                count: '$analyzed/$uploaded',
-                active: analyzed > 0,
-                done: analyzed >= uploaded && uploaded > 0,
+                icon: Icons.hourglass_top,
+                label: 'En revisión',
+                count: '$enRevision',
+                active: enRevision > 0,
+                done: enRevision == 0 && uploaded > 0,
               ),
               const _StepArrow(),
               _StepBadge(
@@ -134,8 +140,8 @@ class _StepBadge extends StatelessWidget {
     final color = done
         ? AppColors.secondary
         : active
-            ? AppColors.primary
-            : Colors.grey.shade400;
+        ? AppColors.primary
+        : Colors.grey.shade400;
 
     return Expanded(
       child: Column(
@@ -152,10 +158,7 @@ class _StepBadge extends StatelessWidget {
           ),
           Text(
             count,
-            style: TextStyle(
-              fontSize: 10,
-              color: color.withValues(alpha: 0.7),
-            ),
+            style: TextStyle(fontSize: 10, color: color.withValues(alpha: 0.7)),
           ),
         ],
       ),

@@ -61,16 +61,18 @@ class VehiculosNotifier extends AsyncNotifier<List<Vehiculo>> {
     }
   }
 
-  Future<void> addVehiculo(Map<String, dynamic> data) async {
+  Future<Vehiculo> addVehiculo(Map<String, dynamic> data) async {
     final repo = ref.read(profileRepositoryProvider);
-    await repo.addVehiculo(data);
+    final vehiculo = await repo.addVehiculo(data);
     ref.invalidateSelf();
+    return vehiculo;
   }
 
-  Future<void> updateVehiculo(String id, Map<String, dynamic> data) async {
+  Future<Vehiculo> updateVehiculo(String id, Map<String, dynamic> data) async {
     final repo = ref.read(profileRepositoryProvider);
-    await repo.updateVehiculo(id, data);
+    final vehiculo = await repo.updateVehiculo(id, data);
     ref.invalidateSelf();
+    return vehiculo;
   }
 
   Future<void> deleteVehiculo(String id) async {

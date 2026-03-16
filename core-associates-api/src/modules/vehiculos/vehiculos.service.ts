@@ -1,10 +1,16 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 import { UpdateVehiculoDto } from './dto/update-vehiculo.dto';
+
+const BUCKET_VEHICULOS = 'core-associates-vehicles';
 
 @Injectable()
 export class VehiculosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   async update(id: string, asociadoId: string, dto: UpdateVehiculoDto) {
     const vehiculo = await this.prisma.vehiculo.findUnique({ where: { id } });
@@ -61,5 +67,37 @@ export class VehiculosService {
     }
 
     return { message: 'Vehículo eliminado' };
+  }
+
+  async uploadFoto(id: string, asociadoId: string, file: Express.Multer.File) {
+    const vehiculo = await this.prisma.vehiculo.findUnique({ where: { id } });
+    if (!vehiculo) throw new NotFoundException('Vehículo no encontrado');
+    if (vehiculo.asociadoId !== asociadoId) throw new ForbiddenException('No puedes modificar este vehículo');
+
+    if (vehiculo.fotoUrl) {
+      await this.storage.deleteFile(BUCKET_VEHICULOS, vehiculo.fotoUrl).catch(() => {});
+    }
+
+    const ext = file.originalname.split('.').pop() || 'jpg';
+    const s3Key = `${asociadoId}/vehiculos/${id}/${Date.now()}.${ext}`;
+    await this.storage.uploadFile(BUCKET_VEHICULOS, s3Key, file.buffer, file.mimetype);
+
+    return this.prisma.vehiculo.update({
+      where: { id },
+      data: { fotoUrl: s3Key },
+    });
+  }
+
+  async getFotoBuffer(id: string, asociadoId: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+    const vehiculo = await this.prisma.vehiculo.findUnique({ where: { id } });
+    if (!vehiculo) throw new NotFoundException('Vehículo no encontrado');
+    if (vehiculo.asociadoId !== asociadoId) throw new ForbiddenException('No puedes ver este vehículo');
+
+    if (!vehiculo.fotoUrl) return null;
+
+    const buffer = await this.storage.getFile(BUCKET_VEHICULOS, vehiculo.fotoUrl);
+    const ext = vehiculo.fotoUrl.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+    return { buffer, contentType: mimeMap[ext] || 'image/jpeg' };
   }
 }

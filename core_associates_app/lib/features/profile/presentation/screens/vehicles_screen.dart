@@ -1,9 +1,12 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../data/models/vehiculo.dart';
+import '../../data/profile_repository.dart';
 import '../providers/profile_provider.dart';
 
 class VehiclesScreen extends ConsumerWidget {
@@ -147,7 +150,7 @@ class VehiclesScreen extends ConsumerWidget {
   }
 }
 
-class _VehiculoCard extends StatelessWidget {
+class _VehiculoCard extends ConsumerWidget {
   final Vehiculo vehiculo;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -159,7 +162,7 @@ class _VehiculoCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -185,18 +188,7 @@ class _VehiculoCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.directions_car,
-                    color: AppColors.primary,
-                  ),
-                ),
+                _buildVehicleThumb(ref),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -276,6 +268,37 @@ class _VehiculoCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildVehicleThumb(WidgetRef ref) {
+    final fallback = Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Icon(Icons.directions_car, color: AppColors.primary),
+    );
+
+    if (vehiculo.fotoUrl == null) return fallback;
+
+    final headers = ref.watch(authHeadersProvider).value ?? {};
+    final repo = ref.read(profileRepositoryProvider);
+    final url = repo.getVehiculoFotoUrl(vehiculo.id);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: CachedNetworkImage(
+        imageUrl: url,
+        httpHeaders: headers,
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => fallback,
+        errorWidget: (_, __, ___) => fallback,
       ),
     );
   }

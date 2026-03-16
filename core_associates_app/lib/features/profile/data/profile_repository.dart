@@ -61,4 +61,20 @@ class ProfileRepository {
   String getFotoUrl() {
     return apiClient.imageUrl('/asociados/me/foto');
   }
+
+  Future<Vehiculo> uploadVehiculoFoto(
+    String vehiculoId,
+    String filePath,
+  ) async {
+    final response = await apiClient.uploadFile(
+      '/vehiculos/$vehiculoId/foto',
+      filePath: filePath,
+      fieldName: 'file',
+    );
+    return Vehiculo.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  String getVehiculoFotoUrl(String vehiculoId) {
+    return apiClient.imageUrl('/vehiculos/$vehiculoId/foto');
+  }
 }

@@ -1,8 +1,14 @@
+import 'dart:io';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../shared/theme/app_theme.dart';
 import '../../data/models/vehiculo.dart';
+import '../../data/profile_repository.dart';
 import '../providers/profile_provider.dart';
 
 class AddVehicleScreen extends ConsumerStatefulWidget {
@@ -16,6 +22,7 @@ class AddVehicleScreen extends ConsumerStatefulWidget {
 
 class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _picker = ImagePicker();
   late TextEditingController _marcaCtrl;
   late TextEditingController _modeloCtrl;
   late TextEditingController _anioCtrl;
@@ -24,6 +31,7 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
   late TextEditingController _serieCtrl;
   late bool _esPrincipal;
   bool _saving = false;
+  String? _pickedPhotoPath;
 
   bool get _isEditing => widget.vehiculo != null;
 
@@ -51,6 +59,38 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
     super.dispose();
   }
 
+  Future<void> _pickPhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Cámara'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Galería'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await _picker.pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 800,
+    );
+    if (picked != null && mounted) {
+      setState(() => _pickedPhotoPath = picked.path);
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -69,10 +109,18 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
       }
 
       final notifier = ref.read(vehiculosProvider.notifier);
+      Vehiculo result;
       if (_isEditing) {
-        await notifier.updateVehiculo(widget.vehiculo!.id, data);
+        result = await notifier.updateVehiculo(widget.vehiculo!.id, data);
       } else {
-        await notifier.addVehiculo(data);
+        result = await notifier.addVehiculo(data);
+      }
+
+      // Upload photo if one was picked
+      if (_pickedPhotoPath != null) {
+        final repo = ref.read(profileRepositoryProvider);
+        await repo.uploadVehiculoFoto(result.id, _pickedPhotoPath!);
+        ref.invalidate(vehiculosProvider);
       }
 
       if (mounted) {
@@ -96,6 +144,76 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
     }
   }
 
+  Widget _buildPhotoPreview() {
+    final headers = ref.watch(authHeadersProvider).value ?? {};
+
+    Widget content;
+    if (_pickedPhotoPath != null) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.file(
+          File(_pickedPhotoPath!),
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else if (_isEditing && widget.vehiculo!.fotoUrl != null) {
+      final repo = ref.read(profileRepositoryProvider);
+      final url = repo.getVehiculoFotoUrl(widget.vehiculo!.id);
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: CachedNetworkImage(
+          imageUrl: url,
+          httpHeaders: headers,
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+          placeholder: (_, __) =>
+              const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          errorWidget: (_, __, ___) => const Icon(
+            Icons.directions_car,
+            size: 48,
+            color: AppColors.primary,
+          ),
+        ),
+      );
+    } else {
+      content = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.camera_alt_outlined,
+            size: 36,
+            color: AppColors.primary.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Añadir foto',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.primary.withValues(alpha: 0.6),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: content,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,6 +227,14 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // --- Photo picker ---
+              Center(
+                child: GestureDetector(
+                  onTap: _pickPhoto,
+                  child: _buildPhotoPreview(),
+                ),
+              ),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _marcaCtrl,
                 decoration: const InputDecoration(
@@ -116,6 +242,7 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
                   prefixIcon: Icon(Icons.directions_car_outlined),
                   hintText: 'Ej. Nissan',
                 ),
+
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                 textCapitalization: TextCapitalization.words,

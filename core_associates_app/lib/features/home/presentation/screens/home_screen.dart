@@ -1,5 +1,4 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/theme/app_theme.dart';
-import '../../../auth/presentation/providers/otp_peek_provider.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../promotions/presentation/providers/promotions_provider.dart';
 import '../../../promotions/data/models/promocion.dart';
@@ -83,9 +81,6 @@ class HomeScreen extends ConsumerWidget {
 
             // KYC banner
             _KycBanner(),
-
-            // OTP Peek banner (solo app nativa, no web)
-            if (!kIsWeb) const _PendingOtpBanner(),
 
             const SizedBox(height: 24),
 
@@ -388,75 +383,6 @@ class _KycBanner extends ConsumerWidget {
             if (asociado.estado == 'pendiente' ||
                 asociado.estado == 'rechazado')
               Icon(Icons.chevron_right, color: color, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PendingOtpBanner extends ConsumerWidget {
-  const _PendingOtpBanner();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final peekAsync = ref.watch(otpPeekProvider);
-    final peekState = peekAsync.value;
-
-    if (peekState == null || !peekState.hasPending) {
-      return const SizedBox.shrink();
-    }
-
-    final minutes = peekState.ttlSegundos ~/ 60;
-    final seconds = peekState.ttlSegundos % 60;
-    final timeStr = '${minutes}:${seconds.toString().padLeft(2, '0')}';
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: AppGradients.accent,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          boxShadow: AppShadows.colored(AppColors.accent),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.security, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Código de verificación pendiente',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: Text(
-                peekState.codigo!.split('').join('  '),
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 4,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                'Expira en $timeStr',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.white60),
-              ),
-            ),
           ],
         ),
       ),

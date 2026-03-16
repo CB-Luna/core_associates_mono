@@ -9,6 +9,7 @@ import 'package:pin_code_fields/pin_code_fields.dart';
 
 import '../../../../shared/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../providers/otp_peek_provider.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
   final String phoneNumber;
@@ -204,6 +205,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 
               const SizedBox(height: 24),
 
+              // OTP Peek banner (solo app nativa — web tiene flujo de portapapeles)
+              if (!kIsWeb)
+                _OtpPeekBanner(
+                  onCodeReady: (code) {
+                    _pinController.setText(code);
+                    _verifyOtp(code);
+                  },
+                ),
+
               if (_isVerifying)
                 const Center(
                   child: Padding(
@@ -325,6 +335,87 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OtpPeekBanner extends ConsumerWidget {
+  final void Function(String code) onCodeReady;
+
+  const _OtpPeekBanner({required this.onCodeReady});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final peekAsync = ref.watch(otpPeekProvider);
+    final peekState = peekAsync.value;
+
+    if (peekState == null || !peekState.hasPending) {
+      return const SizedBox.shrink();
+    }
+
+    final minutes = peekState.ttlSegundos ~/ 60;
+    final seconds = peekState.ttlSegundos % 60;
+    final timeStr = '${minutes}:${seconds.toString().padLeft(2, '0')}';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: AppGradients.accent,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.colored(AppColors.accent),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.security, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Código detectado',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Text(
+                  timeStr,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.white60),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                peekState.codigo!.split('').join('  '),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => onCodeReady(peekState.codigo!),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white54),
+                ),
+                child: const Text('Usar este código'),
+              ),
+            ),
+          ],
         ),
       ),
     );
