@@ -97,6 +97,7 @@ services:
       mc mb --ignore-existing coreminio/core-associates-legal;
       mc mb --ignore-existing coreminio/core-associates-photos;
       mc mb --ignore-existing coreminio/core-associates-avatars;
+      mc mb --ignore-existing coreminio/core-associates-vehicles;
       mc anonymous set download coreminio/core-associates-providers;
       mc anonymous set download coreminio/core-associates-promotions;
       echo 'Buckets creados y configurados exitosamente';

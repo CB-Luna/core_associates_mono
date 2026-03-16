@@ -182,6 +182,7 @@ model Vehiculo {
   // Relaciones
   asociado     Asociado @relation(fields: [asociadoId], references: [id], onDelete: Cascade)
 
+  @@unique([placas])
   @@map("vehiculos")
 }
 

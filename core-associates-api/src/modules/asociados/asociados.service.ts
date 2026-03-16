@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { StorageService } from '../storage/storage.service';
@@ -83,6 +83,11 @@ export class AsociadosService {
         numeroSerie: dto.numeroSerie,
         esPrincipal: dto.esPrincipal ?? true,
       },
+    }).catch((e) => {
+      if (e.code === 'P2002') {
+        throw new ConflictException('Ya existe un vehículo con esas placas');
+      }
+      throw e;
     });
   }
 

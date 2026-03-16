@@ -28,6 +28,11 @@ logs/
 # ── Coverage ──
 coverage/
 
+# ── GitHub docs (excluir MD sueltos, conservar instrucciones) ──
+.github/*.md
+!.github/copilot-instructions.md
+.github/PLAN_*.md
+
 # ── Playwright ──
 .auth/
 test-results/

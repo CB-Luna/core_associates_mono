@@ -116,10 +116,22 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
         result = await notifier.addVehiculo(data);
       }
 
-      // Upload photo if one was picked
+      // Upload photo if one was picked (non-blocking: vehicle already saved)
       if (_pickedPhotoPath != null) {
-        final repo = ref.read(profileRepositoryProvider);
-        await repo.uploadVehiculoFoto(result.id, _pickedPhotoPath!);
+        try {
+          final repo = ref.read(profileRepositoryProvider);
+          await repo.uploadVehiculoFoto(result.id, _pickedPhotoPath!);
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Vehículo guardado, pero no se pudo subir la foto',
+                ),
+              ),
+            );
+          }
+        }
         ref.invalidate(vehiculosProvider);
       }
 
