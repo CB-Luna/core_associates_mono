@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send } from 'lucide-react';
-import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send, Car } from 'lucide-react';
+import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import type { CasoLegal, NotaCaso, Proveedor } from '@/lib/api-types';
 import { Badge } from '@/components/ui/Badge';
@@ -74,6 +74,9 @@ export default function CasoLegalDetailPage() {
   // Prioridad
   const [updatingPrioridad, setUpdatingPrioridad] = useState(false);
 
+  // Asociado photo
+  const [asociadoFotoUrl, setAsociadoFotoUrl] = useState<string | null>(null);
+
   const fetchCaso = useCallback(async () => {
     try {
       const data = await apiClient<CasoLegal>(`/casos-legales/${id}`);
@@ -92,6 +95,19 @@ export default function CasoLegalDetailPage() {
       .then((res) => setAbogados(res.data))
       .catch(() => {});
   }, [fetchCaso]);
+
+  // Fetch asociado photo
+  useEffect(() => {
+    if (!caso?.asociado) return;
+    const a = caso.asociado;
+    if (a.fotoUrl || (a._count && a._count.documentos > 0)) {
+      let cancelled = false;
+      apiImageUrl(`/asociados/${caso.asociadoId}/foto`).then((url) => {
+        if (!cancelled && url) setAsociadoFotoUrl(url);
+      });
+      return () => { cancelled = true; };
+    }
+  }, [caso?.asociado, caso?.asociadoId]);
 
   const handleAsignarAbogado = async () => {
     if (!selectedAbogado || !caso) return;
@@ -377,22 +393,34 @@ export default function CasoLegalDetailPage() {
               Asociado
             </h3>
             {caso.asociado ? (
-              <dl className="mt-3 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Nombre</dt>
-                  <dd className="text-gray-900">
-                    {caso.asociado.nombre} {caso.asociado.apellidoPat}
-                  </dd>
+              <div className="mt-3">
+                {/* Avatar */}
+                <div className="mb-3 flex items-center gap-3">
+                  {asociadoFotoUrl ? (
+                    <img
+                      src={asociadoFotoUrl}
+                      alt={`${caso.asociado.nombre} ${caso.asociado.apellidoPat}`}
+                      className="h-12 w-12 rounded-full object-cover ring-2 ring-gray-200"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 ring-2 ring-blue-200">
+                      {caso.asociado.nombre?.[0]}{caso.asociado.apellidoPat?.[0]}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {caso.asociado.nombre} {caso.asociado.apellidoPat}
+                    </p>
+                    <p className="text-xs text-gray-500">{caso.asociado.idUnico}</p>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">ID</dt>
-                  <dd className="text-gray-900">{caso.asociado.idUnico}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Teléfono</dt>
-                  <dd className="text-gray-900">{caso.asociado.telefono}</dd>
-                </div>
-              </dl>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <dt className="text-gray-500">Teléfono</dt>
+                    <dd className="text-gray-900">{caso.asociado.telefono}</dd>
+                  </div>
+                </dl>
+              </div>
             ) : (
               <p className="mt-2 text-sm text-gray-400">Sin datos</p>
             )}
@@ -488,6 +516,32 @@ export default function CasoLegalDetailPage() {
               )}
             </dl>
           </div>
+
+          {/* Vehiculos */}
+          {caso.asociado?.vehiculos && caso.asociado.vehiculos.length > 0 && (
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                <Car className="h-4 w-4" />
+                Vehículos
+              </h3>
+              <div className="mt-3 space-y-3">
+                {caso.asociado.vehiculos.map((v) => (
+                  <div key={v.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                    <p className="text-sm font-medium text-gray-900">
+                      {v.marca} {v.modelo} {v.anio}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-2 text-xs text-gray-500">
+                      {v.placas && <span>Placas: {v.placas}</span>}
+                      {v.color && <span>· {v.color}</span>}
+                      {v.esPrincipal && (
+                        <Badge variant="info">Principal</Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

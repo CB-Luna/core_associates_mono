@@ -215,74 +215,82 @@ class LegalSupportScreen extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: const Text('Reportar Percance'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Tipo de percance:'),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: tiposPercance.map((tipo) {
-                    final isSelected = selectedTipo == tipo['value'];
-                    final color = tipo['color'] as Color;
-                    return GestureDetector(
-                      onTap: () => setState(
-                        () => selectedTipo = tipo['value'] as String,
-                      ),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 90,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? color.withValues(alpha: 0.15)
-                              : Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected ? color : Colors.grey.shade300,
-                            width: isSelected ? 2 : 1,
-                          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Tipo de percance:'),
+                  const SizedBox(height: 12),
+                  GridView.count(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: 1.1,
+                    children: tiposPercance.map((tipo) {
+                      final isSelected = selectedTipo == tipo['value'];
+                      final color = tipo['color'] as Color;
+                      return GestureDetector(
+                        onTap: () => setState(
+                          () => selectedTipo = tipo['value'] as String,
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              tipo['icon'] as IconData,
-                              size: 28,
-                              color: isSelected ? color : Colors.grey.shade500,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? color.withValues(alpha: 0.15)
+                                : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? color : Colors.grey.shade300,
+                              width: isSelected ? 2 : 1,
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              tipo['label'] as String,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                tipo['icon'] as IconData,
+                                size: 28,
                                 color: isSelected
                                     ? color
-                                    : Colors.grey.shade600,
+                                    : Colors.grey.shade500,
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 6),
+                              Text(
+                                tipo['label'] as String,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  color: isSelected
+                                      ? color
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descripcionController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    hintText: 'Descripción (opcional)',
-                    border: OutlineInputBorder(),
+                      );
+                    }).toList(),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descripcionController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText: 'Descripción (opcional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [

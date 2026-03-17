@@ -40,6 +40,15 @@ npm run prisma:generate    # Regenerar Prisma Client
 npm run prisma:seed        # Seed de datos
 npm run prisma:studio      # UI de Prisma Studio
 
+# ⚠️  REGLA CRÍTICA — Migraciones en desarrollo local
+# Cada vez que se añade una migración nueva al repo (carpeta prisma/migrations/)
+# se DEBE ejecutar localmente ANTES de levantar la API:
+#   cd core-associates-api
+#   npx prisma migrate deploy   ← aplica migraciones pendientes a la BD local
+#   npx prisma generate         ← regenera el Prisma Client con los nuevos modelos
+# Si la API lanza 404/500 en un endpoint nuevo, verificar primero con:
+#   npx prisma migrate status   ← muestra si hay migraciones pendientes
+
 # Web (desde core-associates-web/)
 npm run dev                # Next.js dev server
 

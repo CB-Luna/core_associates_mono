@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@/lib/theme-provider';
+import { apiClient } from '@/lib/api-client';
+import type { Tema } from '@/lib/api-types';
 import {
   Check,
   Moon,
@@ -18,6 +20,12 @@ import {
   CheckCircle2,
   XCircle,
   Info,
+  Table2,
+  Cloud,
+  Trash2,
+  Globe,
+  Plus,
+  Download,
 } from 'lucide-react';
 
 // ─── Theme Model ─────────────────────────────────────────────────────────────
@@ -37,6 +45,9 @@ interface ThemeConfig {
   textPrimary: string;
   textSecondary: string;
   borderColor: string;
+  tableHeaderBg: string;
+  tableStripeBg: string;
+  tableHoverBg: string;
 }
 
 const DEFAULT_THEME: ThemeConfig = {
@@ -54,6 +65,9 @@ const DEFAULT_THEME: ThemeConfig = {
   textPrimary: '#111827',
   textSecondary: '#6b7280',
   borderColor: '#e5e7eb',
+  tableHeaderBg: '#f3f4f6',
+  tableStripeBg: '#f9fafb',
+  tableHoverBg: '#eff6ff',
 };
 
 const DARK_OVERRIDES: Partial<ThemeConfig> = {
@@ -62,6 +76,9 @@ const DARK_OVERRIDES: Partial<ThemeConfig> = {
   textPrimary: '#f9fafb',
   textSecondary: '#9ca3af',
   borderColor: '#374151',
+  tableHeaderBg: '#1f2937',
+  tableStripeBg: '#111827',
+  tableHoverBg: '#1e3a5f',
 };
 
 const LIGHT_OVERRIDES: Partial<ThemeConfig> = {
@@ -70,6 +87,9 @@ const LIGHT_OVERRIDES: Partial<ThemeConfig> = {
   textPrimary: '#111827',
   textSecondary: '#6b7280',
   borderColor: '#e5e7eb',
+  tableHeaderBg: '#f3f4f6',
+  tableStripeBg: '#f9fafb',
+  tableHoverBg: '#eff6ff',
 };
 
 // ─── Presets ─────────────────────────────────────────────────────────────────
@@ -79,7 +99,7 @@ interface PresetDef {
   name: string;
   section: string;
   colors: [string, string, string];
-  theme: Omit<ThemeConfig, 'isDark'>;
+  theme: Omit<ThemeConfig, 'isDark' | 'tableHeaderBg' | 'tableStripeBg' | 'tableHoverBg'> & Partial<Pick<ThemeConfig, 'tableHeaderBg' | 'tableStripeBg' | 'tableHoverBg'>>;
 }
 
 const PRESETS: PresetDef[] = [
@@ -172,6 +192,8 @@ export function TemasTab() {
   const [theme, setTheme] = useState<ThemeConfig>(DEFAULT_THEME);
   const [savedTheme, setSavedTheme] = useState<ThemeConfig>(DEFAULT_THEME);
   const [hasChanges, setHasChanges] = useState(false);
+  const [serverTemaId, setServerTemaId] = useState<string | null>(null);
+  const [savingServer, setSavingServer] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('themeConfig');
@@ -182,6 +204,13 @@ export function TemasTab() {
         setSavedTheme(parsed);
       } catch { /* ignore */ }
     }
+  }, []);
+
+  // Load server tema ID on mount
+  useEffect(() => {
+    apiClient<Tema | null>('/temas/mi-tema')
+      .then((tema) => { if (tema) setServerTemaId(tema.id); })
+      .catch(() => {});
   }, []);
 
   // Apply theme to DOM in real-time as user edits (live preview on actual UI)
@@ -198,6 +227,9 @@ export function TemasTab() {
     setTheme((prev) => ({
       ...prev,
       ...preset.theme,
+      tableHeaderBg: preset.theme.tableHeaderBg ?? DEFAULT_THEME.tableHeaderBg,
+      tableStripeBg: preset.theme.tableStripeBg ?? DEFAULT_THEME.tableStripeBg,
+      tableHoverBg: preset.theme.tableHoverBg ?? DEFAULT_THEME.tableHoverBg,
       isDark: prev.isDark,
       ...(prev.isDark ? DARK_OVERRIDES : {}),
     }));
@@ -209,10 +241,32 @@ export function TemasTab() {
     updateTheme({ isDark: next, ...(next ? DARK_OVERRIDES : LIGHT_OVERRIDES) });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Save locally (immediate effect)
     localStorage.setItem('themeConfig', JSON.stringify(theme));
     setSavedTheme(theme);
     setHasChanges(false);
+
+    // Also persist to server
+    setSavingServer(true);
+    try {
+      if (serverTemaId) {
+        await apiClient(`/temas/${serverTemaId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ colores: theme }),
+        });
+      } else {
+        const created = await apiClient<Tema>('/temas', {
+          method: 'POST',
+          body: JSON.stringify({ nombre: 'Tema Principal', colores: theme, esGlobal: true }),
+        });
+        if (created?.id) setServerTemaId(created.id);
+      }
+    } catch {
+      // localStorage save still works — server save is best-effort
+    } finally {
+      setSavingServer(false);
+    }
   };
 
   const handleReset = () => {
@@ -223,12 +277,12 @@ export function TemasTab() {
   return (
     <div>
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Gestion de Temas</h3>
           <p className="mt-0.5 text-sm text-gray-500">Personaliza colores, modo oscuro y apariencia del sistema</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {hasChanges && (
             <span className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700">
               <AlertTriangle className="h-3.5 w-3.5" />
@@ -244,16 +298,16 @@ export function TemasTab() {
           </button>
           <button
             onClick={handleSave}
-            disabled={!hasChanges}
+            disabled={!hasChanges || savingServer}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-40"
           >
-            <Save className="h-3.5 w-3.5" /> Guardar tema
+            <Save className="h-3.5 w-3.5" /> {savingServer ? 'Guardando...' : 'Guardar tema'}
           </button>
         </div>
       </div>
 
-      {/* 3-Column Layout */}
-      <div className="mt-5 flex gap-4" style={{ minHeight: 560 }}>
+      {/* 3-Column Layout → stacks on mobile */}
+      <div className="mt-5 flex flex-col gap-4 lg:flex-row" style={{ minHeight: 'auto' }}>
         <PresetPanel
           presets={PRESETS}
           activePreset={theme.preset}
@@ -264,6 +318,12 @@ export function TemasTab() {
         <ThemePreviewPanel theme={theme} />
         <ColorEditorPanel theme={theme} onUpdate={updateTheme} />
       </div>
+
+      {/* Temas guardados en servidor */}
+      <SavedThemesSection currentTheme={theme} onLoadTheme={(colores) => {
+        setTheme((prev) => ({ ...prev, ...colores }));
+        setHasChanges(true);
+      }} />
     </div>
   );
 }
@@ -280,7 +340,7 @@ function PresetPanel({ presets, activePreset, isDark, onSelectPreset, onToggleDa
   const sections = [...new Set(presets.map((p) => p.section))];
 
   return (
-    <div className="flex w-[260px] shrink-0 flex-col overflow-y-auto rounded-xl border bg-white shadow-sm">
+    <div className="flex w-full shrink-0 flex-col overflow-y-auto rounded-xl border bg-white shadow-sm lg:w-[260px]">
       <div className="border-b px-4 py-3">
         <div className="flex items-center gap-2">
           <Palette className="h-4 w-4 text-pink-500" />
@@ -288,7 +348,7 @@ function PresetPanel({ presets, activePreset, isDark, onSelectPreset, onToggleDa
         </div>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
+      <div className="grid grid-cols-1 gap-4 overflow-y-auto p-3 sm:grid-cols-2 lg:grid-cols-1 lg:space-y-4 lg:gap-0">
         {sections.map((section) => (
           <div key={section}>
             <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">{section}</p>
@@ -344,19 +404,71 @@ function PresetPanel({ presets, activePreset, isDark, onSelectPreset, onToggleDa
 
 function ThemePreviewPanel({ theme }: { theme: ThemeConfig }) {
   const sidebarBg = deriveSidebarBg(theme.primary);
+  const [previewMode, setPreviewMode] = useState<'dashboard' | 'tabla'>('dashboard');
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
-      <div className="border-b px-4 py-3">
-        <span className="text-sm font-semibold text-gray-700">Vista previa</span>
-        <span className="ml-2 text-xs text-gray-400">Asi se vera tu sistema</span>
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b px-4 py-3">
+        <div>
+          <span className="text-sm font-semibold text-gray-700">Vista previa</span>
+          <span className="ml-2 text-xs text-gray-400">Asi se vera tu sistema</span>
+        </div>
+        <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+          <button
+            onClick={() => setPreviewMode('dashboard')}
+            className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
+              previewMode === 'dashboard' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <LayoutDashboard className="h-3 w-3" /> Dashboard
+          </button>
+          <button
+            onClick={() => setPreviewMode('tabla')}
+            className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${
+              previewMode === 'tabla' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Table2 className="h-3 w-3" /> Tabla
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 p-4">
-        {/* Miniature dashboard */}
-        <div className="flex overflow-hidden rounded-lg border shadow-sm" style={{ backgroundColor: theme.bgPage, height: 400 }}>
-          {/* Mini sidebar */}
-          <div className="flex w-[170px] shrink-0 flex-col" style={{ backgroundColor: sidebarBg }}>
+        {previewMode === 'dashboard' ? (
+          <DashboardPreview theme={theme} sidebarBg={sidebarBg} />
+        ) : (
+          <TablePreview theme={theme} sidebarBg={sidebarBg} />
+        )}
+
+        {/* Color palette summary */}
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 sm:gap-6">
+          {[
+            { label: 'Primario', color: theme.primary },
+            { label: 'Secundario', color: theme.secondary },
+            { label: 'Acento', color: theme.accent },
+            { label: 'Sidebar', color: sidebarBg },
+          ].map((c) => (
+            <div key={c.label} className="flex items-center gap-2">
+              <div className="h-4 w-4 rounded-full border border-gray-200 shadow-sm" style={{ backgroundColor: c.color }} />
+              <div>
+                <p className="text-[10px] font-medium text-gray-600">{c.label}</p>
+                <p className="font-mono text-[9px] text-gray-400">{c.color}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Dashboard Preview ───────────────────────────────────────────────────────
+
+function DashboardPreview({ theme, sidebarBg }: { theme: ThemeConfig; sidebarBg: string }) {
+  return (
+    <div className="flex overflow-hidden rounded-lg border shadow-sm" style={{ backgroundColor: theme.bgPage, minHeight: 340 }}>
+          {/* Mini sidebar — hidden on very small previews */}
+          <div className="hidden shrink-0 flex-col sm:flex sm:w-[170px]" style={{ backgroundColor: sidebarBg }}>
             <div className="flex items-center gap-2 border-b border-white/10 px-3 py-3">
               <div className="h-6 w-6 rounded-lg" style={{ backgroundColor: theme.primary }} />
               <span className="text-[10px] font-bold text-white">Core Associates</span>
@@ -444,23 +556,135 @@ function ThemePreviewPanel({ theme }: { theme: ThemeConfig }) {
             </div>
           </div>
         </div>
+  );
+}
 
-        {/* Color palette summary */}
-        <div className="mt-3 flex items-center justify-center gap-6">
+// ─── Table Preview ───────────────────────────────────────────────────────────
+
+const TABLE_ROWS = [
+  { nombre: 'Carlos López', id: 'CA-001', estado: 'activo', badge: 'success' as const },
+  { nombre: 'María García', id: 'CA-002', estado: 'pendiente', badge: 'warning' as const },
+  { nombre: 'Juan Hernández', id: 'CA-003', estado: 'activo', badge: 'success' as const },
+  { nombre: 'Ana Rodríguez', id: 'CA-004', estado: 'rechazado', badge: 'danger' as const },
+  { nombre: 'Pedro Martínez', id: 'CA-005', estado: 'activo', badge: 'success' as const },
+];
+
+const BADGE_COLORS: Record<string, (t: ThemeConfig) => { bg: string; text: string }> = {
+  success: (t) => ({ bg: t.success + '20', text: t.success }),
+  warning: (t) => ({ bg: t.warning + '20', text: t.warning }),
+  danger: (t) => ({ bg: t.error + '20', text: t.error }),
+};
+
+function TablePreview({ theme, sidebarBg }: { theme: ThemeConfig; sidebarBg: string }) {
+  return (
+    <div className="flex overflow-hidden rounded-lg border shadow-sm" style={{ backgroundColor: theme.bgPage, minHeight: 340 }}>
+      {/* Mini sidebar */}
+      <div className="hidden shrink-0 flex-col sm:flex sm:w-[170px]" style={{ backgroundColor: sidebarBg }}>
+        <div className="flex items-center gap-2 border-b border-white/10 px-3 py-3">
+          <div className="h-6 w-6 rounded-lg" style={{ backgroundColor: theme.primary }} />
+          <span className="text-[10px] font-bold text-white">Core Associates</span>
+        </div>
+        <div className="flex-1 space-y-0.5 px-2 py-3">
           {[
-            { label: 'Primario', color: theme.primary },
-            { label: 'Secundario', color: theme.secondary },
-            { label: 'Acento', color: theme.accent },
-            { label: 'Sidebar', color: sidebarBg },
-          ].map((c) => (
-            <div key={c.label} className="flex items-center gap-2">
-              <div className="h-4 w-4 rounded-full border border-gray-200 shadow-sm" style={{ backgroundColor: c.color }} />
-              <div>
-                <p className="text-[10px] font-medium text-gray-600">{c.label}</p>
-                <p className="font-mono text-[9px] text-gray-400">{c.color}</p>
-              </div>
+            { icon: LayoutDashboard, label: 'Dashboard', active: false },
+            { icon: Users, label: 'Asociados', active: true },
+            { icon: BarChart3, label: 'Reportes', active: false },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center gap-2 rounded-md px-2.5 py-1.5"
+              style={{
+                backgroundColor: item.active ? theme.primary + '30' : 'transparent',
+                color: item.active ? '#ffffff' : '#d1d5db',
+              }}
+            >
+              <item.icon className="h-3 w-3" />
+              <span className="text-[10px] font-medium">{item.label}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Main area with table */}
+      <div className="flex-1 overflow-hidden">
+        <div className="flex items-center justify-between border-b px-3 py-2" style={{ backgroundColor: theme.bgSurface, borderColor: theme.borderColor }}>
+          <span className="text-xs font-semibold" style={{ color: theme.textPrimary }}>Asociados</span>
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 items-center rounded border px-1.5" style={{ borderColor: theme.borderColor }}>
+              <Search className="h-2.5 w-2.5" style={{ color: theme.textSecondary }} />
+            </div>
+            <span className="rounded px-2 py-0.5 text-[9px] font-medium text-white" style={{ backgroundColor: theme.primary }}>+ Nuevo</span>
+          </div>
+        </div>
+
+        <div className="p-3">
+          <div className="overflow-hidden rounded-md border" style={{ borderColor: theme.borderColor }}>
+            {/* Table header */}
+            <div className="grid grid-cols-4 gap-px" style={{ backgroundColor: theme.tableHeaderBg }}>
+              {['Nombre', 'ID', 'Estado', 'Acciones'].map((h) => (
+                <div key={h} className="px-2.5 py-2">
+                  <span className="text-[10px] font-semibold" style={{ color: theme.textSecondary }}>{h}</span>
+                </div>
+              ))}
+            </div>
+            {/* Table rows */}
+            {TABLE_ROWS.map((row, i) => {
+              const colors = BADGE_COLORS[row.badge](theme);
+              return (
+                <div
+                  key={row.id}
+                  className="grid grid-cols-4 gap-px border-t"
+                  style={{
+                    backgroundColor: i % 2 === 1 ? theme.tableStripeBg : theme.bgSurface,
+                    borderColor: theme.borderColor,
+                  }}
+                >
+                  <div className="flex items-center gap-1.5 px-2.5 py-2">
+                    <div className="h-5 w-5 shrink-0 rounded-full" style={{ backgroundColor: theme.primary + '20' }}>
+                      <span className="flex h-full items-center justify-center text-[8px] font-bold" style={{ color: theme.primary }}>
+                        {row.nombre[0]}
+                      </span>
+                    </div>
+                    <span className="truncate text-[10px] font-medium" style={{ color: theme.textPrimary }}>{row.nombre}</span>
+                  </div>
+                  <div className="flex items-center px-2.5 py-2">
+                    <span className="text-[10px]" style={{ color: theme.textSecondary }}>{row.id}</span>
+                  </div>
+                  <div className="flex items-center px-2.5 py-2">
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-[9px] font-medium capitalize"
+                      style={{ backgroundColor: colors.bg, color: colors.text }}
+                    >
+                      {row.estado}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 px-2.5 py-2">
+                    <span className="text-[9px]" style={{ color: theme.primary }}>Ver</span>
+                    <span className="text-[9px]" style={{ color: theme.textSecondary }}>·</span>
+                    <span className="text-[9px]" style={{ color: theme.error }}>Eliminar</span>
+                  </div>
+                </div>
+              );
+            })}
+            {/* Pagination */}
+            <div className="flex items-center justify-between border-t px-2.5 py-2" style={{ backgroundColor: theme.bgSurface, borderColor: theme.borderColor }}>
+              <span className="text-[9px]" style={{ color: theme.textSecondary }}>5 registros</span>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3].map((p) => (
+                  <span
+                    key={p}
+                    className="flex h-5 w-5 items-center justify-center rounded text-[9px] font-medium"
+                    style={{
+                      backgroundColor: p === 1 ? theme.primary : 'transparent',
+                      color: p === 1 ? '#ffffff' : theme.textSecondary,
+                    }}
+                  >
+                    {p}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -474,7 +698,7 @@ function ColorEditorPanel({ theme, onUpdate }: {
   onUpdate: (updates: Partial<ThemeConfig>) => void;
 }) {
   return (
-    <div className="flex w-[300px] shrink-0 flex-col overflow-y-auto rounded-xl border bg-white shadow-sm">
+    <div className="flex w-full shrink-0 flex-col overflow-y-auto rounded-xl border bg-white shadow-sm lg:w-[300px]">
       <div className="border-b px-4 py-3">
         <span className="text-sm font-semibold text-gray-700">Editor de Colores</span>
       </div>
@@ -502,6 +726,12 @@ function ColorEditorPanel({ theme, onUpdate }: {
         <ColorSection title="Colores de Texto">
           <ColorRow label="Texto principal" value={theme.textPrimary} onChange={(v) => onUpdate({ textPrimary: v })} />
           <ColorRow label="Texto secundario" value={theme.textSecondary} onChange={(v) => onUpdate({ textSecondary: v })} />
+        </ColorSection>
+
+        <ColorSection title="Tabla">
+          <ColorRow label="Header" value={theme.tableHeaderBg} onChange={(v) => onUpdate({ tableHeaderBg: v })} />
+          <ColorRow label="Fila alterna" value={theme.tableStripeBg} onChange={(v) => onUpdate({ tableStripeBg: v })} />
+          <ColorRow label="Hover" value={theme.tableHoverBg} onChange={(v) => onUpdate({ tableHoverBg: v })} />
         </ColorSection>
       </div>
     </div>
@@ -547,6 +777,176 @@ function ColorRow({ label, value, onChange }: {
         }}
         className="w-[78px] rounded border border-gray-200 bg-gray-50 px-2 py-1 font-mono text-[11px] text-gray-600 focus:border-blue-400 focus:outline-none"
       />
+    </div>
+  );
+}
+
+// ─── Saved Themes Section (Server persistence) ──────────────────────────────
+
+function SavedThemesSection({ currentTheme, onLoadTheme }: {
+  currentTheme: ThemeConfig;
+  onLoadTheme: (colores: Partial<ThemeConfig>) => void;
+}) {
+  const [temas, setTemas] = useState<Tema[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [nombre, setNombre] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+
+  const fetchTemas = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient<Tema[]>('/temas');
+      setTemas(res);
+    } catch { setTemas([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchTemas(); }, [fetchTemas]);
+
+  const handleCreate = async () => {
+    if (!nombre.trim()) return;
+    setSaving(true);
+    try {
+      await apiClient('/temas', {
+        method: 'POST',
+        body: JSON.stringify({ nombre: nombre.trim(), colores: currentTheme }),
+      });
+      setNombre('');
+      setShowCreate(false);
+      fetchTemas();
+    } catch { /* */ }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await apiClient(`/temas/${id}`, { method: 'DELETE' });
+      fetchTemas();
+    } catch { /* */ }
+  };
+
+  const handleSetGlobal = async (id: string) => {
+    try {
+      await apiClient(`/temas/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ esGlobal: true }),
+      });
+      fetchTemas();
+    } catch { /* */ }
+  };
+
+  return (
+    <div className="mt-6 rounded-xl border bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b px-5 py-4">
+        <div className="flex items-center gap-2">
+          <Cloud className="h-4.5 w-4.5 text-blue-500" />
+          <span className="text-sm font-semibold text-gray-700">Temas guardados en servidor</span>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{temas.length}</span>
+        </div>
+        <button
+          onClick={() => setShowCreate(!showCreate)}
+          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+        >
+          <Plus className="h-3.5 w-3.5" /> Guardar tema actual
+        </button>
+      </div>
+
+      {showCreate && (
+        <div className="flex items-center gap-3 border-b bg-blue-50/50 px-5 py-3">
+          <input
+            type="text"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="Nombre del tema..."
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+          />
+          <button
+            onClick={handleCreate}
+            disabled={saving || !nombre.trim()}
+            className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? 'Guardando...' : 'Guardar'}
+          </button>
+          <button
+            onClick={() => { setShowCreate(false); setNombre(''); }}
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center p-8">
+          <div className="h-6 w-6 animate-spin rounded-full border-3 border-gray-200 border-t-blue-600" />
+        </div>
+      ) : temas.length === 0 ? (
+        <div className="p-8 text-center text-sm text-gray-400">
+          No hay temas guardados. Personaliza los colores arriba y guárdalos en el servidor.
+        </div>
+      ) : (
+        <div className="divide-y">
+          {temas.map((tema) => (
+            <div key={tema.id} className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-gray-50">
+              {/* Color swatches */}
+              <div className="flex gap-1">
+                {['primary', 'secondary', 'accent', 'success', 'warning', 'error'].map((key) => (
+                  <div
+                    key={key}
+                    className="h-6 w-6 rounded-md border border-gray-200"
+                    style={{ backgroundColor: (tema.colores as Record<string, string>)[key] || '#ccc' }}
+                    title={key}
+                  />
+                ))}
+              </div>
+
+              {/* Info */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-gray-900 truncate">{tema.nombre}</span>
+                  {tema.esGlobal && (
+                    <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                      <Globe className="h-3 w-3" /> Global
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">
+                  {tema.creador?.nombre} · {new Date(tema.createdAt).toLocaleDateString('es-MX')}
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onLoadTheme(tema.colores as Partial<ThemeConfig>)}
+                  className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50"
+                  title="Aplicar este tema"
+                >
+                  <Download className="h-3.5 w-3.5" /> Cargar
+                </button>
+                {!tema.esGlobal && (
+                  <button
+                    onClick={() => handleSetGlobal(tema.id)}
+                    className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-green-600 hover:bg-green-50"
+                    title="Establecer como tema global"
+                  >
+                    <Globe className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDelete(tema.id)}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                  title="Eliminar"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

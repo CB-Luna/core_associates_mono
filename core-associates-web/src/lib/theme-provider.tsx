@@ -111,6 +111,13 @@ export function useTheme() {
 
 // ─── Apply CSS variables to document ─────────────────────────────────────────
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 function applyThemeToDOM(config: ThemeConfig) {
   const root = document.documentElement;
 
@@ -125,6 +132,19 @@ function applyThemeToDOM(config: ThemeConfig) {
   root.style.setProperty('--color-warning', config.warning);
   root.style.setProperty('--color-error', config.error);
   root.style.setProperty('--color-info', config.info);
+
+  // Surface & page
+  root.style.setProperty('--bg-surface', config.bgSurface);
+  root.style.setProperty('--bg-page', config.bgPage);
+  root.style.setProperty('--text-primary', config.textPrimary);
+  root.style.setProperty('--text-secondary', config.textSecondary);
+  root.style.setProperty('--border-color', config.borderColor);
+
+  // Table colors (derive semi-transparent from bgPage if not set)
+  const tc = config as ThemeConfig & { tableHeaderBg?: string; tableStripeBg?: string; tableHoverBg?: string };
+  root.style.setProperty('--table-header-bg', tc.tableHeaderBg || hexToRgba(config.bgPage, 0.7));
+  root.style.setProperty('--table-stripe-bg', tc.tableStripeBg || hexToRgba(config.bgPage, 0.4));
+  root.style.setProperty('--table-hover-bg', tc.tableHoverBg || hexToRgba(config.bgPage, 0.6));
 
   // Sidebar
   const sidebarBg = deriveSidebarBg(config.primary);

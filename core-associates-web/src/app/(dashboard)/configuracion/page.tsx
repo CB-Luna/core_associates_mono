@@ -1,11 +1,10 @@
 'use client';
 
 import { TabLayout, type TabItem } from '@/components/ui/TabLayout';
-import { Users, ShieldCheck, Lock, LayoutList, Palette, Server, Bot } from 'lucide-react';
+import { Users, ShieldCheck, LayoutList, Palette, Server, Bot } from 'lucide-react';
 import { UsuariosTab } from './tabs/UsuariosTab';
 import { AuditoriaTab } from './tabs/AuditoriaTab';
 import { RolesTab } from './tabs/RolesTab';
-import { PermisosTab } from './tabs/PermisosTab';
 import { MenuDinamicoTab } from './tabs/MenuDinamicoTab';
 import { TemasTab } from './tabs/TemasTab';
 import { SistemaInfoTab } from './tabs/SistemaInfoTab';
@@ -13,8 +12,7 @@ import { ConfAITab } from './tabs/ConfAITab';
 
 const tabs: TabItem[] = [
   { key: 'usuarios', label: 'Usuarios', icon: Users, color: 'blue', component: <UsuariosTab /> },
-  { key: 'roles', label: 'Roles', icon: ShieldCheck, color: 'purple', component: <RolesTab /> },
-  { key: 'permisos', label: 'Permisos', icon: Lock, color: 'amber', component: <PermisosTab /> },
+  { key: 'roles', label: 'Roles y Permisos', icon: ShieldCheck, color: 'purple', component: <RolesTab /> },
   { key: 'menu', label: 'Menu Dinamico', icon: LayoutList, color: 'teal', component: <MenuDinamicoTab /> },
   { key: 'temas', label: 'Temas', icon: Palette, color: 'pink', component: <TemasTab /> },
   { key: 'sistema', label: 'Info del Sistema', icon: Server, color: 'gray', component: <SistemaInfoTab /> },

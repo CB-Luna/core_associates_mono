@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, ChevronRight, Search, Bell, Settings, User as UserIcon, Menu } from 'lucide-react';
+import { LogOut, ChevronRight, Settings, User as UserIcon, Menu, Search, Bell, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { Badge } from '@/components/ui/Badge';
 import { DarkModeToggle } from '@/components/ui/DarkModeToggle';
@@ -66,6 +66,11 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const { user, loadFromStorage, logout } = useAuthStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [notiOpen, setNotiOpen] = useState(false);
+  const notiRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadFromStorage();
@@ -77,10 +82,56 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
+      if (notiRef.current && !notiRef.current.contains(e.target as Node)) {
+        setNotiOpen(false);
+      }
     };
-    if (dropdownOpen) document.addEventListener('mousedown', handler);
+    if (dropdownOpen || notiOpen) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [dropdownOpen]);
+  }, [dropdownOpen, notiOpen]);
+
+  // Ctrl+K / Cmd+K to open search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+      if (e.key === 'Escape') setSearchOpen(false);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
+  useEffect(() => {
+    if (searchOpen) {
+      setTimeout(() => searchInputRef.current?.focus(), 100);
+    } else {
+      setSearchQuery('');
+    }
+  }, [searchOpen]);
+
+  const SEARCH_PAGES = [
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Asociados', path: '/asociados' },
+    { label: 'Proveedores', path: '/proveedores' },
+    { label: 'Promociones', path: '/promociones' },
+    { label: 'Cupones', path: '/cupones' },
+    { label: 'Casos Legales', path: '/casos-legales' },
+    { label: 'Mapa SOS', path: '/mapa-sos' },
+    { label: 'Reportes', path: '/reportes' },
+    { label: 'Documentos', path: '/documentos' },
+    { label: 'Configuración', path: '/configuracion' },
+  ];
+
+  const filteredPages = searchQuery.trim()
+    ? SEARCH_PAGES.filter((p) => p.label.toLowerCase().includes(searchQuery.toLowerCase()))
+    : SEARCH_PAGES;
+
+  const navigateSearch = (path: string) => {
+    setSearchOpen(false);
+    router.push(path);
+  };
 
   // Build breadcrumb
   const segments = pathname?.split('/').filter(Boolean) || [];
@@ -116,24 +167,37 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
       </div>
 
       {/* Right side controls */}
-      <div className="flex items-center gap-3">
-        {/* Search placeholder — no-op for now */}
+      <div className="flex items-center gap-1.5 sm:gap-3">
+        {/* Search button */}
         <button
-          className="hidden items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-400 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500 dark:hover:bg-gray-600 md:flex"
-          title="Búsqueda (próximamente)"
+          onClick={() => setSearchOpen(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50/80 px-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-400 dark:hover:bg-gray-700 sm:px-3"
         >
           <Search className="h-3.5 w-3.5" />
-          <span>Buscar...</span>
-          <kbd className="ml-4 rounded border border-gray-300 bg-white px-1.5 py-0.5 text-[10px] font-medium text-gray-400 dark:border-gray-600 dark:bg-gray-800">⌘K</kbd>
+          <span className="hidden sm:inline">Buscar...</span>
+          <kbd className="hidden rounded border border-gray-300 bg-white px-1 py-0.5 font-mono text-[10px] text-gray-400 dark:border-gray-600 dark:bg-gray-800 sm:inline">⌘K</kbd>
         </button>
 
-        {/* Notifications (coming soon) */}
-        <button
-          className="relative rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-          title="Notificaciones (próximamente)"
-        >
-          <Bell className="h-5 w-5" />
-        </button>
+        {/* Notifications */}
+        <div className="relative" ref={notiRef}>
+          <button
+            onClick={() => setNotiOpen(!notiOpen)}
+            className="relative rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+          >
+            <Bell className="h-4 w-4" />
+          </button>
+          {notiOpen && (
+            <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+              <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">Notificaciones</p>
+              </div>
+              <div className="px-4 py-8 text-center">
+                <Bell className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600" />
+                <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">No hay notificaciones</p>
+              </div>
+            </div>
+          )}
+        </div>
 
         <DarkModeToggle />
 
@@ -181,6 +245,51 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
           )}
         </div>
       </div>
+
+      {/* Search command palette */}
+      {searchOpen && (
+        <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 pt-[15vh] backdrop-blur-sm" onClick={() => setSearchOpen(false)}>
+          <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 border-b px-4 py-3 dark:border-gray-700">
+              <Search className="h-4 w-4 text-gray-400" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar página..."
+                className="flex-1 bg-transparent text-sm text-gray-900 placeholder-gray-400 outline-none dark:text-white"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && filteredPages.length > 0) {
+                    navigateSearch(filteredPages[0].path);
+                  }
+                }}
+              />
+              <button onClick={() => setSearchOpen(false)} className="rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-64 overflow-y-auto py-2">
+              {filteredPages.length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-gray-400">Sin resultados</p>
+              ) : (
+                filteredPages.map((page) => (
+                  <button
+                    key={page.path}
+                    onClick={() => navigateSearch(page.path)}
+                    className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                      pathname === page.path ? 'text-blue-600 font-medium' : 'text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                    {page.label}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

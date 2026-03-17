@@ -90,7 +90,12 @@ export class CasosLegalesService {
         take: limit,
         orderBy: { fechaApertura: 'desc' },
         include: {
-          asociado: { select: { idUnico: true, nombre: true, apellidoPat: true, telefono: true } },
+          asociado: {
+            select: {
+              idUnico: true, nombre: true, apellidoPat: true, telefono: true,
+              fotoUrl: true, _count: { select: { documentos: true } },
+            },
+          },
           abogado: { select: { razonSocial: true } },
           _count: { select: { notas: true } },
         },
@@ -108,7 +113,15 @@ export class CasosLegalesService {
     const caso = await this.prisma.casoLegal.findUnique({
       where: { id },
       include: {
-        asociado: { select: { idUnico: true, nombre: true, apellidoPat: true, telefono: true } },
+        asociado: {
+          select: {
+            idUnico: true, nombre: true, apellidoPat: true, telefono: true,
+            fotoUrl: true, _count: { select: { documentos: true } },
+            vehiculos: {
+              select: { id: true, marca: true, modelo: true, anio: true, color: true, placas: true, esPrincipal: true },
+            },
+          },
+        },
         abogado: { select: { razonSocial: true, telefono: true } },
         notas: {
           orderBy: { createdAt: 'desc' },

@@ -382,6 +382,7 @@ model Usuario {
   rol           RolUsuario
   proveedorId   String?       @map("proveedor_id") @db.Uuid
   avatarUrl     String?       @map("avatar_url") @db.VarChar(255)
+  temaId        String?       @map("tema_id") @db.Uuid
   estado        EstadoUsuario @default(activo)
   ultimoAcceso  DateTime?     @map("ultimo_acceso")
   createdAt     DateTime      @default(now()) @map("created_at")
@@ -389,6 +390,8 @@ model Usuario {
 
   // Relaciones
   proveedor            Proveedor?  @relation(fields: [proveedorId], references: [id])
+  tema                 Tema?       @relation("TemaAsignado", fields: [temaId], references: [id], onDelete: SetNull)
+  temasCreados         Tema[]      @relation("TemaCreador")
   asociadosAprobados   Asociado[]  @relation("AprobadorAsociado")
   documentosRevisados  Documento[] @relation("RevisadorDocumento")
   notasCaso            NotaCaso[]
@@ -463,4 +466,22 @@ model ResumenDiario {
   createdAt             DateTime @default(now()) @map("created_at")
 
   @@map("resumenes_diarios")
+}
+
+model Tema {
+  id         String   @id @default(uuid()) @db.Uuid
+  nombre     String   @db.VarChar(100)
+  colores    Json     // ThemeConfig JSON (primary, secondary, accent, etc.)
+  fuente     String?  @db.VarChar(100)  // font-family
+  logoUrl    String?  @map("logo_url") @db.VarChar(255)
+  esGlobal   Boolean  @default(false) @map("es_global")
+  creadoPor  String   @map("creado_por") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  creador    Usuario  @relation("TemaCreador", fields: [creadoPor], references: [id])
+  usuarios   Usuario[] @relation("TemaAsignado")
+
+  @@map("temas")
 }

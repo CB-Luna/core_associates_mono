@@ -23,6 +23,22 @@ const config: Config = {
           900: 'var(--primary-900)',
           950: 'var(--primary-950)',
         },
+        surface: 'var(--bg-surface)',
+        page: 'var(--bg-page)',
+      },
+      borderColor: {
+        theme: 'var(--border-color)',
+      },
+      textColor: {
+        'theme-primary': 'var(--text-primary)',
+        'theme-secondary': 'var(--text-secondary)',
+      },
+      backgroundColor: {
+        surface: 'var(--bg-surface)',
+        page: 'var(--bg-page)',
+        'table-header': 'var(--table-header-bg)',
+        'table-stripe': 'var(--table-stripe-bg)',
+        'table-hover': 'var(--table-hover-bg)',
       },
       animation: {
         'drive-right': 'driveRight 12s linear infinite',

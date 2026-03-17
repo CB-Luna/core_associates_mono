@@ -19,6 +19,7 @@ import { StorageModule } from './modules/storage/storage.module';
 import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
 import { MenuModule } from './modules/menu/menu.module';
+import { TemasModule } from './modules/temas/temas.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { HealthModule } from './modules/health/health.module';
 import { AiModule } from './modules/ai/ai.module';
@@ -50,6 +51,7 @@ import { AiModule } from './modules/ai/ai.module';
     NotificacionesModule,
     ReportesModule,
     MenuModule,
+    TemasModule,
     AuditoriaModule,
     HealthModule,
     AiModule,

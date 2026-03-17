@@ -294,10 +294,10 @@ export function DataTable<T>({
   const allTableColumns = table.getAllColumns().filter((c) => c.getCanHide());
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="overflow-hidden rounded-xl border border-theme bg-surface shadow-sm dark:border-gray-700 dark:bg-gray-800">
       {/* ─── Toolbar ─── */}
       {hasToolbar && (
-        <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 bg-gray-50/40 px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800/60">
+        <div className="flex flex-wrap items-center gap-2 border-b border-theme bg-table-header px-4 py-2.5 dark:border-gray-700 dark:bg-gray-800/60">
           {/* Global search */}
           {searchable && (
             <div className="relative">
@@ -420,7 +420,7 @@ export function DataTable<T>({
         <table className="min-w-full">
           <thead className={stickyHeader ? 'sticky top-0 z-10' : ''}>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} className="border-b border-gray-200 bg-gray-50/70 dark:border-gray-700 dark:bg-gray-800/70">
+              <tr key={headerGroup.id} className="border-b border-theme bg-table-header dark:border-gray-700 dark:bg-gray-800/70">
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
@@ -484,10 +484,10 @@ export function DataTable<T>({
                     className={[
                       'group transition-colors',
                       isSelected && 'bg-primary-50/60',
-                      !isSelected && striped && idx % 2 === 1 && 'bg-gray-50/40 dark:bg-gray-750/30',
+                      !isSelected && striped && idx % 2 === 1 && 'bg-table-stripe dark:bg-gray-750/30',
                       onRowClick
-                        ? 'cursor-pointer border-l-2 border-l-transparent hover:border-l-primary-500 hover:bg-primary-50/40 dark:hover:bg-primary-950/20'
-                        : 'hover:bg-gray-50/60 dark:hover:bg-gray-700/40',
+                        ? 'cursor-pointer border-l-2 border-l-transparent hover:border-l-primary-500 hover:bg-table-hover dark:hover:bg-primary-950/20'
+                        : 'hover:bg-table-hover dark:hover:bg-gray-700/40',
                     ]
                       .filter(Boolean)
                       .join(' ')}
@@ -515,7 +515,7 @@ export function DataTable<T>({
 
       {/* ─── Footer / Pagination ─── */}
       {(onPageChange && totalPages > 0) && (
-        <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50/40 px-5 py-3 dark:border-gray-700 dark:bg-gray-800/60">
+        <div className="flex items-center justify-between border-t border-theme bg-table-header px-5 py-3 dark:border-gray-700 dark:bg-gray-800/60">
           <div className="text-xs text-gray-400">
             {total !== undefined && (
               <span>

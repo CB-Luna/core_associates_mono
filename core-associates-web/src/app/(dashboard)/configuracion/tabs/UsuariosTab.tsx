@@ -12,7 +12,8 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { type UsuarioCRM, type Proveedor } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
-import { Pencil, KeyRound, Power, Camera, Trash2 } from 'lucide-react';
+import { Pencil, KeyRound, Power, Camera, Trash2, Palette } from 'lucide-react';
+import { type Tema } from '@/lib/api-types';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
 
@@ -88,6 +89,8 @@ export function UsuariosTab() {
   const [createAvatarPreview, setCreateAvatarPreview] = useState<string | null>(null);
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
   const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+  const [temas, setTemas] = useState<Tema[]>([]);
+  const [temaUserId, setTemaUserId] = useState<string | null>(null);
 
   const handleAvatarUpload = async (userId: string, file: File) => {
     setUploadingAvatar(true);
@@ -146,7 +149,24 @@ export function UsuariosTab() {
     apiClient<PaginatedResponse<Proveedor>>('/proveedores?limit=100&estado=activo')
       .then((res) => setProveedoresList(res.data))
       .catch(() => {});
+    apiClient<Tema[]>('/temas')
+      .then((res) => setTemas(res))
+      .catch(() => {});
   }, [fetchUsers]);
+
+  const handleAssignTema = async (userId: string, temaId: string | null) => {
+    try {
+      await apiClient(`/temas/asignar/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ temaId }),
+      });
+      toast('success', 'Tema', 'Tema asignado correctamente');
+      setTemaUserId(null);
+      fetchUsers();
+    } catch (err: any) {
+      toast('error', 'Error', err.message || 'Error al asignar tema');
+    }
+  };
 
   const handleCreateUser = async (data: CreateUserInput) => {
     setSaving(true);
@@ -308,6 +328,36 @@ export function UsuariosTab() {
             >
               <Power className="h-4 w-4" />
             </button>
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setTemaUserId(temaUserId === user.id ? null : user.id); }}
+                className={`rounded p-1.5 hover:bg-gray-100 ${user.temaId ? 'text-purple-500' : 'text-gray-400'} hover:text-purple-600`}
+                title="Asignar tema"
+              >
+                <Palette className="h-4 w-4" />
+              </button>
+              {temaUserId === user.id && (
+                <div className="absolute right-0 z-20 mt-1 w-48 rounded-lg border bg-white py-1 shadow-lg">
+                  <button
+                    onClick={() => handleAssignTema(user.id, null)}
+                    className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 ${!user.temaId ? 'font-semibold text-purple-600' : 'text-gray-600'}`}
+                  >
+                    Sin tema (global)
+                  </button>
+                  {temas.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => handleAssignTema(user.id, t.id)}
+                      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-gray-100 ${user.temaId === t.id ? 'font-semibold text-purple-600' : 'text-gray-700'}`}
+                    >
+                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: (t.colores as Record<string, string>)?.primary || '#6366f1' }} />
+                      {t.nombre}
+                      {t.esGlobal && <span className="ml-auto text-xs text-gray-400">global</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         );
       },
@@ -535,7 +585,7 @@ export function UsuariosTab() {
         </form>
       )}
 
-      <div className="mt-4">
+      <div className="mt-4 hidden lg:block">
         <DataTable
           data={users}
           columns={columns}
@@ -551,6 +601,48 @@ export function UsuariosTab() {
           exportFilename="usuarios-crm"
           striped
         />
+      </div>
+
+      {/* Mobile card view */}
+      <div className="mt-4 space-y-3 lg:hidden">
+        {loading && (
+          <div className="flex justify-center py-8">
+            <div className="h-6 w-6 animate-spin rounded-full border-3 border-gray-200 border-t-blue-600" />
+          </div>
+        )}
+        {!loading && users.length === 0 && (
+          <p className="py-8 text-center text-sm text-gray-400">No hay usuarios registrados</p>
+        )}
+        {!loading && users.map((user) => (
+          <div key={user.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <UserAvatarCell user={user} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-gray-900">{user.nombre}</p>
+                <p className="truncate text-xs text-gray-500">{user.email}</p>
+              </div>
+              <Badge variant={user.estado === 'activo' ? 'success' : 'default'}>
+                {user.estado === 'activo' ? 'Activo' : 'Inactivo'}
+              </Badge>
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <Badge variant={user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : 'default'}>
+                {user.rol}
+              </Badge>
+              <div className="flex gap-1">
+                <button onClick={() => openEdit(user)} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-600" title="Editar">
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button onClick={() => { setResetUserId(user.id); setEditingUser(null); setShowForm(false); }} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-orange-600" title="Resetear contraseña">
+                  <KeyRound className="h-4 w-4" />
+                </button>
+                <button onClick={() => handleToggleEstado(user)} className={`rounded p-1.5 hover:bg-gray-100 ${user.estado === 'activo' ? 'text-green-500 hover:text-red-600' : 'text-gray-400 hover:text-green-600'}`} title={user.estado === 'activo' ? 'Desactivar' : 'Activar'}>
+                  <Power className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -18,6 +18,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const loadFromStorage = useAuthStore((s) => s.loadFromStorage);
+  const loadTema = useAuthStore((s) => s.loadTema);
   const [ready, setReady] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -27,9 +28,10 @@ export default function DashboardLayout({
       router.replace('/login');
     } else {
       loadFromStorage();
+      loadTema();
       setReady(true);
     }
-  }, [router, loadFromStorage]);
+  }, [router, loadFromStorage, loadTema]);
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen">
       {/* Desktop sidebar */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:sticky lg:top-0 lg:block lg:h-screen lg:overflow-y-auto">
         <Sidebar />
       </div>
 

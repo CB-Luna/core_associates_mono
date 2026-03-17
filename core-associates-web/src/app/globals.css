@@ -27,6 +27,18 @@
     --sidebar-bg: #0f1729;
     --sidebar-text: #d1d5db;
     --sidebar-active-text: #ffffff;
+
+    /* Surface & page */
+    --bg-surface: #ffffff;
+    --bg-page: #f9fafb;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+
+    /* Table */
+    --table-header-bg: rgba(249,250,251,0.7);
+    --table-stripe-bg: rgba(249,250,251,0.4);
+    --table-hover-bg: rgba(243,244,246,0.6);
   }
 
   body {

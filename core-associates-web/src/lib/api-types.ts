@@ -20,6 +20,21 @@ export interface User {
   rol: 'admin' | 'operador' | 'proveedor';
   proveedorId?: string;
   avatarUrl?: string;
+  temaId?: string | null;
+}
+
+// Temas
+export interface Tema {
+  id: string;
+  nombre: string;
+  colores: Record<string, any>;
+  fuente?: string | null;
+  logoUrl?: string | null;
+  esGlobal: boolean;
+  creadoPor: string;
+  creador?: { id: string; nombre: string };
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Asociado
@@ -58,6 +73,7 @@ export interface Vehiculo {
   color: string;
   placas: string;
   numeroSerie: string | null;
+  fotoUrl: string | null;
   esPrincipal: boolean;
 }
 
@@ -187,6 +203,9 @@ export interface CasoLegal {
     nombre: string;
     apellidoPat: string;
     telefono: string;
+    fotoUrl?: string | null;
+    _count?: { documentos: number };
+    vehiculos?: Vehiculo[];
   };
   abogado?: {
     razonSocial: string;
@@ -319,6 +338,7 @@ export interface UsuarioCRM {
   rol: 'admin' | 'operador' | 'proveedor';
   proveedorId?: string;
   avatarUrl?: string | null;
+  temaId?: string | null;
   estado: 'activo' | 'inactivo';
   ultimoAcceso: string | null;
   createdAt: string;
