@@ -73,10 +73,10 @@ export class VehiculosController {
   @ApiResponse({ status: 404, description: 'Vehículo sin foto' })
   async getFoto(
     @Param('id') id: string,
-    @CurrentUser('id') asociadoId: string,
+    @CurrentUser() user: { id: string; tipo: string; rol?: string },
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.vehiculosService.getFotoBuffer(id, asociadoId);
+    const result = await this.vehiculosService.getFotoBuffer(id, user);
     if (!result) throw new NotFoundException('El vehículo no tiene foto');
     res.setHeader('Content-Type', result.contentType);
     res.setHeader('Cache-Control', 'private, max-age=900');

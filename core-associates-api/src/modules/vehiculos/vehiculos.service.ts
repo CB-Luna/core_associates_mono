@@ -88,10 +88,15 @@ export class VehiculosService {
     });
   }
 
-  async getFotoBuffer(id: string, asociadoId: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+  async getFotoBuffer(id: string, user: { id: string; tipo: string; rol?: string }): Promise<{ buffer: Buffer; contentType: string } | null> {
     const vehiculo = await this.prisma.vehiculo.findUnique({ where: { id } });
     if (!vehiculo) throw new NotFoundException('Vehículo no encontrado');
-    if (vehiculo.asociadoId !== asociadoId) throw new ForbiddenException('No puedes ver este vehículo');
+
+    // Admin/operador CRM users can view any vehicle photo
+    const isStaff = user.tipo === 'usuario' && (user.rol === 'admin' || user.rol === 'operador');
+    if (!isStaff && vehiculo.asociadoId !== user.id) {
+      throw new ForbiddenException('No puedes ver este vehículo');
+    }
 
     if (!vehiculo.fotoUrl) return null;
 

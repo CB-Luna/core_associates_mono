@@ -10,6 +10,7 @@ import { RejectDocumentDialog } from '@/components/documentos/RejectDocumentDial
 import { AIAnalysisPanel } from '@/components/documentos/AIAnalysisPanel';
 import { usePermisos } from '@/lib/permisos';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
+import { VehiclePhoto } from '@/components/shared/VehiclePhoto';
 
 interface Props {
   asociadoId: string;
@@ -254,9 +255,7 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
                   {asociado.vehiculos.map((v) => (
                     <div key={v.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0H21M3.375 14.25h.834c.586 0 1.135-.301 1.515-.756l2.204-2.644a2.25 2.25 0 011.724-.806h4.694a2.25 2.25 0 011.724.806l2.204 2.644c.38.455.929.756 1.515.756h.834M3.375 14.25V3.75m17.25 10.5V3.75" /></svg>
-                        </div>
+                        <VehiclePhoto vehiculoId={v.id} fotoUrl={v.fotoUrl} />
                         <div>
                           <p className="font-medium text-gray-900 dark:text-gray-100">{v.marca} {v.modelo} {v.anio}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">Placas: {v.placas} · {v.color}</p>

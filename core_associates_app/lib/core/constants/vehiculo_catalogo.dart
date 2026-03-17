@@ -1,0 +1,155 @@
+// Catálogo de marcas y modelos de vehículos populares en México.
+// Se usa para autocompletar en el formulario de alta/edición de vehículos.
+
+const Map<String, List<String>> vehiculoCatalogo = {
+  'Nissan': [
+    'Versa', 'Sentra', 'March', 'Kicks', 'X-Trail', 'Frontier', 'NP300',
+    'Pathfinder', 'Altima', 'Maxima', 'Tiida', 'Tsuru', 'Juke', 'Murano',
+    'Rogue', 'Leaf', 'Note',
+  ],
+  'Chevrolet': [
+    'Aveo', 'Spark', 'Beat', 'Onix', 'Cavalier', 'Sonic', 'Cruze',
+    'Trax', 'Equinox', 'Tracker', 'Captiva', 'Blazer', 'Suburban',
+    'Tahoe', 'Silverado', 'Colorado', 'Cheyenne', 'S10', 'Tornado',
+    'Malibu', 'Camaro', 'Traverse',
+  ],
+  'Volkswagen': [
+    'Jetta', 'Golf', 'Polo', 'Vento', 'Virtus', 'T-Cross', 'Taos',
+    'Tiguan', 'Teramont', 'ID.4', 'Passat', 'Beetle', 'Bora', 'Clásico',
+    'Gol', 'Saveiro', 'Amarok', 'Caddy', 'Crafter',
+  ],
+  'Toyota': [
+    'Corolla', 'Yaris', 'Camry', 'RAV4', 'Hilux', 'Tacoma', 'Tundra',
+    'C-HR', 'Prius', 'Avanza', 'Rush', 'Highlander', 'Supra', 'Sienna',
+    '4Runner', 'Land Cruiser', 'Sequoia',
+  ],
+  'Honda': [
+    'Civic', 'City', 'CR-V', 'HR-V', 'Fit', 'Accord', 'Pilot',
+    'BR-V', 'Odyssey', 'Ridgeline', 'Insight', 'Passport',
+  ],
+  'Hyundai': [
+    'Accent', 'Grand i10', 'Creta', 'Tucson', 'Santa Fe', 'Palisade',
+    'Sonata', 'Elantra', 'Venue', 'Kona', 'Ioniq', 'Ioniq 5', 'Starex',
+  ],
+  'Kia': [
+    'Rio', 'Forte', 'Seltos', 'Sportage', 'Sorento', 'Telluride',
+    'Soul', 'K5', 'Carnival', 'Stinger', 'Niro', 'EV6',
+  ],
+  'Mazda': [
+    'Mazda2', 'Mazda3', 'Mazda6', 'CX-3', 'CX-30', 'CX-5', 'CX-50',
+    'CX-9', 'CX-90', 'MX-5',
+  ],
+  'Ford': [
+    'Fiesta', 'Focus', 'Fusion', 'Escape', 'Bronco', 'Bronco Sport',
+    'Explorer', 'Expedition', 'Edge', 'Maverick', 'Ranger', 'F-150',
+    'Lobo', 'Mustang', 'Puma', 'Territory', 'Transit',
+  ],
+  'Suzuki': [
+    'Swift', 'Ignis', 'Vitara', 'S-Cross', 'Jimny', 'Ertiga', 'Ciaz',
+    'Baleno', 'Grand Vitara',
+  ],
+  'Renault': [
+    'Kwid', 'Logan', 'Sandero', 'Stepway', 'Duster', 'Captur', 'Koleos',
+    'Oroch', 'Kangoo', 'Master',
+  ],
+  'SEAT': [
+    'Ibiza', 'Arona', 'Ateca', 'León', 'Tarraco', 'Cupra Ateca',
+    'Cupra Formentor', 'Cupra León', 'Mii',
+  ],
+  'Jeep': [
+    'Renegade', 'Compass', 'Cherokee', 'Grand Cherokee', 'Wrangler',
+    'Gladiator', 'Avenger', 'Wagoneer',
+  ],
+  'RAM': [
+    '700', '1200', '1500', '2500', '3500', 'ProMaster',
+  ],
+  'Dodge': [
+    'Attitude', 'Neon', 'Charger', 'Challenger', 'Durango', 'Journey',
+    'Vision',
+  ],
+  'Mitsubishi': [
+    'Mirage', 'Lancer', 'Outlander', 'Eclipse Cross', 'L200', 'Xpander',
+    'ASX', 'Montero',
+  ],
+  'Peugeot': [
+    '208', '301', '2008', '3008', '5008', 'Partner', 'Rifter', 'Expert',
+  ],
+  'MG': [
+    'MG5', 'MG ZS', 'MG HS', 'MG RX8', 'MG GT', 'MG4', 'Marvel R',
+  ],
+  'Audi': [
+    'A1', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q2', 'Q3', 'Q5',
+    'Q7', 'Q8', 'e-tron', 'TT', 'RS3', 'RS5',
+  ],
+  'BMW': [
+    'Serie 1', 'Serie 2', 'Serie 3', 'Serie 4', 'Serie 5', 'Serie 7',
+    'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'iX', 'i4', 'Z4',
+  ],
+  'Mercedes-Benz': [
+    'Clase A', 'Clase C', 'Clase E', 'Clase S', 'CLA', 'GLA', 'GLB',
+    'GLC', 'GLE', 'GLS', 'Sprinter', 'Vito', 'EQS', 'EQE',
+  ],
+  'Fiat': [
+    'Mobi', 'Uno', 'Argo', 'Cronos', 'Pulse', 'Fastback', 'Strada',
+    'Ducato', '500',
+  ],
+  'Stellantis/Chrysler': [
+    'Pacifica', '300',
+  ],
+  'Subaru': [
+    'Impreza', 'Crosstrek', 'Forester', 'Outback', 'WRX', 'BRZ',
+  ],
+  'JAC': [
+    'Sei 2', 'Sei 3', 'Sei 4', 'Sei 7', 'T6', 'T8', 'E10X', 'iEV40',
+  ],
+  'BAIC': [
+    'X25', 'X35', 'X55', 'D50', 'X7',
+  ],
+  'Changan': [
+    'CS15', 'CS35', 'CS55', 'CS75', 'Alsvin', 'UNI-T', 'UNI-K',
+    'Hunter',
+  ],
+  'BYD': [
+    'Dolphin', 'Seal', 'Song Plus', 'Tang', 'Han', 'Atto 3', 'Yuan Plus',
+  ],
+  'Volvo': [
+    'XC40', 'XC60', 'XC90', 'S60', 'S90', 'V60', 'C40',
+  ],
+  'Lincoln': [
+    'Corsair', 'Nautilus', 'Aviator', 'Navigator',
+  ],
+  'Acura': [
+    'TLX', 'RDX', 'MDX', 'Integra',
+  ],
+  'Infiniti': [
+    'Q50', 'QX50', 'QX55', 'QX60', 'QX80',
+  ],
+  'Mini': [
+    'Cooper', 'Countryman', 'Clubman', 'Paceman',
+  ],
+  'Porsche': [
+    'Cayenne', 'Macan', 'Panamera', '911', 'Taycan', 'Boxster', 'Cayman',
+  ],
+  'Land Rover': [
+    'Defender', 'Discovery', 'Discovery Sport', 'Range Rover',
+    'Range Rover Sport', 'Range Rover Evoque', 'Range Rover Velar',
+  ],
+  'GMC': [
+    'Sierra', 'Canyon', 'Terrain', 'Acadia', 'Yukon',
+  ],
+};
+
+/// Lista de todas las marcas ordenadas alfabéticamente.
+List<String> get vehiculoMarcas {
+  final marcas = vehiculoCatalogo.keys.toList()..sort();
+  return marcas;
+}
+
+/// Devuelve los modelos de una marca (case-insensitive match).
+List<String> modelosPorMarca(String marca) {
+  final key = vehiculoCatalogo.keys.firstWhere(
+    (k) => k.toLowerCase() == marca.toLowerCase(),
+    orElse: () => '',
+  );
+  return key.isNotEmpty ? vehiculoCatalogo[key]! : [];
+}

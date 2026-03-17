@@ -11,6 +11,7 @@ import { DocumentViewer } from '@/components/documentos/DocumentViewer';
 import { RejectDocumentDialog } from '@/components/documentos/RejectDocumentDialog';
 import { AIAnalysisPanel } from '@/components/documentos/AIAnalysisPanel';
 import { usePermisos } from '@/lib/permisos';
+import { VehiclePhoto } from '@/components/shared/VehiclePhoto';
 
 export default function AsociadoDetailPage() {
   const params = useParams();
@@ -281,12 +282,15 @@ export default function AsociadoDetailPage() {
           <div className="mt-3 space-y-3">
             {asociado.vehiculos?.length ? (
               asociado.vehiculos.map((v) => (
-                <div key={v.id} className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{v.marca} {v.modelo} {v.anio}</p>
-                  <p className="text-gray-500 dark:text-gray-400">Placas: {v.placas} &middot; {v.color}</p>
-                  {v.esPrincipal && (
-                    <Badge variant="info" className="mt-1">Principal</Badge>
-                  )}
+                <div key={v.id} className="flex items-center gap-3 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
+                  <VehiclePhoto vehiculoId={v.id} fotoUrl={v.fotoUrl} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{v.marca} {v.modelo} {v.anio}</p>
+                    <p className="text-gray-500 dark:text-gray-400">Placas: {v.placas} &middot; {v.color}</p>
+                    {v.esPrincipal && (
+                      <Badge variant="info" className="mt-1">Principal</Badge>
+                    )}
+                  </div>
                 </div>
               ))
             ) : (

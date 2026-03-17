@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import dynamic from 'next/dynamic';
 import { usePermisos } from '@/lib/permisos';
+import { VehiclePhoto } from '@/components/shared/VehiclePhoto';
 
 const MapView = dynamic(() => import('@/components/ui/MapView').then((m) => m.MapView), { ssr: false });
 
@@ -526,16 +527,19 @@ export default function CasoLegalDetailPage() {
               </h3>
               <div className="mt-3 space-y-3">
                 {caso.asociado.vehiculos.map((v) => (
-                  <div key={v.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                    <p className="text-sm font-medium text-gray-900">
-                      {v.marca} {v.modelo} {v.anio}
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-2 text-xs text-gray-500">
-                      {v.placas && <span>Placas: {v.placas}</span>}
-                      {v.color && <span>· {v.color}</span>}
-                      {v.esPrincipal && (
-                        <Badge variant="info">Principal</Badge>
-                      )}
+                  <div key={v.id} className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+                    <VehiclePhoto vehiculoId={v.id} fotoUrl={v.fotoUrl} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        {v.marca} {v.modelo} {v.anio}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-gray-500">
+                        {v.placas && <span>Placas: {v.placas}</span>}
+                        {v.color && <span>· {v.color}</span>}
+                        {v.esPrincipal && (
+                          <Badge variant="info">Principal</Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
