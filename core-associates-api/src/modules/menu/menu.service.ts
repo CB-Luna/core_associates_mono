@@ -1,8 +1,14 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
 import { ReorderMenuDto } from './dto/reorder-menu.dto';
+
+/**
+ * Códigos de items de menú protegidos del sistema.
+ * No se pueden eliminar, ocultar, ni quitar el rol 'admin'.
+ */
+const PROTECTED_CODES = ['configuracion'];
 
 @Injectable()
 export class MenuService {
@@ -73,6 +79,23 @@ export class MenuService {
       throw new NotFoundException(`Item de menú '${id}' no encontrado`);
     }
 
+    const isProtected = PROTECTED_CODES.includes(item.codigo);
+
+    if (isProtected) {
+      // No permitir cambiar el código de un item protegido
+      if (dto.codigo !== undefined && dto.codigo !== item.codigo) {
+        throw new BadRequestException(`No se puede cambiar el código del item protegido '${item.codigo}'`);
+      }
+      // Siempre debe tener 'admin' en permisos
+      if (dto.permisos !== undefined && !dto.permisos.includes('admin')) {
+        throw new BadRequestException(`El item '${item.codigo}' es un módulo crítico del sistema y siempre debe incluir el rol 'admin'`);
+      }
+      // No se puede ocultar
+      if (dto.visible === false) {
+        throw new BadRequestException(`El item '${item.codigo}' es un módulo crítico del sistema y no se puede ocultar`);
+      }
+    }
+
     // Si se cambia el código, verificar unicidad
     if (dto.codigo && dto.codigo !== item.codigo) {
       const dupe = await this.prisma.moduloMenu.findUnique({
@@ -103,6 +126,9 @@ export class MenuService {
     const item = await this.prisma.moduloMenu.findUnique({ where: { id } });
     if (!item) {
       throw new NotFoundException(`Item de menú '${id}' no encontrado`);
+    }
+    if (PROTECTED_CODES.includes(item.codigo)) {
+      throw new BadRequestException(`El item '${item.titulo}' es un módulo crítico del sistema y no se puede eliminar`);
     }
     await this.prisma.moduloMenu.delete({ where: { id } });
     return { message: `Item '${item.titulo}' eliminado` };

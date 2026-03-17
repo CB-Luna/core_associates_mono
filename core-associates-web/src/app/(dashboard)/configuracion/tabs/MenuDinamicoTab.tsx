@@ -7,8 +7,14 @@ import { type MenuItem } from '@/lib/api-types';
 import { getIcon, iconMap } from '@/lib/icon-map';
 import {
   RefreshCw, Plus, Pencil, Trash2, ChevronUp, ChevronDown,
-  Save, X, Eye, EyeOff, GripVertical,
+  Save, X, Eye, EyeOff, GripVertical, Lock,
 } from 'lucide-react';
+
+/**
+ * Códigos de items de menú protegidos del sistema.
+ * No se pueden eliminar, ocultar, ni quitar el rol 'admin'.
+ */
+const PROTECTED_CODES = ['configuracion'];
 
 interface MenuItemFlat {
   id: string;
@@ -95,6 +101,7 @@ export function MenuDinamicoTab() {
 
   // --- Toggle visible ---
   const toggleVisible = async (item: MenuItemFlat) => {
+    if (PROTECTED_CODES.includes(item.codigo)) return;
     try {
       await apiClient(`/menu/${item.id}`, {
         method: 'PUT',
@@ -169,6 +176,8 @@ export function MenuDinamicoTab() {
   };
 
   const togglePermiso = (rol: string) => {
+    // No permitir quitar 'admin' de items protegidos
+    if (rol === 'admin' && editingItem && PROTECTED_CODES.includes(editingItem.codigo)) return;
     setFormData((prev) => ({
       ...prev,
       permisos: prev.permisos.includes(rol)
@@ -222,6 +231,7 @@ export function MenuDinamicoTab() {
           <div className="divide-y divide-gray-100">
             {items.map((item, index) => {
               const Icon = getIcon(item.icono);
+              const isProtected = PROTECTED_CODES.includes(item.codigo);
               return (
                 <div
                   key={item.id}
@@ -291,13 +301,19 @@ export function MenuDinamicoTab() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => toggleVisible(item)}
-                      className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                      title={item.visible ? 'Ocultar' : 'Mostrar'}
-                    >
-                      {item.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                    </button>
+                    {isProtected ? (
+                      <span className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-amber-600 bg-amber-50" title="Módulo crítico del sistema">
+                        <Lock className="h-3.5 w-3.5" /> Protegido
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => toggleVisible(item)}
+                        className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                        title={item.visible ? 'Ocultar' : 'Mostrar'}
+                      >
+                        {item.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </button>
+                    )}
                     <button
                       onClick={() => openEdit(item)}
                       className="rounded-lg p-2 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
@@ -305,13 +321,15 @@ export function MenuDinamicoTab() {
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
-                    <button
-                      onClick={() => setDeleteId(item.id)}
-                      className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                      title="Eliminar"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {!isProtected && (
+                      <button
+                        onClick={() => setDeleteId(item.id)}
+                        className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -365,6 +383,13 @@ export function MenuDinamicoTab() {
                 <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{formError}</div>
               )}
 
+              {editingItem && PROTECTED_CODES.includes(editingItem.codigo) && (
+                <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                  <Lock className="h-4 w-4 flex-shrink-0" />
+                  <span>Módulo crítico del sistema — el código, la visibilidad y el rol <strong>admin</strong> no se pueden modificar.</span>
+                </div>
+              )}
+
               {/* Código */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">Código *</label>
@@ -372,7 +397,8 @@ export function MenuDinamicoTab() {
                   type="text"
                   value={formData.codigo}
                   onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-                  className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  disabled={!!editingItem && PROTECTED_CODES.includes(editingItem.codigo)}
+                  className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
                   placeholder="mi-modulo"
                 />
               </div>
@@ -434,32 +460,39 @@ export function MenuDinamicoTab() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Roles con acceso</label>
                 <div className="flex gap-2">
-                  {ROLES.map((rol) => (
-                    <button
-                      key={rol}
-                      type="button"
-                      onClick={() => togglePermiso(rol)}
-                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                        formData.permisos.includes(rol)
-                          ? rol === 'admin' ? 'bg-red-600 text-white' :
-                            rol === 'operador' ? 'bg-blue-600 text-white' :
-                            'bg-amber-600 text-white'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {rol}
-                    </button>
-                  ))}
+                  {ROLES.map((rol) => {
+                    const isActive = formData.permisos.includes(rol);
+                    const isLocked = rol === 'admin' && !!editingItem && PROTECTED_CODES.includes(editingItem.codigo);
+                    return (
+                      <button
+                        key={rol}
+                        type="button"
+                        onClick={() => togglePermiso(rol)}
+                        disabled={isLocked}
+                        className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${isLocked ? 'cursor-not-allowed opacity-70' : ''} ${
+                          isActive
+                            ? rol === 'admin' ? 'bg-red-600 text-white' :
+                              rol === 'operador' ? 'bg-blue-600 text-white' :
+                              'bg-amber-600 text-white'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                        title={isLocked ? 'El rol admin es obligatorio para este módulo' : undefined}
+                      >
+                        {rol}{isLocked && ' \uD83D\uDD12'}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Visible */}
               <div className="flex items-center gap-3">
-                <label className="relative inline-flex cursor-pointer items-center">
+                <label className={`relative inline-flex items-center ${editingItem && PROTECTED_CODES.includes(editingItem.codigo) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                   <input
                     type="checkbox"
                     checked={formData.visible}
                     onChange={(e) => setFormData({ ...formData, visible: e.target.checked })}
+                    disabled={!!editingItem && PROTECTED_CODES.includes(editingItem.codigo)}
                     className="peer sr-only"
                   />
                   <div className="h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-blue-300" />
