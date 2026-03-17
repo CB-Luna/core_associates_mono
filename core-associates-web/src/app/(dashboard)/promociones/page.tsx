@@ -105,6 +105,9 @@ export default function PromocionesPage() {
     {
       id: 'promocion',
       header: 'Promoción',
+      meta: {
+        exportValue: (p: Promocion) => `${p.titulo} — ${p.proveedor?.razonSocial || ''}`,
+      },
       cell: ({ row }) => {
         const p = row.original;
         return (
@@ -121,6 +124,10 @@ export default function PromocionesPage() {
     {
       id: 'descuento',
       header: 'Descuento',
+      meta: {
+        exportValue: (p: Promocion) =>
+          p.tipoDescuento === 'porcentaje' ? `${p.valorDescuento}%` : `$${p.valorDescuento}`,
+      },
       cell: ({ row }) => {
         const p = row.original;
         const isPct = p.tipoDescuento === 'porcentaje';
@@ -135,6 +142,10 @@ export default function PromocionesPage() {
     {
       id: 'periodo',
       header: 'Periodo',
+      meta: {
+        exportValue: (p: Promocion) =>
+          `${formatFechaLegible(p.fechaInicio)} — ${formatFechaLegible(p.fechaFin)}`,
+      },
       cell: ({ row }) => {
         const p = row.original;
         return (
@@ -148,6 +159,9 @@ export default function PromocionesPage() {
     {
       id: 'cupones',
       header: 'Cupones',
+      meta: {
+        exportValue: (p: Promocion) => p._count?.cupones || 0,
+      },
       cell: ({ row }) => {
         const count = row.original._count?.cupones || 0;
         return (

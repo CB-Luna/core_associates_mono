@@ -2,23 +2,34 @@
 
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import { useTheme, DARK_OVERRIDES, LIGHT_OVERRIDES } from '@/lib/theme-provider';
 
 export function DarkModeToggle() {
   const [dark, setDark] = useState(false);
+  const { theme, applyTheme } = useTheme();
 
   useEffect(() => {
+    // Sync with themeConfig isDark if available, else localStorage 'theme'
     const stored = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark = stored === 'dark' || (!stored && prefersDark);
+    const isDark = theme?.isDark
+      ?? (stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches);
     setDark(isDark);
     document.documentElement.classList.toggle('dark', isDark);
-  }, []);
+  }, [theme?.isDark]);
 
   const toggle = () => {
     const next = !dark;
     setDark(next);
     document.documentElement.classList.toggle('dark', next);
     localStorage.setItem('theme', next ? 'dark' : 'light');
+
+    // Sync CSS variables via ThemeProvider so all components update
+    if (theme) {
+      const overrides = next ? DARK_OVERRIDES : LIGHT_OVERRIDES;
+      const updated = { ...theme, isDark: next, ...overrides };
+      applyTheme(updated);
+      localStorage.setItem('themeConfig', JSON.stringify(updated));
+    }
   };
 
   return (

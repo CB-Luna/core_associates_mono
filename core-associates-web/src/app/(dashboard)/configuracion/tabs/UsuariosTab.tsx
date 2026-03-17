@@ -292,6 +292,13 @@ export function UsuariosTab() {
       id: 'tema',
       header: 'Tema',
       size: 180,
+      meta: {
+        exportValue: (u: UsuarioCRM) => {
+          if (!u.temaId) return 'Por defecto';
+          const t = temas.find((t) => t.id === u.temaId);
+          return t?.nombre || '';
+        },
+      },
       cell: ({ row }) => {
         const user = row.original;
         if (!user.temaId) {

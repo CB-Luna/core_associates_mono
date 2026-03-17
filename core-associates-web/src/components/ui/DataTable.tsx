@@ -84,6 +84,14 @@ function generatePageNumbers(current: number, total: number): (number | 'ellipsi
   return pages;
 }
 
+function escapeCsvField(val: unknown): string {
+  if (val === null || val === undefined) return '';
+  const str = String(val);
+  return str.includes(',') || str.includes('"') || str.includes('\n')
+    ? `"${str.replace(/"/g, '""')}"`
+    : str;
+}
+
 function exportToCsv<T>(data: T[], columns: ColumnDef<T, any>[], filename: string) {
   const exportCols = columns.filter(
     (c) => {
@@ -99,14 +107,15 @@ function exportToCsv<T>(data: T[], columns: ColumnDef<T, any>[], filename: strin
 
   const rows = data.map((row) =>
     exportCols.map((col) => {
+      // 1. Custom export function via column meta
+      const exportValue = (col as any).meta?.exportValue;
+      if (typeof exportValue === 'function') {
+        return escapeCsvField(exportValue(row));
+      }
+      // 2. Standard accessorKey
       const key = (col as any).accessorKey;
-      if (!key) return '';
-      const val = (row as any)[key];
-      if (val === null || val === undefined) return '';
-      const str = String(val);
-      return str.includes(',') || str.includes('"') || str.includes('\n')
-        ? `"${str.replace(/"/g, '""')}"`
-        : str;
+      if (key) return escapeCsvField((row as any)[key]);
+      return '';
     })
   );
 

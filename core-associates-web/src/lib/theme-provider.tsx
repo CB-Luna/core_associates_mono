@@ -91,6 +91,9 @@ interface ThemeConfig {
   textPrimary: string;
   textSecondary: string;
   borderColor: string;
+  tableHeaderBg?: string;
+  tableStripeBg?: string;
+  tableHoverBg?: string;
 }
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -99,6 +102,30 @@ interface ThemeContextValue {
   theme: ThemeConfig | null;
   applyTheme: (config: ThemeConfig) => void;
 }
+
+// ─── Dark / Light overrides (shared with DarkModeToggle) ─────────────────────
+
+export const DARK_OVERRIDES: Partial<ThemeConfig> = {
+  bgSurface: '#1f2937',
+  bgPage: '#111827',
+  textPrimary: '#f9fafb',
+  textSecondary: '#9ca3af',
+  borderColor: '#374151',
+  tableHeaderBg: '#1f2937',
+  tableStripeBg: '#111827',
+  tableHoverBg: '#1e3a5f',
+};
+
+export const LIGHT_OVERRIDES: Partial<ThemeConfig> = {
+  bgSurface: '#ffffff',
+  bgPage: '#f9fafb',
+  textPrimary: '#111827',
+  textSecondary: '#6b7280',
+  borderColor: '#e5e7eb',
+  tableHeaderBg: '#f3f4f6',
+  tableStripeBg: '#f9fafb',
+  tableHoverBg: '#eff6ff',
+};
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: null,
@@ -141,10 +168,9 @@ function applyThemeToDOM(config: ThemeConfig) {
   root.style.setProperty('--border-color', config.borderColor);
 
   // Table colors (derive semi-transparent from bgPage if not set)
-  const tc = config as ThemeConfig & { tableHeaderBg?: string; tableStripeBg?: string; tableHoverBg?: string };
-  root.style.setProperty('--table-header-bg', tc.tableHeaderBg || hexToRgba(config.bgPage, 0.7));
-  root.style.setProperty('--table-stripe-bg', tc.tableStripeBg || hexToRgba(config.bgPage, 0.4));
-  root.style.setProperty('--table-hover-bg', tc.tableHoverBg || hexToRgba(config.bgPage, 0.6));
+  root.style.setProperty('--table-header-bg', config.tableHeaderBg || hexToRgba(config.bgPage, 0.7));
+  root.style.setProperty('--table-stripe-bg', config.tableStripeBg || hexToRgba(config.bgPage, 0.4));
+  root.style.setProperty('--table-hover-bg', config.tableHoverBg || hexToRgba(config.bgPage, 0.6));
 
   // Sidebar
   const sidebarBg = deriveSidebarBg(config.primary);
@@ -166,6 +192,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const config = JSON.parse(saved) as ThemeConfig;
         setTheme(config);
         applyThemeToDOM(config);
+        // Sync Tailwind dark class with theme isDark
+        document.documentElement.classList.toggle('dark', !!config.isDark);
+        localStorage.setItem('theme', config.isDark ? 'dark' : 'light');
       } catch { /* use CSS defaults */ }
     }
 
@@ -176,6 +205,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           const config = JSON.parse(e.newValue) as ThemeConfig;
           setTheme(config);
           applyThemeToDOM(config);
+          document.documentElement.classList.toggle('dark', !!config.isDark);
         } catch { /* ignore */ }
       }
     };

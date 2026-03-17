@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useTheme } from '@/lib/theme-provider';
+import { useTheme, DARK_OVERRIDES, LIGHT_OVERRIDES } from '@/lib/theme-provider';
 import { apiClient } from '@/lib/api-client';
 import type { Tema } from '@/lib/api-types';
 import {
@@ -61,28 +61,6 @@ const DEFAULT_THEME: ThemeConfig = {
   warning: '#f59e0b',
   error: '#ef4444',
   info: '#3b82f6',
-  bgSurface: '#ffffff',
-  bgPage: '#f9fafb',
-  textPrimary: '#111827',
-  textSecondary: '#6b7280',
-  borderColor: '#e5e7eb',
-  tableHeaderBg: '#f3f4f6',
-  tableStripeBg: '#f9fafb',
-  tableHoverBg: '#eff6ff',
-};
-
-const DARK_OVERRIDES: Partial<ThemeConfig> = {
-  bgSurface: '#1f2937',
-  bgPage: '#111827',
-  textPrimary: '#f9fafb',
-  textSecondary: '#9ca3af',
-  borderColor: '#374151',
-  tableHeaderBg: '#1f2937',
-  tableStripeBg: '#111827',
-  tableHoverBg: '#1e3a5f',
-};
-
-const LIGHT_OVERRIDES: Partial<ThemeConfig> = {
   bgSurface: '#ffffff',
   bgPage: '#f9fafb',
   textPrimary: '#111827',
@@ -345,7 +323,7 @@ export function TemasTab() {
       </div>
 
       {/* 3-Column Layout → stacks on mobile */}
-      <div className="mt-5 flex flex-col gap-4 lg:flex-row" style={{ minHeight: 'auto' }}>
+      <div className="mt-5 flex flex-col gap-4 lg:h-[calc(100vh-220px)] lg:flex-row">
         <PresetPanel
           presets={PRESETS}
           serverTemas={serverTemas}
@@ -412,7 +390,7 @@ function PresetPanel({ presets, serverTemas, activePreset, isDark, onSelectPrese
   };
 
   return (
-    <div className="flex w-full shrink-0 flex-col overflow-y-auto rounded-xl border bg-white shadow-sm lg:w-[280px]">
+    <div className="flex w-full shrink-0 flex-col rounded-xl border bg-white shadow-sm lg:w-[280px] lg:overflow-hidden">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-2">
           <Palette className="h-4 w-4 text-pink-500" />
@@ -551,7 +529,7 @@ function PresetPanel({ presets, serverTemas, activePreset, isDark, onSelectPrese
                           <div className="min-w-0 flex-1">
                             <span className="block truncate text-xs font-medium text-gray-700">{tema.nombre}</span>
                             {tema.esGlobal && (
-                              <span className="text-[9px] text-green-600">Global activo</span>
+                              <span className="text-[9px] text-green-600">Default</span>
                             )}
                           </div>
                         </button>
@@ -921,7 +899,7 @@ function ColorEditorPanel({ theme, onUpdate }: {
   onUpdate: (updates: Partial<ThemeConfig>) => void;
 }) {
   return (
-    <div className="flex w-full shrink-0 flex-col overflow-y-auto rounded-xl border bg-white shadow-sm lg:w-[300px]">
+    <div className="flex w-full shrink-0 flex-col rounded-xl border bg-white shadow-sm lg:w-[300px] lg:overflow-hidden">
       <div className="border-b px-4 py-3">
         <span className="text-sm font-semibold text-gray-700">Editor de Colores</span>
       </div>

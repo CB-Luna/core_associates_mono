@@ -95,6 +95,9 @@ export default function CuponesPage() {
     {
       id: 'cupon',
       header: 'Cupón',
+      meta: {
+        exportValue: (c: any) => `${c.codigo} — ${c.promocion?.titulo || ''}`,
+      },
       cell: ({ row }) => {
         const c = row.original;
         return (
@@ -117,6 +120,9 @@ export default function CuponesPage() {
     {
       id: 'asociado',
       header: 'Asociado',
+      meta: {
+        exportValue: (c: any) => c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '',
+      },
       cell: ({ row }) => {
         const a = row.original.asociado;
         if (!a) return <span className="text-gray-300">—</span>;
@@ -134,6 +140,9 @@ export default function CuponesPage() {
     ...(!esProveedor ? [{
       id: 'proveedor',
       header: 'Proveedor',
+      meta: {
+        exportValue: (c: any) => c.proveedor?.razonSocial || '',
+      },
       cell: ({ row }: { row: any }) => {
         const name = row.original.proveedor?.razonSocial;
         return name ? <span className="text-gray-600">{name}</span> : <span className="text-gray-300">—</span>;

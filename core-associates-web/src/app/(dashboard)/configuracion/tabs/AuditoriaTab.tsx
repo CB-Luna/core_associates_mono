@@ -78,6 +78,9 @@ export function AuditoriaTab() {
     {
       id: 'usuarioNombre',
       header: 'Usuario',
+      meta: {
+        exportValue: (r: AuditoriaRecord) => r.usuario ? `${r.usuario.nombre} (${r.usuario.rol})` : 'Sistema',
+      },
       cell: ({ row }) => {
         const u = row.original.usuario;
         if (!u) return <span className="text-gray-400">Sistema</span>;

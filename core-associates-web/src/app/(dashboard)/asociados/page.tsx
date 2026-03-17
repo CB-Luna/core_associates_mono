@@ -110,6 +110,9 @@ export default function AsociadosPage() {
     {
       id: 'asociado',
       header: 'Asociado',
+      meta: {
+        exportValue: (a: Asociado) => `${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''}`.trim(),
+      },
       cell: ({ row }) => {
         const a = row.original;
         const fullName = `${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''}`.trim();

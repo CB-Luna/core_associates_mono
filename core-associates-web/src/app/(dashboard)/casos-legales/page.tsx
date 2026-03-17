@@ -131,6 +131,9 @@ export default function CasosLegalesPage() {
     {
       id: 'caso',
       header: 'Caso',
+      meta: {
+        exportValue: (c: any) => `${c.codigo} (${c.tipoPercance})`,
+      },
       cell: ({ row }) => {
         const c = row.original;
         const TIcon = tipoIcon[c.tipoPercance] || HelpCircle;
@@ -150,6 +153,9 @@ export default function CasosLegalesPage() {
     {
       id: 'asociado',
       header: 'Asociado',
+      meta: {
+        exportValue: (c: any) => c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '',
+      },
       cell: ({ row }) => {
         const a = row.original.asociado;
         if (!a) return <span className="text-gray-300">—</span>;
@@ -172,6 +178,9 @@ export default function CasosLegalesPage() {
     {
       id: 'abogado',
       header: 'Abogado',
+      meta: {
+        exportValue: (c: any) => c.abogado?.razonSocial || '',
+      },
       cell: ({ row }) => {
         const name = row.original.abogado?.razonSocial;
         return name ? <span className="text-gray-600">{name}</span> : <span className="text-xs text-gray-300">Sin asignar</span>;

@@ -116,6 +116,9 @@ export default function ProveedoresPage() {
     {
       id: 'proveedor',
       header: 'Proveedor',
+      meta: {
+        exportValue: (p: Proveedor) => `${p.razonSocial} (${p.idUnico})`,
+      },
       cell: ({ row }) => {
         const p = row.original;
         return (
