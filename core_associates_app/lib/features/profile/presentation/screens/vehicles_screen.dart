@@ -36,22 +36,33 @@ class VehiclesScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.directions_car_outlined,
-                      size: 64,
-                      color: AppColors.textSecondary.withValues(alpha: 0.5),
+                    Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        gradient: AppGradients.surfaceSubtle,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.directions_car_rounded,
+                        size: 48,
+                        color: AppColors.primary.withValues(alpha: 0.4),
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     Text(
                       'Sin vehículos registrados',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Agrega tu primer vehículo para comenzar',
                       textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
@@ -70,7 +81,7 @@ class VehiclesScreen extends ConsumerWidget {
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: vehiculos.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
                 final v = vehiculos[index];
                 return _VehiculoCard(
@@ -163,168 +174,264 @@ class _VehiculoCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isPrimary = vehiculo.esPrincipal;
+
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: vehiculo.esPrincipal
-              ? AppColors.primary.withValues(alpha: 0.4)
-              : AppColors.border,
-        ),
-        boxShadow: [
-          if (vehiculo.esPrincipal)
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-        ],
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: isPrimary ? AppShadows.md : AppShadows.sm,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Hero image / gradient placeholder ──
+          _buildHeroImage(ref, context),
+
+          // ── Info section ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildVehicleThumb(ref),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+                // Title row
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
                         '${vehiculo.marca} ${vehiculo.modelo}',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.3,
+                            ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      Text(
-                        '${vehiculo.anio} · ${vehiculo.color}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
+                    ),
+                    if (isPrimary) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: AppGradients.primary,
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.star_rounded,
+                              size: 13,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              'Principal',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                  ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
-                if (vehiculo.esPrincipal)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                const SizedBox(height: 4),
+                Text(
+                  '${vehiculo.anio} · ${vehiculo.color}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // ── Detail chips ──
+                Row(
+                  children: [
+                    _DetailChip(
+                      icon: Icons.pin_outlined,
+                      label: vehiculo.placas,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'Principal',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    if (vehiculo.numeroSerie != null &&
+                        vehiculo.numeroSerie!.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _DetailChip(
+                          icon: Icons.tag,
+                          label: vehiculo.numeroSerie!,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                // ── Action buttons ──
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ActionButton(
+                        icon: Icons.edit_outlined,
+                        label: 'Editar',
                         color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
+                        onTap: onEdit,
                       ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _InfoChip(icon: Icons.credit_card, label: vehiculo.placas),
-                if (vehiculo.numeroSerie != null &&
-                    vehiculo.numeroSerie!.isNotEmpty) ...[
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _InfoChip(
-                      icon: Icons.tag,
-                      label: vehiculo.numeroSerie!,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _ActionButton(
+                        icon: Icons.delete_outline,
+                        label: 'Eliminar',
+                        color: AppColors.error,
+                        onTap: onDelete,
+                      ),
                     ),
-                  ),
-                ],
-              ],
-            ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('Editar'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.delete_outline, size: 18),
-                  label: const Text('Eliminar'),
-                  style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildVehicleThumb(WidgetRef ref) {
-    final fallback = Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
+  Widget _buildHeroImage(WidgetRef ref, BuildContext context) {
+    const double heroHeight = 160;
+
+    final placeholder = Container(
+      height: heroHeight,
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFE0E7FF), Color(0xFFEFF6FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-      child: const Icon(Icons.directions_car, color: AppColors.primary),
+      child: Center(
+        child: Icon(
+          Icons.directions_car_rounded,
+          size: 56,
+          color: AppColors.primary.withValues(alpha: 0.35),
+        ),
+      ),
     );
 
-    if (vehiculo.fotoUrl == null) return fallback;
+    if (vehiculo.fotoUrl == null) return placeholder;
 
     final headers = ref.watch(authHeadersProvider).value ?? {};
     final repo = ref.read(profileRepositoryProvider);
     final url = repo.getVehiculoFotoUrl(vehiculo.id);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
+    return SizedBox(
+      height: heroHeight,
+      width: double.infinity,
       child: CachedNetworkImage(
         imageUrl: url,
         httpHeaders: headers,
-        width: 44,
-        height: 44,
         fit: BoxFit.cover,
-        placeholder: (_, __) => fallback,
-        errorWidget: (_, __, ___) => fallback,
+        placeholder: (_, __) => placeholder,
+        errorWidget: (_, __, ___) => placeholder,
       ),
     );
   }
 }
 
-class _InfoChip extends StatelessWidget {
+// ── Detail chip with icon + background ──────────────────────────────────────
+
+class _DetailChip extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _InfoChip({required this.icon, required this.label});
+  const _DetailChip({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: AppColors.textSecondary),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-          overflow: TextOverflow.ellipsis,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.textSecondary),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                  ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Rounded action button ───────────────────────────────────────────────────
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 }

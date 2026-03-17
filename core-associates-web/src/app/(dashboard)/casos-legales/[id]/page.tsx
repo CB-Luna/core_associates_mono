@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send, Car } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send, Car, Maximize2, Minimize2 } from 'lucide-react';
 import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import type { CasoLegal, NotaCaso, Proveedor } from '@/lib/api-types';
@@ -61,6 +61,9 @@ export default function CasoLegalDetailPage() {
   const [selectedAbogado, setSelectedAbogado] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [updatingEstado, setUpdatingEstado] = useState(false);
+
+  // Map expanded
+  const [mapExpanded, setMapExpanded] = useState(false);
 
   // Note form
   const [notaContenido, setNotaContenido] = useState('');
@@ -283,10 +286,21 @@ export default function CasoLegalDetailPage() {
 
           {/* Location */}
           <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <MapPin className="h-4 w-4" />
-              Ubicación
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                <MapPin className="h-4 w-4" />
+                Ubicación
+              </h3>
+              {caso.latitud && caso.longitud && (
+                <button
+                  onClick={() => setMapExpanded((p) => !p)}
+                  className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700"
+                >
+                  {mapExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                  {mapExpanded ? 'Reducir' : 'Expandir'}
+                </button>
+              )}
+            </div>
             <dl className="mt-3 space-y-2 text-sm">
               {caso.direccionAprox && (
                 <div className="flex justify-between">
@@ -304,7 +318,7 @@ export default function CasoLegalDetailPage() {
                 <MapView
                   markers={[{ lat: caso.latitud, lng: caso.longitud, label: caso.codigo || 'Ubicación', color: 'red' }]}
                   zoom={15}
-                  height="220px"
+                  height={mapExpanded ? '420px' : '220px'}
                 />
               </div>
             )}
@@ -347,39 +361,49 @@ export default function CasoLegalDetailPage() {
               </div>
             </form>
 
-            {/* Notes list */}
-            <div className="mt-4 space-y-3">
+            {/* Notes timeline */}
+            <div className="mt-4">
               {caso.notas && caso.notas.length > 0 ? (
-                caso.notas.map((nota) => (
-                  <div
-                    key={nota.id}
-                    className={`rounded-lg border p-3 text-sm ${
-                      nota.esPrivada
-                        ? 'border-yellow-200 bg-yellow-50'
-                        : 'border-gray-200 bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-900">
-                        {nota.autor?.nombre || 'Sistema'}
-                        {nota.autor?.rol && (
-                          <span className="ml-1.5 text-xs text-gray-500">({nota.autor.rol})</span>
-                        )}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {nota.esPrivada && (
-                          <span className="text-xs text-yellow-600">Privada</span>
-                        )}
-                        <span className="text-xs text-gray-400">
-                          {formatFechaConHora(nota.createdAt)}
-                        </span>
+                <div className="relative ml-3 border-l-2 border-gray-200 pl-6">
+                  {caso.notas.map((nota, idx) => (
+                    <div key={nota.id} className={`relative ${idx < caso.notas!.length - 1 ? 'pb-5' : ''}`}>
+                      {/* Timeline dot */}
+                      <div className={`absolute -left-[31px] top-0.5 h-4 w-4 rounded-full border-2 ${
+                        nota.esPrivada
+                          ? 'border-yellow-400 bg-yellow-100'
+                          : 'border-primary-400 bg-primary-100'
+                      }`} />
+                      <div className={`rounded-lg border p-3 text-sm ${
+                        nota.esPrivada
+                          ? 'border-yellow-200 bg-yellow-50'
+                          : 'border-gray-200 bg-gray-50'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-900">
+                            {nota.autor?.nombre || 'Sistema'}
+                            {nota.autor?.rol && (
+                              <span className="ml-1.5 text-xs text-gray-500">({nota.autor.rol})</span>
+                            )}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {nota.esPrivada && (
+                              <span className="text-xs text-yellow-600">Privada</span>
+                            )}
+                            <span className="text-xs text-gray-400">
+                              {formatFechaConHora(nota.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="mt-1 text-gray-700">{nota.contenido}</p>
                       </div>
                     </div>
-                    <p className="mt-1 text-gray-700">{nota.contenido}</p>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
-                <p className="text-center text-sm text-gray-400">Sin notas aún</p>
+                <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/50 py-6">
+                  <MessageSquare className="h-8 w-8 text-gray-300" />
+                  <p className="text-xs text-gray-400">Sin notas aún — agrega la primera arriba</p>
+                </div>
               )}
             </div>
           </div>
@@ -518,13 +542,13 @@ export default function CasoLegalDetailPage() {
             </dl>
           </div>
 
-          {/* Vehiculos */}
-          {caso.asociado?.vehiculos && caso.asociado.vehiculos.length > 0 && (
-            <div className="rounded-xl border border-gray-200 bg-white p-5">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-                <Car className="h-4 w-4" />
-                Vehículos
-              </h3>
+          {/* Vehiculos — always visible */}
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <Car className="h-4 w-4" />
+              Vehículos del asociado
+            </h3>
+            {caso.asociado?.vehiculos && caso.asociado.vehiculos.length > 0 ? (
               <div className="mt-3 space-y-3">
                 {caso.asociado.vehiculos.map((v) => (
                   <div key={v.id} className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
@@ -544,8 +568,13 @@ export default function CasoLegalDetailPage() {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="mt-3 flex flex-col items-center gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/50 py-6">
+                <Car className="h-8 w-8 text-gray-300" />
+                <p className="text-xs text-gray-400">Sin vehículos registrados</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -3,14 +3,14 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import { useToast } from '@/components/ui/Toast';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
 import {
   MapPinned, Filter, Scale, X, ExternalLink, Clock, User,
-  AlertTriangle, Gavel, Car, ShieldAlert, HelpCircle, MapPin, Calendar, Briefcase,
+  AlertTriangle, Gavel, Car, ShieldAlert, HelpCircle, MapPin, Calendar, Briefcase, Phone,
 } from 'lucide-react';
 
 const MapView = dynamic(() => import('@/components/ui/MapView').then((m) => m.MapView), {
@@ -108,6 +108,7 @@ export default function MapaSosPage() {
         lng: Number(c.longitud),
         label: c.codigo,
         color: estadoColor[c.estado] || ('blue' as const),
+        iconType: c.tipoPercance,
       })),
     [casosConUbicacion],
   );
@@ -165,11 +166,19 @@ export default function MapaSosPage() {
         {(estadoFilter || prioridadFilter) && (
           <button onClick={() => { setEstadoFilter(''); setPrioridadFilter(''); }} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">Limpiar</button>
         )}
-        <div className="ml-auto flex items-center gap-4 text-xs text-gray-500">
+        <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+          <span className="font-medium text-gray-400">Estado:</span>
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-red-500" /> Abierto</span>
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-orange-500" /> En atención</span>
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Escalado</span>
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-green-500" /> Resuelto</span>
+          <span className="mx-1 text-gray-300">|</span>
+          <span className="font-medium text-gray-400">Tipo:</span>
+          <span className="flex items-center gap-1"><Car className="h-3 w-3" /> Accidente</span>
+          <span className="flex items-center gap-1"><Gavel className="h-3 w-3" /> Infracción</span>
+          <span className="flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> Robo</span>
+          <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Asalto</span>
+          <span className="flex items-center gap-1"><HelpCircle className="h-3 w-3" /> Otro</span>
         </div>
       </div>
 
@@ -238,14 +247,49 @@ export default function MapaSosPage() {
 
                 {/* Información General */}
                 <PanelSection title="Información General">
-                  <PanelField icon={User} label="Asociado" value={selectedCaso.asociado ? `${selectedCaso.asociado.nombre} ${selectedCaso.asociado.apellidoPat}` : 'Sin asociado'} />
+                  <div className="flex items-center gap-3">
+                    <AsociadoPhoto asociado={{ id: selectedCaso.asociadoId, ...selectedCaso.asociado }} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-800">
+                        {selectedCaso.asociado ? `${selectedCaso.asociado.nombre} ${selectedCaso.asociado.apellidoPat}` : 'Sin asociado'}
+                      </p>
+                      {selectedCaso.asociado?.idUnico && (
+                        <p className="text-[11px] text-gray-400">{selectedCaso.asociado.idUnico}</p>
+                      )}
+                    </div>
+                  </div>
                   {selectedCaso.asociado?.telefono && (
-                    <PanelField icon={User} label="Teléfono" value={selectedCaso.asociado.telefono} />
+                    <a href={`tel:${selectedCaso.asociado.telefono}`} className="flex items-center gap-3 rounded-lg px-2 py-1.5 -mx-2 transition-colors hover:bg-primary-50">
+                      <Phone className="h-3.5 w-3.5 shrink-0 text-primary-500" />
+                      <span className="text-sm font-medium text-primary-600">{selectedCaso.asociado.telefono}</span>
+                    </a>
                   )}
                   {selectedCaso.descripcion && (
                     <PanelField icon={HelpCircle} label="Descripción" value={selectedCaso.descripcion} multiline />
                   )}
                 </PanelSection>
+
+                {/* Vehículos del asociado */}
+                {selectedCaso.asociado?.vehiculos && selectedCaso.asociado.vehiculos.length > 0 && (
+                  <PanelSection title="Vehículos">
+                    <div className="space-y-2">
+                      {selectedCaso.asociado.vehiculos.map((v: any) => (
+                        <div key={v.id} className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+                            <Car className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-800">
+                              {v.marca} {v.modelo} {v.anio ? `(${v.anio})` : ''}
+                              {v.esPrincipal && <span className="ml-1.5 text-[10px] font-bold text-primary-500">★</span>}
+                            </p>
+                            {v.placas && <p className="text-[11px] font-mono text-gray-400">{v.placas}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </PanelSection>
+                )}
 
                 {/* Ubicación */}
                 <PanelSection title="Ubicación">
@@ -337,6 +381,32 @@ export default function MapaSosPage() {
 }
 
 /* Panel sub-components */
+
+function AsociadoPhoto({ asociado }: { asociado: { id?: string; nombre?: string; apellidoPat?: string; fotoUrl?: string | null; _count?: { documentos: number } } }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const initials = `${asociado.nombre?.[0] || ''}${asociado.apellidoPat?.[0] || ''}`.toUpperCase();
+
+  useEffect(() => {
+    if (!asociado.id) return;
+    const puedeCargar = asociado.fotoUrl || (asociado._count?.documentos ?? 0) > 0;
+    if (!puedeCargar) return;
+    let revoked = false;
+    apiImageUrl(`/asociados/${asociado.id}/foto`)
+      .then((url) => { if (!revoked) setSrc(url); })
+      .catch(() => {});
+    return () => { revoked = true; if (src) URL.revokeObjectURL(src); };
+  }, [asociado.id, asociado.fotoUrl, asociado._count?.documentos]);
+
+  if (src) {
+    return <img src={src} alt={initials} className="h-9 w-9 rounded-full object-cover ring-2 ring-white shadow-sm" />;
+  }
+  return (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-xs font-bold text-white shadow-sm">
+      {initials}
+    </div>
+  );
+}
+
 function PanelSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="border-b border-gray-100 px-5 py-3">

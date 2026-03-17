@@ -92,8 +92,12 @@ export class CasosLegalesService {
         include: {
           asociado: {
             select: {
-              idUnico: true, nombre: true, apellidoPat: true, telefono: true,
+              id: true, idUnico: true, nombre: true, apellidoPat: true, telefono: true,
               fotoUrl: true, _count: { select: { documentos: true } },
+              vehiculos: {
+                select: { id: true, marca: true, modelo: true, anio: true, placas: true, esPrincipal: true, fotoUrl: true },
+                take: 3,
+              },
             },
           },
           abogado: { select: { razonSocial: true } },
