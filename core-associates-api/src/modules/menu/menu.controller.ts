@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Patch, Body, Param, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Body, Param, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { MenuService } from './menu.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -46,14 +46,6 @@ export class MenuController {
   @ApiOperation({ summary: 'Actualizar item de menú' })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateMenuItemDto) {
     return this.menuService.update(id, dto);
-  }
-
-  @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
-  @ApiOperation({ summary: 'Eliminar item de menú' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.menuService.remove(id);
   }
 
   @Patch('reorder')

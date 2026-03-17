@@ -122,18 +122,6 @@ export class MenuService {
     });
   }
 
-  async remove(id: string) {
-    const item = await this.prisma.moduloMenu.findUnique({ where: { id } });
-    if (!item) {
-      throw new NotFoundException(`Item de menú '${id}' no encontrado`);
-    }
-    if (PROTECTED_CODES.includes(item.codigo)) {
-      throw new BadRequestException(`El item '${item.titulo}' es un módulo crítico del sistema y no se puede eliminar`);
-    }
-    await this.prisma.moduloMenu.delete({ where: { id } });
-    return { message: `Item '${item.titulo}' eliminado` };
-  }
-
   async reorder(dto: ReorderMenuDto) {
     await this.prisma.$transaction(
       dto.items.map((item) =>

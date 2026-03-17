@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { type MenuItem } from '@/lib/api-types';
 import { getIcon, iconMap } from '@/lib/icon-map';
 import {
-  RefreshCw, Plus, Pencil, Trash2, ChevronUp, ChevronDown,
+  RefreshCw, Plus, Pencil, ChevronUp, ChevronDown,
   Save, X, Eye, EyeOff, GripVertical, Lock,
 } from 'lucide-react';
 
@@ -56,9 +56,6 @@ export function MenuDinamicoTab() {
   const [editingItem, setEditingItem] = useState<MenuItemFlat | null>(null);
   const [formData, setFormData] = useState<Omit<MenuItemFlat, 'id'>>(EMPTY_ITEM);
   const [formError, setFormError] = useState('');
-
-  // Delete confirm
-  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const fetchMenu = useCallback(async () => {
     setLoading(true);
@@ -162,17 +159,6 @@ export function MenuDinamicoTab() {
     } finally {
       setSaving(false);
     }
-  };
-
-  // --- Delete ---
-  const handleDelete = async (id: string) => {
-    setSaving(true);
-    try {
-      await apiClient(`/menu/${id}`, { method: 'DELETE' });
-      setDeleteId(null);
-      fetchMenu();
-    } catch { /* */ }
-    finally { setSaving(false); }
   };
 
   const togglePermiso = (rol: string) => {
@@ -321,15 +307,6 @@ export function MenuDinamicoTab() {
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
-                    {!isProtected && (
-                      <button
-                        onClick={() => setDeleteId(item.id)}
-                        className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
                   </div>
                 </div>
               );
@@ -337,33 +314,6 @@ export function MenuDinamicoTab() {
           </div>
         )}
       </div>
-
-      {/* Delete confirmation */}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl">
-            <h4 className="text-lg font-semibold text-gray-900">¿Eliminar item?</h4>
-            <p className="mt-2 text-sm text-gray-500">
-              Esta acción no se puede deshacer. El item se eliminará permanentemente del menú.
-            </p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                onClick={() => setDeleteId(null)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => handleDelete(deleteId)}
-                disabled={saving}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Create/Edit modal */}
       {modalOpen && (
