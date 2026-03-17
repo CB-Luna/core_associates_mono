@@ -471,6 +471,7 @@ model ResumenDiario {
 model Tema {
   id         String   @id @default(uuid()) @db.Uuid
   nombre     String   @db.VarChar(100)
+  categoria  String?  @db.VarChar(50)   // Sección de agrupación: CORPORATIVO, ESTILOS, etc.
   colores    Json     // ThemeConfig JSON (primary, secondary, accent, etc.)
   fuente     String?  @db.VarChar(100)  // font-family
   logoUrl    String?  @map("logo_url") @db.VarChar(255)

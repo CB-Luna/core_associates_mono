@@ -21,11 +21,12 @@ import {
   XCircle,
   Info,
   Table2,
-  Cloud,
   Trash2,
   Globe,
   Plus,
   Download,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 
 // ─── Theme Model ─────────────────────────────────────────────────────────────
@@ -194,6 +195,7 @@ export function TemasTab() {
   const [hasChanges, setHasChanges] = useState(false);
   const [serverTemaId, setServerTemaId] = useState<string | null>(null);
   const [savingServer, setSavingServer] = useState(false);
+  const [serverTemas, setServerTemas] = useState<Tema[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem('themeConfig');
@@ -212,6 +214,16 @@ export function TemasTab() {
       .then((tema) => { if (tema) setServerTemaId(tema.id); })
       .catch(() => {});
   }, []);
+
+  // Fetch all server themes
+  const fetchServerTemas = useCallback(async () => {
+    try {
+      const res = await apiClient<Tema[]>('/temas');
+      setServerTemas(res);
+    } catch { setServerTemas([]); }
+  }, []);
+
+  useEffect(() => { fetchServerTemas(); }, [fetchServerTemas]);
 
   // Apply theme to DOM in real-time as user edits (live preview on actual UI)
   useEffect(() => {
@@ -274,6 +286,32 @@ export function TemasTab() {
     setHasChanges(false);
   };
 
+  const handleCreateTemplate = async (nombre: string, categoria: string) => {
+    await apiClient('/temas', {
+      method: 'POST',
+      body: JSON.stringify({ nombre, categoria: categoria || null, colores: theme }),
+    });
+    fetchServerTemas();
+  };
+
+  const handleDeleteTema = async (id: string) => {
+    await apiClient(`/temas/${id}`, { method: 'DELETE' });
+    fetchServerTemas();
+  };
+
+  const handleSetGlobal = async (id: string) => {
+    await apiClient(`/temas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ esGlobal: true }),
+    });
+    fetchServerTemas();
+  };
+
+  const handleLoadServerTema = (colores: Partial<ThemeConfig>) => {
+    setTheme((prev) => ({ ...prev, ...colores }));
+    setHasChanges(true);
+  };
+
   return (
     <div>
       {/* Toolbar */}
@@ -310,78 +348,243 @@ export function TemasTab() {
       <div className="mt-5 flex flex-col gap-4 lg:flex-row" style={{ minHeight: 'auto' }}>
         <PresetPanel
           presets={PRESETS}
+          serverTemas={serverTemas}
           activePreset={theme.preset}
           isDark={theme.isDark}
           onSelectPreset={applyPreset}
+          onSelectServerTema={handleLoadServerTema}
           onToggleDark={toggleDarkMode}
+          onCreateTemplate={handleCreateTemplate}
+          onDeleteTema={handleDeleteTema}
+          onSetGlobal={handleSetGlobal}
         />
         <ThemePreviewPanel theme={theme} />
         <ColorEditorPanel theme={theme} onUpdate={updateTheme} />
       </div>
-
-      {/* Temas guardados en servidor */}
-      <SavedThemesSection currentTheme={theme} onLoadTheme={(colores) => {
-        setTheme((prev) => ({ ...prev, ...colores }));
-        setHasChanges(true);
-      }} />
     </div>
   );
 }
 
-// ─── Preset Panel (Left Column - 260px) ──────────────────────────────────────
+// ─── Preset Panel (Left Column - 280px) ──────────────────────────────────────
 
-function PresetPanel({ presets, activePreset, isDark, onSelectPreset, onToggleDark }: {
+function PresetPanel({ presets, serverTemas, activePreset, isDark, onSelectPreset, onSelectServerTema, onToggleDark, onCreateTemplate, onDeleteTema, onSetGlobal }: {
   presets: PresetDef[];
+  serverTemas: Tema[];
   activePreset: string;
   isDark: boolean;
   onSelectPreset: (p: PresetDef) => void;
+  onSelectServerTema: (colores: Partial<ThemeConfig>) => void;
   onToggleDark: () => void;
+  onCreateTemplate: (nombre: string, categoria: string) => Promise<void>;
+  onDeleteTema: (id: string) => Promise<void>;
+  onSetGlobal: (id: string) => Promise<void>;
 }) {
-  const sections = [...new Set(presets.map((p) => p.section))];
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newCategoria, setNewCategoria] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+
+  const presetSections = [...new Set(presets.map((p) => p.section))];
+  const serverSections = [...new Set(serverTemas.map((t) => t.categoria || 'PERSONALIZADOS'))];
+  const allSections = [...new Set([...presetSections, ...serverSections])];
+  // Existing categories for the dropdown
+  const existingCategories = [...new Set([...presetSections, ...serverSections.filter(s => s !== 'PERSONALIZADOS')])];
+
+  const toggleSection = (section: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      next.has(section) ? next.delete(section) : next.add(section);
+      return next;
+    });
+  };
+
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    setCreating(true);
+    try {
+      await onCreateTemplate(newName.trim(), newCategoria.trim().toUpperCase() || 'PERSONALIZADOS');
+      setNewName('');
+      setNewCategoria('');
+      setShowCreate(false);
+    } catch { /* */ }
+    finally { setCreating(false); }
+  };
 
   return (
-    <div className="flex w-full shrink-0 flex-col overflow-y-auto rounded-xl border bg-white shadow-sm lg:w-[260px]">
-      <div className="border-b px-4 py-3">
+    <div className="flex w-full shrink-0 flex-col overflow-y-auto rounded-xl border bg-white shadow-sm lg:w-[280px]">
+      <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-2">
           <Palette className="h-4 w-4 text-pink-500" />
-          <span className="text-sm font-semibold text-gray-700">Temas Predefinidos</span>
+          <span className="text-sm font-semibold text-gray-700">Temas</span>
+          {serverTemas.length > 0 && (
+            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">{serverTemas.length}</span>
+          )}
         </div>
+        <button
+          onClick={() => setShowCreate(!showCreate)}
+          className="flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-[11px] font-medium text-blue-600 transition-colors hover:bg-blue-100"
+          title="Crear template del tema actual"
+        >
+          <Plus className="h-3 w-3" /> Crear template
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 overflow-y-auto p-3 sm:grid-cols-2 lg:grid-cols-1 lg:space-y-4 lg:gap-0">
-        {sections.map((section) => (
-          <div key={section}>
-            <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">{section}</p>
-            <div className="space-y-1.5">
-              {presets.filter((p) => p.section === section).map((preset) => (
-                <button
-                  key={preset.code}
-                  onClick={() => onSelectPreset(preset)}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all ${
-                    activePreset === preset.code
-                      ? 'bg-blue-50 ring-2 ring-blue-400'
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex -space-x-1.5">
-                    {preset.colors.map((c, i) => (
-                      <div
-                        key={i}
-                        className="h-7 w-7 rounded-full border-2 border-white shadow-sm"
-                        style={{ backgroundColor: c, zIndex: 3 - i }}
-                      />
-                    ))}
-                  </div>
-                  <span className="flex-1 text-sm font-medium text-gray-700">{preset.name}</span>
-                  {activePreset === preset.code && <Check className="h-4 w-4 shrink-0 text-blue-600" />}
-                </button>
+      {/* Create template form */}
+      {showCreate && (
+        <div className="border-b bg-blue-50/50 px-3 py-3 space-y-2">
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Nombre del template..."
+            className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+            autoFocus
+          />
+          <div className="relative">
+            <input
+              type="text"
+              value={newCategoria}
+              onChange={(e) => setNewCategoria(e.target.value)}
+              placeholder="Categoría (ej: CORPORATIVO)"
+              list="categorias-list"
+              className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+            <datalist id="categorias-list">
+              {existingCategories.map((cat) => (
+                <option key={cat} value={cat} />
               ))}
-            </div>
+            </datalist>
           </div>
-        ))}
+          <div className="flex gap-2">
+            <button
+              onClick={handleCreate}
+              disabled={creating || !newName.trim()}
+              className="flex-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {creating ? 'Creando...' : 'Guardar'}
+            </button>
+            <button
+              onClick={() => { setShowCreate(false); setNewName(''); setNewCategoria(''); }}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 overflow-y-auto p-3 sm:grid-cols-2 lg:grid-cols-1 lg:space-y-3 lg:gap-0">
+        {allSections.map((section) => {
+          const sectionPresets = presets.filter((p) => p.section === section);
+          const sectionTemas = serverTemas.filter((t) => (t.categoria || 'PERSONALIZADOS') === section);
+          if (sectionPresets.length === 0 && sectionTemas.length === 0) return null;
+          const isCollapsed = collapsedSections.has(section);
+          const isServerSection = sectionPresets.length === 0; // Pure server section
+
+          return (
+            <div key={section}>
+              <button
+                onClick={() => toggleSection(section)}
+                className="mb-1.5 flex w-full items-center gap-1 px-1"
+              >
+                {isCollapsed
+                  ? <ChevronRight className="h-3 w-3 text-gray-400" />
+                  : <ChevronDown className="h-3 w-3 text-gray-400" />
+                }
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{section}</span>
+                {isServerSection && (
+                  <span className="ml-auto rounded bg-blue-50 px-1 py-0.5 text-[9px] text-blue-500">custom</span>
+                )}
+              </button>
+
+              {!isCollapsed && (
+                <div className="space-y-1">
+                  {/* Hardcoded presets */}
+                  {sectionPresets.map((preset) => (
+                    <button
+                      key={preset.code}
+                      onClick={() => onSelectPreset(preset)}
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all ${
+                        activePreset === preset.code
+                          ? 'bg-blue-50 ring-2 ring-blue-400'
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex -space-x-1.5">
+                        {preset.colors.map((c, i) => (
+                          <div
+                            key={i}
+                            className="h-6 w-6 rounded-full border-2 border-white shadow-sm"
+                            style={{ backgroundColor: c, zIndex: 3 - i }}
+                          />
+                        ))}
+                      </div>
+                      <span className="flex-1 text-xs font-medium text-gray-700">{preset.name}</span>
+                      {activePreset === preset.code && <Check className="h-3.5 w-3.5 shrink-0 text-blue-600" />}
+                    </button>
+                  ))}
+
+                  {/* Server themes in this section */}
+                  {sectionTemas.map((tema) => {
+                    const colors = tema.colores as Record<string, string>;
+                    return (
+                      <div
+                        key={tema.id}
+                        className="group flex w-full items-center gap-2.5 rounded-lg px-3 py-2 transition-all hover:bg-gray-50"
+                      >
+                        <button
+                          onClick={() => onSelectServerTema(tema.colores as Partial<ThemeConfig>)}
+                          className="flex flex-1 items-center gap-2.5 text-left"
+                          title="Cargar tema"
+                        >
+                          <div className="flex -space-x-1.5">
+                            {['primary', 'secondary', 'accent'].map((key) => (
+                              <div
+                                key={key}
+                                className="h-6 w-6 rounded-full border-2 border-white shadow-sm"
+                                style={{ backgroundColor: colors[key] || '#ccc' }}
+                              />
+                            ))}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-medium text-gray-700">{tema.nombre}</span>
+                            {tema.esGlobal && (
+                              <span className="text-[9px] text-green-600">Global activo</span>
+                            )}
+                          </div>
+                        </button>
+                        {/* Actions (visible on hover) */}
+                        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                          {!tema.esGlobal && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onSetGlobal(tema.id); }}
+                              className="rounded p-1 text-gray-400 hover:bg-green-50 hover:text-green-600"
+                              title="Establecer como global"
+                            >
+                              <Globe className="h-3 w-3" />
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onDeleteTema(tema.id); }}
+                            className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         {/* Dark mode toggle */}
-        <div className="border-t pt-4">
+        <div className="border-t pt-3">
           <button
             onClick={onToggleDark}
             className="flex w-full items-center justify-between rounded-lg bg-gray-50 px-3 py-2.5 transition-colors hover:bg-gray-100"
@@ -691,6 +894,26 @@ function TablePreview({ theme, sidebarBg }: { theme: ThemeConfig; sidebarBg: str
   );
 }
 
+// ─── Color Descriptions ──────────────────────────────────────────────────────
+
+const COLOR_HINTS: Record<string, string> = {
+  primary: 'Sidebar, botones principales, enlaces activos',
+  secondary: 'Badges, avatares, elementos decorativos',
+  accent: 'Destacados, notificaciones, alertas de atención',
+  success: 'Estados exitosos, confirmaciones, activo',
+  warning: 'Alertas moderadas, estados pendientes',
+  error: 'Errores, acciones destructivas, rechazados',
+  info: 'Información general, tooltips, ayuda',
+  bgSurface: 'Fondo de tarjetas, modales y paneles',
+  bgPage: 'Fondo general de la página',
+  borderColor: 'Bordes de tarjetas, inputs y separadores',
+  textPrimary: 'Títulos, nombres y texto principal',
+  textSecondary: 'Subtítulos, descripciones y texto auxiliar',
+  tableHeaderBg: 'Fondo del encabezado de tablas',
+  tableStripeBg: 'Fondo de filas alternas en tablas',
+  tableHoverBg: 'Fondo al pasar el mouse sobre filas',
+};
+
 // ─── Color Editor Panel (Right Column - 300px) ──────────────────────────────
 
 function ColorEditorPanel({ theme, onUpdate }: {
@@ -705,33 +928,33 @@ function ColorEditorPanel({ theme, onUpdate }: {
 
       <div className="flex-1 space-y-5 overflow-y-auto p-4">
         <ColorSection title="Colores Principales">
-          <ColorRow label="Primario" value={theme.primary} onChange={(v) => onUpdate({ primary: v })} />
-          <ColorRow label="Secundario" value={theme.secondary} onChange={(v) => onUpdate({ secondary: v })} />
-          <ColorRow label="Acento" value={theme.accent} onChange={(v) => onUpdate({ accent: v })} />
+          <ColorRow label="Primario" hint={COLOR_HINTS.primary} value={theme.primary} onChange={(v) => onUpdate({ primary: v })} />
+          <ColorRow label="Secundario" hint={COLOR_HINTS.secondary} value={theme.secondary} onChange={(v) => onUpdate({ secondary: v })} />
+          <ColorRow label="Acento" hint={COLOR_HINTS.accent} value={theme.accent} onChange={(v) => onUpdate({ accent: v })} />
         </ColorSection>
 
         <ColorSection title="Colores Semanticos">
-          <ColorRow label="Exito" value={theme.success} onChange={(v) => onUpdate({ success: v })} />
-          <ColorRow label="Alerta" value={theme.warning} onChange={(v) => onUpdate({ warning: v })} />
-          <ColorRow label="Error" value={theme.error} onChange={(v) => onUpdate({ error: v })} />
-          <ColorRow label="Informacion" value={theme.info} onChange={(v) => onUpdate({ info: v })} />
+          <ColorRow label="Exito" hint={COLOR_HINTS.success} value={theme.success} onChange={(v) => onUpdate({ success: v })} />
+          <ColorRow label="Alerta" hint={COLOR_HINTS.warning} value={theme.warning} onChange={(v) => onUpdate({ warning: v })} />
+          <ColorRow label="Error" hint={COLOR_HINTS.error} value={theme.error} onChange={(v) => onUpdate({ error: v })} />
+          <ColorRow label="Informacion" hint={COLOR_HINTS.info} value={theme.info} onChange={(v) => onUpdate({ info: v })} />
         </ColorSection>
 
         <ColorSection title="Superficie y Fondo">
-          <ColorRow label="Superficie" value={theme.bgSurface} onChange={(v) => onUpdate({ bgSurface: v })} />
-          <ColorRow label="Fondo pagina" value={theme.bgPage} onChange={(v) => onUpdate({ bgPage: v })} />
-          <ColorRow label="Bordes" value={theme.borderColor} onChange={(v) => onUpdate({ borderColor: v })} />
+          <ColorRow label="Superficie" hint={COLOR_HINTS.bgSurface} value={theme.bgSurface} onChange={(v) => onUpdate({ bgSurface: v })} />
+          <ColorRow label="Fondo pagina" hint={COLOR_HINTS.bgPage} value={theme.bgPage} onChange={(v) => onUpdate({ bgPage: v })} />
+          <ColorRow label="Bordes" hint={COLOR_HINTS.borderColor} value={theme.borderColor} onChange={(v) => onUpdate({ borderColor: v })} />
         </ColorSection>
 
         <ColorSection title="Colores de Texto">
-          <ColorRow label="Texto principal" value={theme.textPrimary} onChange={(v) => onUpdate({ textPrimary: v })} />
-          <ColorRow label="Texto secundario" value={theme.textSecondary} onChange={(v) => onUpdate({ textSecondary: v })} />
+          <ColorRow label="Texto principal" hint={COLOR_HINTS.textPrimary} value={theme.textPrimary} onChange={(v) => onUpdate({ textPrimary: v })} />
+          <ColorRow label="Texto secundario" hint={COLOR_HINTS.textSecondary} value={theme.textSecondary} onChange={(v) => onUpdate({ textSecondary: v })} />
         </ColorSection>
 
         <ColorSection title="Tabla">
-          <ColorRow label="Header" value={theme.tableHeaderBg} onChange={(v) => onUpdate({ tableHeaderBg: v })} />
-          <ColorRow label="Fila alterna" value={theme.tableStripeBg} onChange={(v) => onUpdate({ tableStripeBg: v })} />
-          <ColorRow label="Hover" value={theme.tableHoverBg} onChange={(v) => onUpdate({ tableHoverBg: v })} />
+          <ColorRow label="Header" hint={COLOR_HINTS.tableHeaderBg} value={theme.tableHeaderBg} onChange={(v) => onUpdate({ tableHeaderBg: v })} />
+          <ColorRow label="Fila alterna" hint={COLOR_HINTS.tableStripeBg} value={theme.tableStripeBg} onChange={(v) => onUpdate({ tableStripeBg: v })} />
+          <ColorRow label="Hover" hint={COLOR_HINTS.tableHoverBg} value={theme.tableHoverBg} onChange={(v) => onUpdate({ tableHoverBg: v })} />
         </ColorSection>
       </div>
     </div>
@@ -749,8 +972,9 @@ function ColorSection({ title, children }: { title: string; children: React.Reac
   );
 }
 
-function ColorRow({ label, value, onChange }: {
+function ColorRow({ label, hint, value, onChange }: {
   label: string;
+  hint?: string;
   value: string;
   onChange: (hex: string) => void;
 }) {
@@ -767,6 +991,7 @@ function ColorRow({ label, value, onChange }: {
       </label>
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium text-gray-700">{label}</p>
+        {hint && <p className="text-[9px] leading-tight text-gray-400">{hint}</p>}
       </div>
       <input
         type="text"
@@ -781,172 +1006,4 @@ function ColorRow({ label, value, onChange }: {
   );
 }
 
-// ─── Saved Themes Section (Server persistence) ──────────────────────────────
-
-function SavedThemesSection({ currentTheme, onLoadTheme }: {
-  currentTheme: ThemeConfig;
-  onLoadTheme: (colores: Partial<ThemeConfig>) => void;
-}) {
-  const [temas, setTemas] = useState<Tema[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [nombre, setNombre] = useState('');
-  const [showCreate, setShowCreate] = useState(false);
-
-  const fetchTemas = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await apiClient<Tema[]>('/temas');
-      setTemas(res);
-    } catch { setTemas([]); }
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { fetchTemas(); }, [fetchTemas]);
-
-  const handleCreate = async () => {
-    if (!nombre.trim()) return;
-    setSaving(true);
-    try {
-      await apiClient('/temas', {
-        method: 'POST',
-        body: JSON.stringify({ nombre: nombre.trim(), colores: currentTheme }),
-      });
-      setNombre('');
-      setShowCreate(false);
-      fetchTemas();
-    } catch { /* */ }
-    finally { setSaving(false); }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await apiClient(`/temas/${id}`, { method: 'DELETE' });
-      fetchTemas();
-    } catch { /* */ }
-  };
-
-  const handleSetGlobal = async (id: string) => {
-    try {
-      await apiClient(`/temas/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ esGlobal: true }),
-      });
-      fetchTemas();
-    } catch { /* */ }
-  };
-
-  return (
-    <div className="mt-6 rounded-xl border bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b px-5 py-4">
-        <div className="flex items-center gap-2">
-          <Cloud className="h-4.5 w-4.5 text-blue-500" />
-          <span className="text-sm font-semibold text-gray-700">Temas guardados en servidor</span>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{temas.length}</span>
-        </div>
-        <button
-          onClick={() => setShowCreate(!showCreate)}
-          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-        >
-          <Plus className="h-3.5 w-3.5" /> Guardar tema actual
-        </button>
-      </div>
-
-      {showCreate && (
-        <div className="flex items-center gap-3 border-b bg-blue-50/50 px-5 py-3">
-          <input
-            type="text"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder="Nombre del tema..."
-            className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-          />
-          <button
-            onClick={handleCreate}
-            disabled={saving || !nombre.trim()}
-            className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? 'Guardando...' : 'Guardar'}
-          </button>
-          <button
-            onClick={() => { setShowCreate(false); setNombre(''); }}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-          >
-            Cancelar
-          </button>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex items-center justify-center p-8">
-          <div className="h-6 w-6 animate-spin rounded-full border-3 border-gray-200 border-t-blue-600" />
-        </div>
-      ) : temas.length === 0 ? (
-        <div className="p-8 text-center text-sm text-gray-400">
-          No hay temas guardados. Personaliza los colores arriba y guárdalos en el servidor.
-        </div>
-      ) : (
-        <div className="divide-y">
-          {temas.map((tema) => (
-            <div key={tema.id} className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-gray-50">
-              {/* Color swatches */}
-              <div className="flex gap-1">
-                {['primary', 'secondary', 'accent', 'success', 'warning', 'error'].map((key) => (
-                  <div
-                    key={key}
-                    className="h-6 w-6 rounded-md border border-gray-200"
-                    style={{ backgroundColor: (tema.colores as Record<string, string>)[key] || '#ccc' }}
-                    title={key}
-                  />
-                ))}
-              </div>
-
-              {/* Info */}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-900 truncate">{tema.nombre}</span>
-                  {tema.esGlobal && (
-                    <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                      <Globe className="h-3 w-3" /> Global
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400">
-                  {tema.creador?.nombre} · {new Date(tema.createdAt).toLocaleDateString('es-MX')}
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => onLoadTheme(tema.colores as Partial<ThemeConfig>)}
-                  className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50"
-                  title="Aplicar este tema"
-                >
-                  <Download className="h-3.5 w-3.5" /> Cargar
-                </button>
-                {!tema.esGlobal && (
-                  <button
-                    onClick={() => handleSetGlobal(tema.id)}
-                    className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-green-600 hover:bg-green-50"
-                    title="Establecer como tema global"
-                  >
-                    <Globe className="h-3.5 w-3.5" />
-                  </button>
-                )}
-                <button
-                  onClick={() => handleDelete(tema.id)}
-                  className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                  title="Eliminar"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// End of TemasTab module

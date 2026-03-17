@@ -12,7 +12,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { type UsuarioCRM, type Proveedor } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
-import { Pencil, KeyRound, Power, Camera, Trash2, Palette, Lock } from 'lucide-react';
+import { Pencil, KeyRound, Power, Camera, Trash2, Palette, Lock, Check, Globe } from 'lucide-react';
 import { type Tema } from '@/lib/api-types';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
@@ -289,6 +289,39 @@ export function UsuariosTab() {
       },
     },
     {
+      id: 'tema',
+      header: 'Tema',
+      size: 180,
+      cell: ({ row }) => {
+        const user = row.original;
+        if (!user.temaId) {
+          return (
+            <div className="flex items-center gap-1.5">
+              <Globe className="h-3.5 w-3.5 text-gray-300" />
+              <span className="text-xs text-gray-400">Por defecto</span>
+            </div>
+          );
+        }
+        const tema = temas.find((t) => t.id === user.temaId);
+        if (!tema) return <span className="text-xs text-gray-400">—</span>;
+        const colors = tema.colores as Record<string, string>;
+        return (
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-1">
+              {['primary', 'secondary', 'accent', 'success', 'error'].map((key) => (
+                <div
+                  key={key}
+                  className="h-4 w-4 rounded-full border-2 border-white shadow-sm"
+                  style={{ backgroundColor: colors[key] || '#ccc' }}
+                />
+              ))}
+            </div>
+            <span className="truncate text-xs font-medium text-gray-600">{tema.nombre}</span>
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: 'estado',
       header: 'Estado',
       cell: ({ getValue }) => (
@@ -349,24 +382,58 @@ export function UsuariosTab() {
                 <Palette className="h-4 w-4" />
               </button>
               {temaUserId === user.id && (
-                <div className="absolute right-0 z-20 mt-1 w-48 rounded-lg border bg-white py-1 shadow-lg">
+                <div className="absolute right-0 z-20 mt-1 w-64 rounded-xl border bg-white p-2 shadow-xl">
+                  <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">Asignar tema</p>
+
+                  {/* Por defecto (sin tema asignado) */}
                   <button
                     onClick={() => handleAssignTema(user.id, null)}
-                    className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 ${!user.temaId ? 'font-semibold text-purple-600' : 'text-gray-600'}`}
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${!user.temaId ? 'bg-green-50 ring-1 ring-green-200' : 'hover:bg-gray-50'}`}
                   >
-                    Sin tema (global)
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100">
+                      <Globe className="h-4 w-4 text-gray-500" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-700">Por defecto</p>
+                      <p className="text-[10px] text-gray-400">Sin tema personalizado</p>
+                    </div>
+                    {!user.temaId && <Check className="ml-auto h-4 w-4 shrink-0 text-green-600" />}
                   </button>
-                  {temas.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => handleAssignTema(user.id, t.id)}
-                      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-gray-100 ${user.temaId === t.id ? 'font-semibold text-purple-600' : 'text-gray-700'}`}
-                    >
-                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: (t.colores as Record<string, string>)?.primary || '#6366f1' }} />
-                      {t.nombre}
-                      {t.esGlobal && <span className="ml-auto text-xs text-gray-400">global</span>}
-                    </button>
-                  ))}
+
+                  {temas.length > 0 && (
+                    <>
+                      <div className="my-1.5 border-t" />
+                      <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">Temas disponibles</p>
+                      <div className="max-h-52 space-y-0.5 overflow-y-auto">
+                        {temas.map((t) => {
+                          const colors = t.colores as Record<string, string>;
+                          const isSelected = user.temaId === t.id;
+                          return (
+                            <button
+                              key={t.id}
+                              onClick={() => handleAssignTema(user.id, t.id)}
+                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${isSelected ? 'bg-blue-50 ring-1 ring-blue-200' : 'hover:bg-gray-50'}`}
+                            >
+                              <div className="flex -space-x-1">
+                                {['primary', 'secondary', 'accent', 'success', 'error'].map((key) => (
+                                  <div
+                                    key={key}
+                                    className="h-5 w-5 rounded-full border-2 border-white shadow-sm"
+                                    style={{ backgroundColor: colors[key] || '#ccc' }}
+                                  />
+                                ))}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-gray-700">{t.nombre}</p>
+                                {t.esGlobal && <span className="text-[10px] text-green-600">Tema global</span>}
+                              </div>
+                              {isSelected && <Check className="ml-auto h-4 w-4 shrink-0 text-blue-600" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -644,9 +711,35 @@ export function UsuariosTab() {
               </Badge>
             </div>
             <div className="mt-3 flex items-center justify-between">
-              <Badge variant={user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : 'default'}>
-                {user.rol}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : 'default'}>
+                  {user.rol}
+                </Badge>
+                {/* Theme indicator in mobile */}
+                {(() => {
+                  if (!user.temaId) {
+                    return (
+                      <div className="flex items-center gap-1">
+                        <Globe className="h-3 w-3 text-gray-300" />
+                        <span className="text-[10px] text-gray-400">Por defecto</span>
+                      </div>
+                    );
+                  }
+                  const tema = temas.find((t) => t.id === user.temaId);
+                  if (!tema) return null;
+                  const colors = tema.colores as Record<string, string>;
+                  return (
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex -space-x-0.5">
+                        {['primary', 'secondary', 'accent', 'success'].map((key) => (
+                          <div key={key} className="h-3 w-3 rounded-full border border-white shadow-sm" style={{ backgroundColor: colors[key] || '#ccc' }} />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-gray-500">{tema.nombre}</span>
+                    </div>
+                  );
+                })()}
+              </div>
               <div className="flex gap-1">
                 <button onClick={() => openEdit(user)} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-600" title="Editar">
                   <Pencil className="h-4 w-4" />

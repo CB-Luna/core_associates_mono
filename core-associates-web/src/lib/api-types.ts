@@ -27,6 +27,7 @@ export interface User {
 export interface Tema {
   id: string;
   nombre: string;
+  categoria?: string | null;
   colores: Record<string, any>;
   fuente?: string | null;
   logoUrl?: string | null;

@@ -181,6 +181,7 @@ export class AuthService {
         estado: true,
         proveedorId: true,
         avatarUrl: true,
+        temaId: true,
         ultimoAcceso: true,
         createdAt: true,
       },

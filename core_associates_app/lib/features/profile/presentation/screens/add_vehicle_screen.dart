@@ -252,32 +252,36 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
                 optionsBuilder: (textEditingValue) {
                   if (textEditingValue.text.isEmpty) return vehiculoMarcas;
                   final query = textEditingValue.text.toLowerCase();
-                  return vehiculoMarcas.where((m) => m.toLowerCase().contains(query));
+                  return vehiculoMarcas.where(
+                    (m) => m.toLowerCase().contains(query),
+                  );
                 },
                 onSelected: (marca) {
                   _marcaCtrl.text = marca;
                   _modeloCtrl.clear();
                   setState(() {});
                 },
-                fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                  // Sync with external controller
-                  if (controller.text != _marcaCtrl.text) {
-                    controller.text = _marcaCtrl.text;
-                  }
-                  return TextFormField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    decoration: const InputDecoration(
-                      labelText: 'Marca',
-                      prefixIcon: Icon(Icons.directions_car_outlined),
-                      hintText: 'Ej. Nissan',
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-                    textCapitalization: TextCapitalization.words,
-                    onChanged: (v) => _marcaCtrl.text = v,
-                  );
-                },
+                fieldViewBuilder:
+                    (context, controller, focusNode, onFieldSubmitted) {
+                      // Sync with external controller
+                      if (controller.text != _marcaCtrl.text) {
+                        controller.text = _marcaCtrl.text;
+                      }
+                      return TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(
+                          labelText: 'Marca',
+                          prefixIcon: Icon(Icons.directions_car_outlined),
+                          hintText: 'Ej. Nissan',
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Requerido'
+                            : null,
+                        textCapitalization: TextCapitalization.words,
+                        onChanged: (v) => _marcaCtrl.text = v,
+                      );
+                    },
               ),
               const SizedBox(height: 16),
               Autocomplete<String>(
@@ -291,24 +295,26 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
                 onSelected: (modelo) {
                   _modeloCtrl.text = modelo;
                 },
-                fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                  if (controller.text != _modeloCtrl.text) {
-                    controller.text = _modeloCtrl.text;
-                  }
-                  return TextFormField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    decoration: const InputDecoration(
-                      labelText: 'Modelo',
-                      prefixIcon: Icon(Icons.badge_outlined),
-                      hintText: 'Ej. Versa',
-                    ),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-                    textCapitalization: TextCapitalization.words,
-                    onChanged: (v) => _modeloCtrl.text = v,
-                  );
-                },
+                fieldViewBuilder:
+                    (context, controller, focusNode, onFieldSubmitted) {
+                      if (controller.text != _modeloCtrl.text) {
+                        controller.text = _modeloCtrl.text;
+                      }
+                      return TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(
+                          labelText: 'Modelo',
+                          prefixIcon: Icon(Icons.badge_outlined),
+                          hintText: 'Ej. Versa',
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Requerido'
+                            : null,
+                        textCapitalization: TextCapitalization.words,
+                        onChanged: (v) => _modeloCtrl.text = v,
+                      );
+                    },
               ),
               const SizedBox(height: 16),
               Row(

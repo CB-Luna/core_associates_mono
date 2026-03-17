@@ -7,6 +7,12 @@ export class CreateTemaDto {
   @MaxLength(100)
   nombre: string;
 
+  @ApiPropertyOptional({ example: 'CORPORATIVO', description: 'Sección para agrupar el tema', maxLength: 50 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  categoria?: string;
+
   @ApiProperty({ description: 'JSON con colores del tema (primary, secondary, accent, etc.)' })
   @IsObject()
   colores: Record<string, any>;

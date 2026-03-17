@@ -50,6 +50,7 @@ export class TemasService {
     return this.prisma.tema.create({
       data: {
         nombre: dto.nombre,
+        categoria: dto.categoria ?? null,
         colores: dto.colores,
         fuente: dto.fuente ?? null,
         esGlobal: dto.esGlobal ?? false,
@@ -74,6 +75,7 @@ export class TemasService {
       where: { id },
       data: {
         ...(dto.nombre !== undefined && { nombre: dto.nombre }),
+        ...(dto.categoria !== undefined && { categoria: dto.categoria }),
         ...(dto.colores !== undefined && { colores: dto.colores }),
         ...(dto.fuente !== undefined && { fuente: dto.fuente }),
         ...(dto.esGlobal !== undefined && { esGlobal: dto.esGlobal }),
