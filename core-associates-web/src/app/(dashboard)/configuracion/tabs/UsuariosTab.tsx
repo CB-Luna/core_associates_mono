@@ -12,10 +12,11 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { type UsuarioCRM, type Proveedor } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
-import { Pencil, KeyRound, Power, Camera, Trash2, Palette } from 'lucide-react';
+import { Pencil, KeyRound, Power, Camera, Trash2, Palette, Lock } from 'lucide-react';
 import { type Tema } from '@/lib/api-types';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+const PROTECTED_EMAILS = ['admin@coreassociates.com'];
 
 const createUserSchema = z.object({
   nombre: z.string().min(2, 'Mínimo 2 caracteres'),
@@ -222,6 +223,10 @@ export function UsuariosTab() {
   };
 
   const handleToggleEstado = async (user: UsuarioCRM) => {
+    if (PROTECTED_EMAILS.includes(user.email)) {
+      toast('error', 'Protegido', 'No se puede cambiar el estado del super-administrador');
+      return;
+    }
     const nuevoEstado = user.estado === 'activo' ? 'inactivo' : 'activo';
     try {
       await apiClient(`/auth/users/${user.id}`, {
@@ -305,6 +310,7 @@ export function UsuariosTab() {
       header: 'Acciones',
       cell: ({ row }) => {
         const user = row.original;
+        const isProtected = PROTECTED_EMAILS.includes(user.email);
         return (
           <div className="flex gap-1">
             <button
@@ -321,13 +327,19 @@ export function UsuariosTab() {
             >
               <KeyRound className="h-4 w-4" />
             </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleToggleEstado(user); }}
-              className={`rounded p-1.5 hover:bg-gray-100 ${user.estado === 'activo' ? 'text-green-500 hover:text-red-600' : 'text-gray-400 hover:text-green-600'}`}
-              title={user.estado === 'activo' ? 'Desactivar' : 'Activar'}
-            >
-              <Power className="h-4 w-4" />
-            </button>
+            {isProtected ? (
+              <span className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs text-amber-600" title="Super-admin protegido">
+                <Lock className="h-3.5 w-3.5" />
+              </span>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleToggleEstado(user); }}
+                className={`rounded p-1.5 hover:bg-gray-100 ${user.estado === 'activo' ? 'text-green-500 hover:text-red-600' : 'text-gray-400 hover:text-green-600'}`}
+                title={user.estado === 'activo' ? 'Desactivar' : 'Activar'}
+              >
+                <Power className="h-4 w-4" />
+              </button>
+            )}
             <div className="relative">
               <button
                 onClick={(e) => { e.stopPropagation(); setTemaUserId(temaUserId === user.id ? null : user.id); }}
@@ -479,6 +491,12 @@ export function UsuariosTab() {
             <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300">Editando: {editingUser.nombre}</h4>
             <button type="button" onClick={() => { setEditingUser(null); setEditAvatarFile(null); setEditAvatarPreview(null); }} className="text-sm text-gray-500 hover:text-gray-700">Cancelar</button>
           </div>
+          {PROTECTED_EMAILS.includes(editingUser.email) && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+              <Lock className="h-4 w-4 flex-shrink-0" />
+              <span>Super-administrador protegido — solo se puede editar el nombre y avatar.</span>
+            </div>
+          )}
           {/* Avatar upload section — preview-first */}
           <div className="mb-4 flex items-center gap-4">
             {editAvatarPreview ? (
@@ -539,12 +557,12 @@ export function UsuariosTab() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Email</label>
-              <input type="email" {...editForm.register('email')} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              <input type="email" {...editForm.register('email')} disabled={PROTECTED_EMAILS.includes(editingUser.email)} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500" />
               {editForm.formState.errors.email && <p className="mt-1 text-xs text-red-600">{editForm.formState.errors.email.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Rol</label>
-              <select {...editForm.register('rol')} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+              <select {...editForm.register('rol')} disabled={PROTECTED_EMAILS.includes(editingUser.email)} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500">
                 <option value="operador">Operador</option>
                 <option value="admin">Administrador</option>
                 <option value="proveedor">Proveedor</option>
@@ -636,9 +654,15 @@ export function UsuariosTab() {
                 <button onClick={() => { setResetUserId(user.id); setEditingUser(null); setShowForm(false); }} className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-orange-600" title="Resetear contraseña">
                   <KeyRound className="h-4 w-4" />
                 </button>
-                <button onClick={() => handleToggleEstado(user)} className={`rounded p-1.5 hover:bg-gray-100 ${user.estado === 'activo' ? 'text-green-500 hover:text-red-600' : 'text-gray-400 hover:text-green-600'}`} title={user.estado === 'activo' ? 'Desactivar' : 'Activar'}>
-                  <Power className="h-4 w-4" />
-                </button>
+                {PROTECTED_EMAILS.includes(user.email) ? (
+                  <span className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs text-amber-600" title="Super-admin protegido">
+                    <Lock className="h-3.5 w-3.5" />
+                  </span>
+                ) : (
+                  <button onClick={() => handleToggleEstado(user)} className={`rounded p-1.5 hover:bg-gray-100 ${user.estado === 'activo' ? 'text-green-500 hover:text-red-600' : 'text-gray-400 hover:text-green-600'}`} title={user.estado === 'activo' ? 'Desactivar' : 'Activar'}>
+                    <Power className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
           </div>

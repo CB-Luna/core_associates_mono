@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -10,6 +10,7 @@ import { RolUsuario, EstadoUsuario } from '@prisma/client';
 
 const OTP_TTL_SECONDS = 300; // 5 minutos
 const OTP_KEY_PREFIX = 'otp:';
+const PROTECTED_EMAILS = ['admin@coreassociates.com'];
 
 @Injectable()
 export class AuthService {
@@ -233,6 +234,19 @@ export class AuthService {
   }) {
     const usuario = await this.prisma.usuario.findUnique({ where: { id } });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    // Proteger super-admin: no se puede cambiar email, rol ni desactivar
+    if (PROTECTED_EMAILS.includes(usuario.email)) {
+      if (data.email && data.email !== usuario.email) {
+        throw new BadRequestException('No se puede cambiar el email del super-administrador');
+      }
+      if (data.rol && data.rol !== usuario.rol) {
+        throw new BadRequestException('No se puede cambiar el rol del super-administrador');
+      }
+      if (data.estado && data.estado !== usuario.estado) {
+        throw new BadRequestException('No se puede cambiar el estado del super-administrador');
+      }
+    }
 
     return this.prisma.usuario.update({
       where: { id },
