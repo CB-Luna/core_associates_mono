@@ -353,9 +353,19 @@ export interface Rol {
   id: string;
   nombre: string;
   descripcion: string | null;
+  icono: string | null;
+  color: string | null;
   esProtegido: boolean;
+  esPorDefecto: boolean;
   permisos: { permiso: Permiso }[];
   _count: { usuarios: number };
+}
+
+export interface RolMenuItem {
+  rolId: string;
+  moduloMenuId: string;
+  orden: number;
+  moduloMenu: MenuItem;
 }
 
 export interface Permiso {

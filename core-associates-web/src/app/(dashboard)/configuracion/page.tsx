@@ -1,19 +1,17 @@
 'use client';
 
 import { TabLayout, type TabItem } from '@/components/ui/TabLayout';
-import { Users, ShieldCheck, LayoutList, Palette, Server, Bot } from 'lucide-react';
+import { Users, ShieldCheck, Palette, Server, Bot } from 'lucide-react';
 import { UsuariosTab } from './tabs/UsuariosTab';
 import { AuditoriaTab } from './tabs/AuditoriaTab';
-import { RolesTab } from './tabs/RolesTab';
-import { MenuDinamicoTab } from './tabs/MenuDinamicoTab';
+import { RolesAdminTab } from './tabs/RolesAdminTab';
 import { TemasTab } from './tabs/TemasTab';
 import { SistemaInfoTab } from './tabs/SistemaInfoTab';
 import { ConfAITab } from './tabs/ConfAITab';
 
 const tabs: TabItem[] = [
   { key: 'usuarios', label: 'Usuarios', icon: Users, color: 'blue', component: <UsuariosTab /> },
-  { key: 'roles', label: 'Roles y Permisos', icon: ShieldCheck, color: 'purple', component: <RolesTab /> },
-  { key: 'menu', label: 'Menu Dinamico', icon: LayoutList, color: 'teal', component: <MenuDinamicoTab /> },
+  { key: 'roles', label: 'Roles y Permisos', icon: ShieldCheck, color: 'purple', component: <RolesAdminTab /> },
   { key: 'temas', label: 'Temas', icon: Palette, color: 'pink', component: <TemasTab /> },
   { key: 'sistema', label: 'Info del Sistema', icon: Server, color: 'gray', component: <SistemaInfoTab /> },
   { key: 'auditoria', label: 'Auditoria', icon: ShieldCheck, color: 'purple', component: <AuditoriaTab /> },
