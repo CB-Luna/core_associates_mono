@@ -6,16 +6,17 @@ import { useToast } from '@/components/ui/Toast';
 import { type Rol, type UsuarioCRM } from '@/lib/api-types';
 import { getIcon } from '@/lib/icon-map';
 import {
-  Users as UsersIcon, UserPlus, Loader2, Shield, Search, Check, X,
+  Users as UsersIcon, UserPlus, Loader2, Shield, Search, Check, X, AlertTriangle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
 interface AsignacionesPanelProps {
   rol: Rol | null;
+  allRoles: Rol[];
   onRefresh: () => void;
 }
 
-export function AsignacionesPanel({ rol, onRefresh }: AsignacionesPanelProps) {
+export function AsignacionesPanel({ rol, allRoles, onRefresh }: AsignacionesPanelProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [usuarios, setUsuarios] = useState<UsuarioCRM[]>([]);
@@ -90,12 +91,32 @@ export function AsignacionesPanel({ rol, onRefresh }: AsignacionesPanelProps) {
   };
 
   // Users NOT currently on this role (candidates for bulk assign)
+  // Build map: rolId => count of users on that role
+  const userCountByRol = new Map<string, number>();
+  for (const u of allUsuarios) {
+    if (u.rolId) userCountByRol.set(u.rolId, (userCountByRol.get(u.rolId) || 0) + 1);
+  }
+
+  // Exclude users that are the SOLE user on a protected role (can't be moved out)
+  const protectedRolIds = new Set(allRoles.filter((r) => r.esProtegido).map((r) => r.id));
+
   const candidateUsers = allUsuarios
     .filter((u) => u.rolId !== rol.id)
+    .filter((u) => {
+      // Block if user is on a protected role and is the only one left
+      if (u.rolId && protectedRolIds.has(u.rolId)) {
+        const count = userCountByRol.get(u.rolId) || 0;
+        if (count <= 1) return false;
+      }
+      return true;
+    })
     .filter((u) =>
       u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email.toLowerCase().includes(searchTerm.toLowerCase()),
     );
+
+  // Warning for users on protected roles (they CAN be moved but must leave at least 1)
+  const isFromProtectedRol = (u: UsuarioCRM) => !!(u.rolId && protectedRolIds.has(u.rolId));
 
   return (
     <div>
@@ -185,6 +206,7 @@ export function AsignacionesPanel({ rol, onRefresh }: AsignacionesPanelProps) {
                 <div className="space-y-1">
                   {candidateUsers.map((u) => {
                     const isSelected = selectedIds.has(u.id);
+                    const fromProtected = isFromProtectedRol(u);
                     return (
                       <label
                         key={u.id}
@@ -202,7 +224,12 @@ export function AsignacionesPanel({ rol, onRefresh }: AsignacionesPanelProps) {
                           {u.nombre.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-gray-700 dark:text-gray-200">{u.nombre}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="truncate text-sm font-medium text-gray-700 dark:text-gray-200">{u.nombre}</p>
+                            {fromProtected && (
+                              <span title="Usuario de rol protegido"><AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" /></span>
+                            )}
+                          </div>
                           <p className="truncate text-xs text-gray-400">{u.email} · {u.rol}</p>
                         </div>
                       </label>

@@ -118,6 +118,7 @@ export function RolesAdminTab() {
       {activeTab === 'asignaciones' && (
         <AsignacionesPanel
           rol={selectedRol}
+          allRoles={roles}
           onRefresh={fetchData}
         />
       )}

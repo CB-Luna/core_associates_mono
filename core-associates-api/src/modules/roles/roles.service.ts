@@ -96,6 +96,13 @@ export class RolesService {
     const rol = await this.prisma.rol.findUnique({ where: { id: rolId } });
     if (!rol) throw new NotFoundException('Rol no encontrado');
 
+    // Protección: rol protegido debe conservar configuracion:ver
+    if (rol.esProtegido && !permisoCodigos.includes('configuracion:ver')) {
+      throw new BadRequestException(
+        'El rol protegido debe conservar el permiso "configuracion:ver" para no perder acceso al panel de configuración',
+      );
+    }
+
     // Buscar IDs de permisos por código
     const permisos = await this.prisma.permiso.findMany({
       where: { codigo: { in: permisoCodigos } },
@@ -143,6 +150,19 @@ export class RolesService {
     const rol = await this.prisma.rol.findUnique({ where: { id: rolId } });
     if (!rol) throw new NotFoundException('Rol no encontrado');
 
+    // Protección: rol protegido debe conservar el menú de configuración
+    if (rol.esProtegido) {
+      const configMenu = await this.prisma.moduloMenu.findUnique({ where: { codigo: 'configuracion' } });
+      if (configMenu) {
+        const keepsCfg = items.some((i) => i.moduloMenuId === configMenu.id);
+        if (!keepsCfg) {
+          throw new BadRequestException(
+            'El rol protegido debe conservar el item de menú "Configuración" para no perder acceso al panel',
+          );
+        }
+      }
+    }
+
     // Verificar que todos los moduloMenuIds existen
     if (items.length > 0) {
       const ids = items.map((i) => i.moduloMenuId);
@@ -175,6 +195,36 @@ export class RolesService {
   async bulkAssignUsers(rolId: string, usuarioIds: string[]) {
     const rol = await this.prisma.rol.findUnique({ where: { id: rolId } });
     if (!rol) throw new NotFoundException('Rol no encontrado');
+
+    // Protección: no permitir reasignar usuarios DESDE un rol protegido si lo dejaría vacío
+    const usersToMove = await this.prisma.usuario.findMany({
+      where: { id: { in: usuarioIds } },
+      select: { id: true, rolId: true },
+    });
+
+    // Agrupar por rol de origen para verificar roles protegidos
+    const fromProtectedRoles = new Map<string, string[]>();
+    for (const u of usersToMove) {
+      if (u.rolId && u.rolId !== rolId) {
+        if (!fromProtectedRoles.has(u.rolId)) fromProtectedRoles.set(u.rolId, []);
+        fromProtectedRoles.get(u.rolId)!.push(u.id);
+      }
+    }
+
+    for (const [sourceRolId, movingUserIds] of fromProtectedRoles) {
+      const sourceRol = await this.prisma.rol.findUnique({
+        where: { id: sourceRolId },
+        include: { _count: { select: { usuarios: true } } },
+      });
+      if (sourceRol?.esProtegido) {
+        const remaining = sourceRol._count.usuarios - movingUserIds.length;
+        if (remaining < 1) {
+          throw new BadRequestException(
+            `No se puede dejar el rol protegido "${sourceRol.nombre}" sin usuarios. Debe quedar al menos 1 usuario asignado.`,
+          );
+        }
+      }
+    }
 
     const result = await this.prisma.usuario.updateMany({
       where: { id: { in: usuarioIds } },

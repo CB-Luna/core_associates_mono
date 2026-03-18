@@ -9,6 +9,7 @@ import {
   Save, Loader2, Check, Minus, ChevronDown, ChevronUp,
   ArrowRight, ArrowLeft, GripVertical, Eye, Pencil, Plus, Trash2,
   CheckCircle, ArrowRightLeft, FileDown, Lock, Bell, Cpu, Shield,
+  ChevronsUpDown,
 } from 'lucide-react';
 
 /* ── Config visual por acción ── */
@@ -67,10 +68,10 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
     const codigos = new Set(rol.permisos.map((rp) => rp.permiso.codigo));
     setSelectedPermisos(codigos);
     setPermisosDirty(false);
-    // Expand all groups by default
+    // Start all groups collapsed
     const groups = groupPermisosByGrupo(allPermisos);
     const exp: Record<string, boolean> = {};
-    Object.keys(groups).forEach((g) => { exp[g] = true; });
+    Object.keys(groups).forEach((g) => { exp[g] = false; });
     setExpandedGrupos(exp);
   }, [rol, allPermisos]);
 
@@ -108,7 +109,10 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
   const rolColor = rol.color || '#6366F1';
 
   /* ── Permiso toggle ── */
+  const isProtectedPermiso = (codigo: string) => rol!.esProtegido && codigo === 'configuracion:ver';
+
   const togglePermiso = (codigo: string) => {
+    if (isProtectedPermiso(codigo)) return;
     setSelectedPermisos((prev) => {
       const next = new Set(prev);
       if (next.has(codigo)) next.delete(codigo);
@@ -153,6 +157,13 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
   const assignedIds = new Set(rolMenuItems.map((ri) => ri.moduloMenuId));
   const availableMenuItems = allMenuItems.filter((mi) => !assignedIds.has(mi.id));
 
+  // Protección: no permitir quitar menú "configuracion" de rol protegido
+  const isProtectedMenuItem = (moduloMenuId: string) => {
+    if (!rol!.esProtegido) return false;
+    const item = rolMenuItems.find((ri) => ri.moduloMenuId === moduloMenuId);
+    return item?.moduloMenu.codigo === 'configuracion';
+  };
+
   const assignMenuItem = (item: MenuItem) => {
     const newItem: RolMenuItem = {
       rolId: rol.id,
@@ -165,6 +176,7 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
   };
 
   const unassignMenuItem = (moduloMenuId: string) => {
+    if (isProtectedMenuItem(moduloMenuId)) return;
     setRolMenuItems((prev) => prev.filter((ri) => ri.moduloMenuId !== moduloMenuId).map((ri, i) => ({ ...ri, orden: i })));
     setMenuDirty(true);
   };
@@ -215,6 +227,13 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
     return <span>{codigo}</span>;
   };
 
+  const allExpanded = Object.values(expandedGrupos).every(Boolean);
+  const toggleAllGrupos = () => {
+    const next: Record<string, boolean> = {};
+    Object.keys(permisosByGrupo).forEach((g) => { next[g] = !allExpanded; });
+    setExpandedGrupos(next);
+  };
+
   return (
     <div>
       {/* Rol header */}
@@ -234,7 +253,16 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
         <div>
           <div className="mb-3 flex items-center justify-between">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Permisos</h4>
-            {permisosDirty && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleAllGrupos}
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-2 py-1 text-[11px] font-medium text-gray-500 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
+                title={allExpanded ? 'Contraer todos' : 'Expandir todos'}
+              >
+                <ChevronsUpDown className="h-3.5 w-3.5" />
+                {allExpanded ? 'Contraer' : 'Expandir'}
+              </button>
+              {permisosDirty && (
               <button
                 onClick={savePermisos}
                 disabled={savingPermisos}
@@ -243,7 +271,8 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
                 {savingPermisos ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 Guardar permisos
               </button>
-            )}
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -276,22 +305,27 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
                   {isExpanded && (
                     <div className="border-t border-gray-100 px-3 py-2 dark:border-gray-700">
                       <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                        {permisos.map((p) => (
-                          <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        {permisos.map((p) => {
+                          const locked = isProtectedPermiso(p.codigo);
+                          return (
+                          <label key={p.id} className={`flex items-center gap-2 rounded-md px-2 py-1 ${locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700'}`} title={locked ? 'Permiso protegido — no se puede quitar del rol admin' : undefined}>
                             <input
                               type="checkbox"
                               checked={selectedPermisos.has(p.codigo)}
                               onChange={() => togglePermiso(p.codigo)}
-                              className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              disabled={locked}
+                              className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
                             />
                             <div className="min-w-0">
-                              <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
+                              <span className="flex items-center gap-1 text-xs font-medium text-gray-700 dark:text-gray-200">
                                 {renderPermisoCodigo(p.codigo)}
+                                {locked && <Lock className="h-3 w-3 text-amber-500" />}
                               </span>
                               {p.descripcion && <p className="truncate text-[10px] text-gray-400">{p.descripcion}</p>}
                             </div>
                           </label>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -334,6 +368,7 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
                   )}
                   {rolMenuItems.map((ri, idx) => {
                     const Icon = getIcon(ri.moduloMenu.icono);
+                    const locked = isProtectedMenuItem(ri.moduloMenuId);
                     return (
                       <div key={ri.moduloMenuId} className="flex items-center gap-2 rounded-lg bg-white px-2 py-1.5 shadow-sm dark:bg-gray-800">
                         <div className="flex flex-col">
@@ -356,7 +391,9 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
                         <span className="flex-1 truncate text-xs font-medium text-gray-700 dark:text-gray-200">
                           {ri.moduloMenu.titulo}
                         </span>
+                        {locked && <span title="Protegido — no se puede quitar del rol admin"><Lock className="h-3 w-3 shrink-0 text-amber-500" /></span>}
                         <span className="text-[10px] text-gray-400">#{idx + 1}</span>
+                        {!locked && (
                         <button
                           onClick={() => unassignMenuItem(ri.moduloMenuId)}
                           className="rounded p-0.5 text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
@@ -364,6 +401,7 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
                         >
                           <ArrowRight className="h-3.5 w-3.5" />
                         </button>
+                        )}
                       </div>
                     );
                   })}
