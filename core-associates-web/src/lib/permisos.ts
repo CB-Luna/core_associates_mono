@@ -1,65 +1,46 @@
 import { useAuthStore } from '@/stores/auth-store';
 
-type Rol = 'admin' | 'operador' | 'proveedor';
-
-/**
- * Permisos por rol. Cada permiso mapea a qué roles lo tienen.
- */
-export const PERMISOS: Record<string, Rol[]> = {
-  // Navegación
-  'ver:dashboard': ['admin', 'operador', 'proveedor'],
-  'ver:asociados': ['admin', 'operador'],
-  'ver:proveedores': ['admin', 'operador'],
-  'ver:promociones': ['admin', 'operador', 'proveedor'],
-  'ver:cupones': ['admin', 'operador', 'proveedor'],
-  'ver:casos-legales': ['admin', 'operador'],
-  'ver:mapa-sos': ['admin', 'operador'],
-  'ver:reportes': ['admin'],
-  'ver:configuracion': ['admin'],
-
-  // Acciones
-  'editar:asociados': ['admin', 'operador'],
-  'aprobar:asociados': ['admin', 'operador'],
-  'editar:proveedores': ['admin'],
-  'crear:proveedores': ['admin'],
-  'eliminar:proveedores': ['admin'],
-  'editar:promociones': ['admin', 'operador', 'proveedor'],
-  'crear:promociones': ['admin', 'operador', 'proveedor'],
-  'asignar:abogado': ['admin', 'operador'],
-  'cambiar:estado-caso': ['admin', 'operador'],
-  'cambiar:prioridad-caso': ['admin', 'operador'],
-  'ver:notas-privadas': ['admin', 'operador'],
-  'exportar:reportes': ['admin'],
-  'ver:auditoria': ['admin'],
-};
-
-/**
- * Verifica si el usuario actual tiene un permiso específico.
- */
-export function hasPermission(permiso: string): boolean {
-  const user = useAuthStore.getState().user;
-  if (!user) return false;
-  const roles = PERMISOS[permiso];
-  if (!roles) return false;
-  return roles.includes(user.rol);
-}
-
 /**
  * Hook para verificar permisos del usuario actual.
+ * Usa los permisos dinámicos recibidos del backend al hacer login.
+ * Formato de permiso: "modulo:accion" (e.g., "dashboard:ver", "asociados:editar").
  */
 export function usePermisos() {
   const user = useAuthStore((s) => s.user);
+  const permisos = user?.permisos ?? [];
 
   const puede = (permiso: string): boolean => {
     if (!user) return false;
-    const roles = PERMISOS[permiso];
-    if (!roles) return false;
-    return roles.includes(user.rol);
+    // Admin siempre tiene acceso total
+    if (user.rol === 'admin') return true;
+    // Soporta ambos formatos: "accion:modulo" (legacy) y "modulo:accion" (DB)
+    if (permisos.includes(permiso)) return true;
+    const parts = permiso.split(':');
+    if (parts.length === 2) {
+      return permisos.includes(`${parts[1]}:${parts[0]}`);
+    }
+    return false;
   };
 
   const esAdmin = user?.rol === 'admin';
   const esOperador = user?.rol === 'operador';
   const esProveedor = user?.rol === 'proveedor';
 
-  return { puede, esAdmin, esOperador, esProveedor, rol: user?.rol };
+  return { puede, esAdmin, esOperador, esProveedor, rol: user?.rol, permisos };
+}
+
+/**
+ * Verifica permisos fuera de componentes React (acceso directo al store).
+ */
+export function hasPermission(permiso: string): boolean {
+  const user = useAuthStore.getState().user;
+  if (!user) return false;
+  if (user.rol === 'admin') return true;
+  const permisos = user.permisos ?? [];
+  if (permisos.includes(permiso)) return true;
+  const parts = permiso.split(':');
+  if (parts.length === 2) {
+    return permisos.includes(`${parts[1]}:${parts[0]}`);
+  }
+  return false;
 }

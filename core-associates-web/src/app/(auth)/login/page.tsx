@@ -22,6 +22,8 @@ interface LoginResponse {
     email: string;
     nombre: string;
     rol: string;
+    rolId?: string;
+    permisos?: string[];
     proveedorId?: string;
   };
 }

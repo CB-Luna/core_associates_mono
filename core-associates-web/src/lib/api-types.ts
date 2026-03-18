@@ -18,6 +18,8 @@ export interface User {
   email: string;
   nombre: string;
   rol: 'admin' | 'operador' | 'proveedor';
+  rolId?: string;
+  permisos?: string[];
   proveedorId?: string;
   avatarUrl?: string;
   temaId?: string | null;
@@ -337,12 +339,30 @@ export interface UsuarioCRM {
   email: string;
   nombre: string;
   rol: 'admin' | 'operador' | 'proveedor';
+  rolId?: string;
   proveedorId?: string;
   avatarUrl?: string | null;
   temaId?: string | null;
   estado: 'activo' | 'inactivo';
   ultimoAcceso: string | null;
   createdAt: string;
+}
+
+// Roles & Permisos
+export interface Rol {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  esProtegido: boolean;
+  permisos: { permiso: Permiso }[];
+  _count: { usuarios: number };
+}
+
+export interface Permiso {
+  id: string;
+  codigo: string;
+  grupo: string;
+  descripcion: string | null;
 }
 
 // AI Analysis

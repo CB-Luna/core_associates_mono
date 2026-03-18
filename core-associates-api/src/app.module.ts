@@ -23,6 +23,7 @@ import { TemasModule } from './modules/temas/temas.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { HealthModule } from './modules/health/health.module';
 import { AiModule } from './modules/ai/ai.module';
+import { RolesModule } from './modules/roles/roles.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { AiModule } from './modules/ai/ai.module';
     AuditoriaModule,
     HealthModule,
     AiModule,
+    RolesModule,
   ],
   providers: [
     {
