@@ -380,6 +380,7 @@ model Usuario {
   passwordHash  String        @map("password_hash") @db.VarChar(255)
   nombre        String        @db.VarChar(100)
   rol           RolUsuario
+  rolId         String?       @map("rol_id") @db.Uuid
   proveedorId   String?       @map("proveedor_id") @db.Uuid
   avatarUrl     String?       @map("avatar_url") @db.VarChar(255)
   temaId        String?       @map("tema_id") @db.Uuid
@@ -389,6 +390,7 @@ model Usuario {
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
   // Relaciones
+  rolRef               Rol?        @relation(fields: [rolId], references: [id])
   proveedor            Proveedor?  @relation(fields: [proveedorId], references: [id])
   tema                 Tema?       @relation("TemaAsignado", fields: [temaId], references: [id], onDelete: SetNull)
   temasCreados         Tema[]      @relation("TemaCreador")
@@ -485,4 +487,47 @@ model Tema {
   usuarios   Usuario[] @relation("TemaAsignado")
 
   @@map("temas")
+}
+
+// ── RBAC: Roles y Permisos Dinámicos ──
+
+model Rol {
+  id           String       @id @default(uuid()) @db.Uuid
+  nombre       String       @unique @db.VarChar(50)
+  descripcion  String?      @db.VarChar(200)
+  esProtegido  Boolean      @default(false) @map("es_protegido")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  // Relaciones
+  permisos     RolPermiso[]
+  usuarios     Usuario[]
+
+  @@map("roles")
+}
+
+model Permiso {
+  id           String       @id @default(uuid()) @db.Uuid
+  codigo       String       @unique @db.VarChar(100)
+  grupo        String       @db.VarChar(50)
+  descripcion  String?      @db.VarChar(200)
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  // Relaciones
+  roles        RolPermiso[]
+
+  @@index([grupo])
+  @@map("permisos")
+}
+
+model RolPermiso {
+  rolId      String   @map("rol_id") @db.Uuid
+  permisoId  String   @map("permiso_id") @db.Uuid
+
+  // Relaciones
+  rol        Rol      @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso    Permiso  @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@id([rolId, permisoId])
+  @@map("roles_permisos")
 }

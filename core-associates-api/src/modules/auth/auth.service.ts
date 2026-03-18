@@ -107,6 +107,13 @@ export class AuthService {
   ) {
     const usuario = await this.prisma.usuario.findUnique({
       where: { email },
+      include: {
+        rolRef: {
+          include: {
+            permisos: { include: { permiso: { select: { codigo: true } } } },
+          },
+        },
+      },
     });
 
     if (!usuario) {
@@ -127,10 +134,13 @@ export class AuthService {
       data: { ultimoAcceso: new Date() },
     });
 
+    const permisos = usuario.rolRef?.permisos.map((rp) => rp.permiso.codigo) ?? [];
+
     const payload: Record<string, unknown> = {
       sub: usuario.id,
       email: usuario.email,
       rol: usuario.rol,
+      rolId: usuario.rolId,
       tipo: 'usuario',
     };
 
@@ -146,6 +156,8 @@ export class AuthService {
         email: usuario.email,
         nombre: usuario.nombre,
         rol: usuario.rol,
+        rolId: usuario.rolId,
+        permisos,
         ...(usuario.proveedorId && { proveedorId: usuario.proveedorId }),
         ...(usuario.avatarUrl && { avatarUrl: usuario.avatarUrl }),
       },
@@ -178,6 +190,7 @@ export class AuthService {
         email: true,
         nombre: true,
         rol: true,
+        rolId: true,
         estado: true,
         proveedorId: true,
         avatarUrl: true,
@@ -205,12 +218,15 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(data.password, 10);
 
+    const rolRecord = await this.prisma.rol.findUnique({ where: { nombre: data.rol } });
+
     const usuario = await this.prisma.usuario.create({
       data: {
         email: data.email,
         nombre: data.nombre,
         passwordHash,
         rol: data.rol as RolUsuario,
+        ...(rolRecord && { rolId: rolRecord.id }),
         ...(data.proveedorId && { proveedorId: data.proveedorId }),
       },
       select: {
@@ -218,6 +234,7 @@ export class AuthService {
         email: true,
         nombre: true,
         rol: true,
+        rolId: true,
         estado: true,
         avatarUrl: true,
         createdAt: true,
@@ -249,12 +266,18 @@ export class AuthService {
       }
     }
 
+    let rolUpdateData = {};
+    if (data.rol) {
+      const rolRecord = await this.prisma.rol.findUnique({ where: { nombre: data.rol } });
+      rolUpdateData = { rol: data.rol as RolUsuario, ...(rolRecord && { rolId: rolRecord.id }) };
+    }
+
     return this.prisma.usuario.update({
       where: { id },
       data: {
         ...(data.email && { email: data.email }),
         ...(data.nombre && { nombre: data.nombre }),
-        ...(data.rol && { rol: data.rol as RolUsuario }),
+        ...rolUpdateData,
         ...(data.estado && { estado: data.estado as EstadoUsuario }),
       },
       select: {
@@ -262,6 +285,7 @@ export class AuthService {
         email: true,
         nombre: true,
         rol: true,
+        rolId: true,
         estado: true,
         avatarUrl: true,
         createdAt: true,
@@ -342,5 +366,24 @@ export class AuthService {
     if (!codigo) return { codigo: null, ttlSegundos: 0 };
     const ttlSegundos = await this.redis.ttl(key);
     return { codigo, ttlSegundos: ttlSegundos > 0 ? ttlSegundos : 0 };
+  }
+
+  // ── RBAC: Permisos del usuario ──
+
+  async getPermisosByUsuarioId(usuarioId: string): Promise<{ permisos: string[] }> {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        rolRef: {
+          select: {
+            nombre: true,
+            permisos: { select: { permiso: { select: { codigo: true } } } },
+          },
+        },
+      },
+    });
+
+    const permisos = usuario?.rolRef?.permisos.map((rp) => rp.permiso.codigo) ?? [];
+    return { permisos };
   }
 }

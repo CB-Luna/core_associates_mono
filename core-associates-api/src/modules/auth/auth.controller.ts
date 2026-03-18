@@ -86,6 +86,16 @@ export class AuthController {
     return user;
   }
 
+  @Get('mis-permisos')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener permisos del usuario autenticado' })
+  @ApiResponse({ status: 200, description: 'Lista de códigos de permisos' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  getMisPermisos(@CurrentUser() user: any) {
+    return this.authService.getPermisosByUsuarioId(user.id);
+  }
+
   // ── Gestión de Usuarios CRM (solo admin) ──
 
   @Get('users')

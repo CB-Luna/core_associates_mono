@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { SmsService } from '../../common/sms/sms.service';
+import { StorageService } from '../storage/storage.service';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 describe('AuthService', () => {
@@ -16,6 +17,7 @@ describe('AuthService', () => {
   let jwtService: Record<string, any>;
   let configService: Record<string, any>;
   let smsService: Record<string, any>;
+  let storageService: Record<string, any>;
 
   beforeEach(async () => {
     prisma = {
@@ -29,6 +31,9 @@ describe('AuthService', () => {
         findMany: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+      },
+      rol: {
+        findUnique: jest.fn(),
       },
     };
 
@@ -51,6 +56,12 @@ describe('AuthService', () => {
       sendOtp: jest.fn(),
     };
 
+    storageService = {
+      uploadFile: jest.fn(),
+      getFile: jest.fn(),
+      deleteFile: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -59,6 +70,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: jwtService },
         { provide: ConfigService, useValue: configService },
         { provide: SmsService, useValue: smsService },
+        { provide: StorageService, useValue: storageService },
       ],
     }).compile();
 
@@ -147,14 +159,23 @@ describe('AuthService', () => {
         email: 'admin@core.mx',
         nombre: 'Admin',
         rol: 'admin',
+        rolId: 'rol-admin-id',
         passwordHash: hash,
+        rolRef: {
+          permisos: [
+            { permiso: { codigo: 'dashboard:ver' } },
+            { permiso: { codigo: 'asociados:ver' } },
+          ],
+        },
       });
+      prisma.usuario.update.mockResolvedValue({});
 
       const result = await service.loginAdmin('admin@core.mx', 'password123');
       expect(result).toHaveProperty('accessToken');
       expect(result.user).toEqual(
-        expect.objectContaining({ email: 'admin@core.mx', rol: 'admin' }),
+        expect.objectContaining({ email: 'admin@core.mx', rol: 'admin', rolId: 'rol-admin-id' }),
       );
+      expect(result.user.permisos).toEqual(['dashboard:ver', 'asociados:ver']);
     });
 
     it('should throw on non-existent user', async () => {
@@ -169,6 +190,7 @@ describe('AuthService', () => {
         id: 'user-1',
         email: 'admin@core.mx',
         passwordHash: hash,
+        rolRef: null,
       });
 
       await expect(service.loginAdmin('admin@core.mx', 'wrong'))
@@ -179,11 +201,13 @@ describe('AuthService', () => {
   describe('createUser', () => {
     it('should create user with hashed password', async () => {
       prisma.usuario.findUnique.mockResolvedValue(null);
+      prisma.rol.findUnique.mockResolvedValue({ id: 'rol-operador-id', nombre: 'operador' });
       prisma.usuario.create.mockResolvedValue({
         id: 'new-user',
         email: 'op@core.mx',
         nombre: 'Operador',
         rol: 'operador',
+        rolId: 'rol-operador-id',
       });
 
       await service.createUser({

@@ -5,6 +5,11 @@ import * as bcrypt from 'bcrypt';
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
+// IDs fijos de roles (coinciden con la migración RBAC)
+const ROL_ADMIN_ID     = 'a0000000-0000-4000-8000-000000000001';
+const ROL_OPERADOR_ID  = 'a0000000-0000-4000-8000-000000000002';
+const ROL_PROVEEDOR_ID = 'a0000000-0000-4000-8000-000000000003';
+
 async function main() {
   console.log('Seeding database...');
 
@@ -18,6 +23,7 @@ async function main() {
       passwordHash: adminPasswordHash,
       nombre: 'Administrador',
       rol: 'admin',
+      rolId: ROL_ADMIN_ID,
       estado: 'activo',
     },
   });
@@ -33,6 +39,7 @@ async function main() {
       passwordHash: operadorPasswordHash,
       nombre: 'Operador Principal',
       rol: 'operador',
+      rolId: ROL_OPERADOR_ID,
       estado: 'activo',
     },
   });
@@ -67,6 +74,7 @@ async function main() {
       passwordHash: proveedorPasswordHash,
       nombre: 'Carlos Méndez',
       rol: 'proveedor',
+      rolId: ROL_PROVEEDOR_ID,
       proveedorId: proveedor.id,
       estado: 'activo',
     },

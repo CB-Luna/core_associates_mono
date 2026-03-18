@@ -7,6 +7,11 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 const HMAC_SECRET = 'core-associates-secret';
 
+// IDs fijos de roles (coinciden con la migración RBAC)
+const ROL_ADMIN_ID     = 'a0000000-0000-4000-8000-000000000001';
+const ROL_OPERADOR_ID  = 'a0000000-0000-4000-8000-000000000002';
+const ROL_PROVEEDOR_ID = 'a0000000-0000-4000-8000-000000000003';
+
 async function main() {
   console.log('=== SEED DEMO: Poblando datos de demostración ===\n');
 
@@ -18,13 +23,13 @@ async function main() {
   const admin = await prisma.usuario.upsert({
     where: { email: 'admin@coreassociates.com' },
     update: {},
-    create: { email: 'admin@coreassociates.com', passwordHash: adminHash, nombre: 'Administrador', rol: 'admin', estado: 'activo' },
+    create: { email: 'admin@coreassociates.com', passwordHash: adminHash, nombre: 'Administrador', rol: 'admin', rolId: ROL_ADMIN_ID, estado: 'activo' },
   });
 
   const operador = await prisma.usuario.upsert({
     where: { email: 'operador@coreassociates.com' },
     update: {},
-    create: { email: 'operador@coreassociates.com', passwordHash: operadorHash, nombre: 'Operador Principal', rol: 'operador', estado: 'activo' },
+    create: { email: 'operador@coreassociates.com', passwordHash: operadorHash, nombre: 'Operador Principal', rol: 'operador', rolId: ROL_OPERADOR_ID, estado: 'activo' },
   });
 
   console.log('\u2713 Usuarios admin y operador creados');
@@ -62,6 +67,7 @@ async function main() {
         passwordHash: proveedorHash,
         nombre: prov.contactoNombre,
         rol: 'proveedor',
+        rolId: ROL_PROVEEDOR_ID,
         proveedorId: prov.id,
         estado: 'activo',
       },
