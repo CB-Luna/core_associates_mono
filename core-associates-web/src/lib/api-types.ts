@@ -357,6 +357,7 @@ export interface Rol {
   color: string | null;
   esProtegido: boolean;
   esPorDefecto: boolean;
+  temaIdPorDefecto: string | null;
   permisos: { permiso: Permiso }[];
   _count: { usuarios: number };
 }

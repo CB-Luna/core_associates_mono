@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MinLength, ValidateIf } from 'class-validator';
 
 export class CreateUsuarioDto {
   @ApiProperty({ example: 'operador@core.mx' })
@@ -17,9 +17,15 @@ export class CreateUsuarioDto {
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, { message: 'La contraseña debe incluir mayúscula, minúscula y número' })
   password!: string;
 
-  @ApiPropertyOptional({ enum: ['admin', 'operador', 'proveedor'], default: 'operador' })
+  @ApiPropertyOptional({ enum: ['admin', 'operador', 'proveedor'], default: 'operador', description: 'Rol legacy (ignorado si se envía rolId)' })
+  @ValidateIf((o) => !o.rolId)
   @IsEnum(['admin', 'operador', 'proveedor'])
   rol: string = 'operador';
+
+  @ApiPropertyOptional({ description: 'UUID del rol a asignar (preferido sobre campo rol)' })
+  @IsOptional()
+  @IsUUID()
+  rolId?: string;
 
   @ApiPropertyOptional({ description: 'ID del proveedor a vincular (requerido si rol=proveedor)' })
   @IsOptional()

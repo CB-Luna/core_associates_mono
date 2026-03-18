@@ -27,7 +27,7 @@ export class RolesService {
     return rol;
   }
 
-  async create(data: { nombre: string; descripcion?: string; icono?: string; color?: string; esPorDefecto?: boolean }) {
+  async create(data: { nombre: string; descripcion?: string; icono?: string; color?: string; esPorDefecto?: boolean; temaIdPorDefecto?: string }) {
     const existing = await this.prisma.rol.findUnique({ where: { nombre: data.nombre } });
     if (existing) throw new ConflictException('Ya existe un rol con ese nombre');
 
@@ -39,6 +39,7 @@ export class RolesService {
         color: data.color,
         esPorDefecto: data.esPorDefecto ?? false,
         esProtegido: false,
+        ...(data.temaIdPorDefecto && { temaIdPorDefecto: data.temaIdPorDefecto }),
       },
       include: {
         permisos: { include: { permiso: true } },
@@ -47,7 +48,7 @@ export class RolesService {
     });
   }
 
-  async update(id: string, data: { nombre?: string; descripcion?: string; icono?: string; color?: string; esPorDefecto?: boolean }) {
+  async update(id: string, data: { nombre?: string; descripcion?: string; icono?: string; color?: string; esPorDefecto?: boolean; temaIdPorDefecto?: string | null }) {
     const rol = await this.prisma.rol.findUnique({ where: { id } });
     if (!rol) throw new NotFoundException('Rol no encontrado');
 
@@ -67,6 +68,7 @@ export class RolesService {
         ...(data.icono !== undefined && { icono: data.icono }),
         ...(data.color !== undefined && { color: data.color }),
         ...(data.esPorDefecto !== undefined && { esPorDefecto: data.esPorDefecto }),
+        ...(data.temaIdPorDefecto !== undefined && { temaIdPorDefecto: data.temaIdPorDefecto }),
       },
       include: {
         permisos: { include: { permiso: true } },

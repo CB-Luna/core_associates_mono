@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, MinLength, IsOptional, IsBoolean, Matches } from 'class-validator';
+import { IsString, MinLength, IsOptional, IsBoolean, IsUUID, Matches } from 'class-validator';
 
 export class CreateRolDto {
   @ApiProperty({ example: 'supervisor' })
@@ -27,4 +27,9 @@ export class CreateRolDto {
   @IsOptional()
   @IsBoolean()
   esPorDefecto?: boolean;
+
+  @ApiPropertyOptional({ description: 'UUID del tema de color por defecto para usuarios con este rol' })
+  @IsOptional()
+  @IsUUID()
+  temaIdPorDefecto?: string;
 }

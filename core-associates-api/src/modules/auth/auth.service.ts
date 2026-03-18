@@ -207,6 +207,7 @@ export class AuthService {
     nombre: string;
     password: string;
     rol: string;
+    rolId?: string;
     proveedorId?: string;
   }) {
     const existing = await this.prisma.usuario.findUnique({
@@ -218,15 +219,29 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(data.password, 10);
 
-    const rolRecord = await this.prisma.rol.findUnique({ where: { nombre: data.rol } });
+    // Resolver rol: si viene rolId, buscar por ID; si no, buscar por nombre
+    let rolRecord: { id: string; nombre: string; temaIdPorDefecto: string | null } | null = null;
+    if (data.rolId) {
+      rolRecord = await this.prisma.rol.findUnique({ where: { id: data.rolId } });
+      if (!rolRecord) throw new NotFoundException('Rol no encontrado');
+    } else {
+      rolRecord = await this.prisma.rol.findUnique({ where: { nombre: data.rol } });
+    }
+
+    // Determinar el valor del enum RolUsuario (campo legacy)
+    const validEnumValues = ['admin', 'operador', 'proveedor'];
+    const rolEnum = rolRecord && validEnumValues.includes(rolRecord.nombre)
+      ? rolRecord.nombre
+      : (validEnumValues.includes(data.rol) ? data.rol : 'operador');
 
     const usuario = await this.prisma.usuario.create({
       data: {
         email: data.email,
         nombre: data.nombre,
         passwordHash,
-        rol: data.rol as RolUsuario,
+        rol: rolEnum as RolUsuario,
         ...(rolRecord && { rolId: rolRecord.id }),
+        ...(rolRecord?.temaIdPorDefecto && { temaId: rolRecord.temaIdPorDefecto }),
         ...(data.proveedorId && { proveedorId: data.proveedorId }),
       },
       select: {
@@ -248,6 +263,7 @@ export class AuthService {
     email?: string;
     nombre?: string;
     rol?: string;
+    rolId?: string;
     estado?: string;
   }) {
     const usuario = await this.prisma.usuario.findUnique({ where: { id } });
@@ -258,7 +274,7 @@ export class AuthService {
       if (data.email && data.email !== usuario.email) {
         throw new BadRequestException('No se puede cambiar el email del super-administrador');
       }
-      if (data.rol && data.rol !== usuario.rol) {
+      if ((data.rol && data.rol !== usuario.rol) || data.rolId) {
         throw new BadRequestException('No se puede cambiar el rol del super-administrador');
       }
       if (data.estado && data.estado !== usuario.estado) {
@@ -266,8 +282,14 @@ export class AuthService {
       }
     }
 
-    let rolUpdateData = {};
-    if (data.rol) {
+    let rolUpdateData: Record<string, unknown> = {};
+    if (data.rolId) {
+      const rolRecord = await this.prisma.rol.findUnique({ where: { id: data.rolId } });
+      if (!rolRecord) throw new NotFoundException('Rol no encontrado');
+      const validEnumValues = ['admin', 'operador', 'proveedor'];
+      const rolEnum = validEnumValues.includes(rolRecord.nombre) ? rolRecord.nombre : 'operador';
+      rolUpdateData = { rol: rolEnum as RolUsuario, rolId: rolRecord.id };
+    } else if (data.rol) {
       const rolRecord = await this.prisma.rol.findUnique({ where: { nombre: data.rol } });
       rolUpdateData = { rol: data.rol as RolUsuario, ...(rolRecord && { rolId: rolRecord.id }) };
     }

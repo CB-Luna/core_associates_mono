@@ -8,6 +8,7 @@ import { Loader2, Layers, ShieldCheck, Users as UsersIcon } from 'lucide-react';
 import { PlantillasPanel } from './PlantillasPanel';
 import { PermisosMenuPanel } from './PermisosMenuPanel';
 import { AsignacionesPanel } from './AsignacionesPanel';
+import { useAuthStore } from '@/stores/auth-store';
 
 type SubTab = 'plantillas' | 'permisos-menu' | 'asignaciones';
 
@@ -19,6 +20,10 @@ const SUB_TABS: { key: SubTab; label: string; icon: typeof Layers }[] = [
 
 export function RolesAdminTab() {
   const { toast } = useToast();
+  const permisos = useAuthStore((s) => s.user?.permisos ?? []);
+  const hasGranular = permisos.some((p) => p.startsWith('configuracion:roles:'));
+  const canCreateRol = !hasGranular || permisos.includes('configuracion:roles:crear');
+  const canEditRol = !hasGranular || permisos.includes('configuracion:roles:editar');
   const [activeTab, setActiveTab] = useState<SubTab>('plantillas');
   const [roles, setRoles] = useState<Rol[]>([]);
   const [allPermisos, setAllPermisos] = useState<Permiso[]>([]);
@@ -106,6 +111,8 @@ export function RolesAdminTab() {
           selectedRolId={selectedRolId}
           onSelectRol={handleSelectRol}
           onRefresh={fetchData}
+          canCreate={canCreateRol}
+          canEdit={canEditRol}
         />
       )}
       {activeTab === 'permisos-menu' && (

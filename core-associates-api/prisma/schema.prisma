@@ -488,6 +488,7 @@ model Tema {
   // Relaciones
   creador    Usuario  @relation("TemaCreador", fields: [creadoPor], references: [id])
   usuarios   Usuario[] @relation("TemaAsignado")
+  rolesDefecto Rol[]  @relation("TemaRolDefecto")
 
   @@map("temas")
 }
@@ -495,20 +496,22 @@ model Tema {
 // ── RBAC: Roles y Permisos Dinámicos ──
 
 model Rol {
-  id            String       @id @default(uuid()) @db.Uuid
-  nombre        String       @unique @db.VarChar(50)
-  descripcion   String?      @db.VarChar(200)
-  icono         String?      @db.VarChar(50)   // Nombre de ícono Lucide
-  color         String?      @db.VarChar(20)   // Color hex: #3B82F6
-  esProtegido   Boolean      @default(false) @map("es_protegido")
-  esPorDefecto  Boolean      @default(false) @map("es_por_defecto") // Rol asignado automáticamente a nuevos usuarios
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
+  id                String       @id @default(uuid()) @db.Uuid
+  nombre            String       @unique @db.VarChar(50)
+  descripcion       String?      @db.VarChar(200)
+  icono             String?      @db.VarChar(50)   // Nombre de ícono Lucide
+  color             String?      @db.VarChar(20)   // Color hex: #3B82F6
+  esProtegido       Boolean      @default(false) @map("es_protegido")
+  esPorDefecto      Boolean      @default(false) @map("es_por_defecto") // Rol asignado automáticamente a nuevos usuarios
+  temaIdPorDefecto  String?      @map("tema_id_por_defecto") @db.Uuid
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
 
   // Relaciones
-  permisos      RolPermiso[]
-  menuItems     RolModuloMenu[]
-  usuarios      Usuario[]
+  temaPorDefecto Tema?        @relation("TemaRolDefecto", fields: [temaIdPorDefecto], references: [id], onDelete: SetNull)
+  permisos       RolPermiso[]
+  menuItems      RolModuloMenu[]
+  usuarios       Usuario[]
 
   @@map("roles")
 }

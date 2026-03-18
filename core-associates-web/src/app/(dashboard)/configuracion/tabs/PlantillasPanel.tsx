@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useToast } from '@/components/ui/Toast';
-import { type Rol } from '@/lib/api-types';
+import { type Rol, type Tema } from '@/lib/api-types';
 import { iconMap, iconNames, getIcon } from '@/lib/icon-map';
 import {
-  Plus, Pencil, Trash2, Lock, Loader2, X, Save, Star, Users as UsersIcon,
+  Plus, Pencil, Trash2, Lock, Loader2, X, Save, Star, Users as UsersIcon, Palette,
 } from 'lucide-react';
 
 /* ── Paleta de colores predefinidos ── */
@@ -21,11 +21,18 @@ interface PlantillasPanelProps {
   selectedRolId: string | null;
   onSelectRol: (id: string) => void;
   onRefresh: () => void;
+  canCreate?: boolean;
+  canEdit?: boolean;
 }
 
-export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh }: PlantillasPanelProps) {
+export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh, canCreate = true, canEdit = true }: PlantillasPanelProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [temas, setTemas] = useState<Tema[]>([]);
+
+  useEffect(() => {
+    apiClient<Tema[]>('/temas').then(setTemas).catch(() => {});
+  }, []);
 
   /* ── Crear rol ── */
   const [showCreate, setShowCreate] = useState(false);
@@ -33,6 +40,7 @@ export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh }
   const [newDesc, setNewDesc] = useState('');
   const [newIcono, setNewIcono] = useState('ShieldCheck');
   const [newColor, setNewColor] = useState('#3B82F6');
+  const [newTemaId, setNewTemaId] = useState('');
 
   /* ── Editar rol ── */
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -40,6 +48,7 @@ export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh }
   const [editDesc, setEditDesc] = useState('');
   const [editIcono, setEditIcono] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [editTemaId, setEditTemaId] = useState('');
 
   /* ── Icon picker ── */
   const [iconPickerFor, setIconPickerFor] = useState<'create' | 'edit' | null>(null);
@@ -60,6 +69,7 @@ export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh }
           descripcion: newDesc.trim() || undefined,
           icono: newIcono,
           color: newColor,
+          temaIdPorDefecto: newTemaId || undefined,
         }),
       });
       toast('success', 'Rol', 'Rol creado correctamente');
@@ -68,6 +78,7 @@ export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh }
       setNewDesc('');
       setNewIcono('ShieldCheck');
       setNewColor('#3B82F6');
+      setNewTemaId('');
       onRefresh();
     } catch (err: any) {
       toast('error', 'Error', err.message || 'No se pudo crear el rol');
@@ -82,6 +93,7 @@ export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh }
     setEditDesc(rol.descripcion || '');
     setEditIcono(rol.icono || 'ShieldCheck');
     setEditColor(rol.color || '#6366F1');
+    setEditTemaId(rol.temaIdPorDefecto || '');
   };
 
   const handleUpdate = async () => {
@@ -95,6 +107,7 @@ export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh }
           descripcion: editDesc.trim() || undefined,
           icono: editIcono,
           color: editColor,
+          temaIdPorDefecto: editTemaId || null,
         }),
       });
       toast('success', 'Rol', 'Rol actualizado');
@@ -197,12 +210,14 @@ export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh }
             {roles.length} rol{roles.length !== 1 ? 'es' : ''} definido{roles.length !== 1 ? 's' : ''}. Selecciona uno para gestionar permisos y menú.
           </p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-primary-700"
-        >
-          <Plus className="h-3.5 w-3.5" /> Nuevo Rol
-        </button>
+        {canCreate && (
+          <button
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-primary-700"
+          >
+            <Plus className="h-3.5 w-3.5" /> Nuevo Rol
+          </button>
+        )}
       </div>
 
       {/* Crear rol inline */}
@@ -238,11 +253,27 @@ export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh }
               {renderColorPicker(newColor, setNewColor)}
             </div>
           </div>
+          <div className="mt-3">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+              <Palette className="h-3.5 w-3.5" /> Tema por defecto
+            </label>
+            <select
+              value={newTemaId}
+              onChange={(e) => setNewTemaId(e.target.value)}
+              className="mt-1 w-full max-w-xs rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="">Sin tema por defecto</option>
+              {temas.map((t) => (
+                <option key={t.id} value={t.id}>{t.nombre}</option>
+              ))}
+            </select>
+            <p className="mt-0.5 text-[11px] text-gray-400">Los usuarios con este rol tendrán este tema asignado automáticamente.</p>
+          </div>
           <div className="mt-3 flex gap-2">
             <button onClick={handleCreate} disabled={saving || !newNombre.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-50">
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />} Crear
             </button>
-            <button onClick={() => { setShowCreate(false); setNewNombre(''); setNewDesc(''); }} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">
+            <button onClick={() => { setShowCreate(false); setNewNombre(''); setNewDesc(''); setNewTemaId(''); }} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300">
               Cancelar
             </button>
           </div>
@@ -282,6 +313,21 @@ export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh }
               <span className="text-xs text-gray-500">Color:</span>
               {renderColorPicker(editColor, setEditColor)}
             </div>
+          </div>
+          <div className="mt-3">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+              <Palette className="h-3.5 w-3.5" /> Tema por defecto
+            </label>
+            <select
+              value={editTemaId}
+              onChange={(e) => setEditTemaId(e.target.value)}
+              className="mt-1 w-full max-w-xs rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            >
+              <option value="">Sin tema por defecto</option>
+              {temas.map((t) => (
+                <option key={t.id} value={t.id}>{t.nombre}</option>
+              ))}
+            </select>
           </div>
           <div className="mt-3 flex gap-2">
             <button onClick={handleUpdate} disabled={saving || !editNombre.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-50">
@@ -343,26 +389,28 @@ export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh }
               </div>
 
               {/* Actions */}
-              <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                <span
-                  onClick={(e) => { e.stopPropagation(); startEdit(rol); }}
-                  className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  title="Editar"
-                  role="button"
-                >
-                  <Pencil className="h-3.5 w-3.5 text-gray-500" />
-                </span>
-                {!rol.esProtegido && (
+              {canEdit && (
+                <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <span
-                    onClick={(e) => { e.stopPropagation(); handleDelete(rol); }}
-                    className="rounded-lg p-1 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    title="Eliminar"
+                    onClick={(e) => { e.stopPropagation(); startEdit(rol); }}
+                    className="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    title="Editar"
                     role="button"
                   >
-                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    <Pencil className="h-3.5 w-3.5 text-gray-500" />
                   </span>
-                )}
-              </div>
+                  {!rol.esProtegido && (
+                    <span
+                      onClick={(e) => { e.stopPropagation(); handleDelete(rol); }}
+                      className="rounded-lg p-1 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      title="Eliminar"
+                      role="button"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Selection indicator */}
               {isSelected && (

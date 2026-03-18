@@ -128,6 +128,7 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
     setSelectedPermisos((prev) => {
       const next = new Set(prev);
       for (const p of perms) {
+        if (isProtectedPermiso(p.codigo)) continue; // nunca quitar permisos protegidos
         if (allChecked) next.delete(p.codigo);
         else next.add(p.codigo);
       }

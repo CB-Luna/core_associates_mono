@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 
 export class UpdateUsuarioDto {
   @ApiPropertyOptional({ example: 'nuevo@core.mx' })
@@ -16,6 +16,11 @@ export class UpdateUsuarioDto {
   @IsOptional()
   @IsEnum(['admin', 'operador', 'proveedor'])
   rol?: string;
+
+  @ApiPropertyOptional({ description: 'UUID del rol a asignar (preferido sobre campo rol)' })
+  @IsOptional()
+  @IsUUID()
+  rolId?: string;
 
   @ApiPropertyOptional({ enum: ['activo', 'inactivo'] })
   @IsOptional()

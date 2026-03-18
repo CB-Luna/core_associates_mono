@@ -10,10 +10,11 @@ import { useToast } from '@/components/ui/Toast';
 import { type ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
-import { type UsuarioCRM, type Proveedor } from '@/lib/api-types';
+import { type UsuarioCRM, type Proveedor, type Rol } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
 import { Pencil, KeyRound, Power, Camera, Trash2, Palette, Lock, Check, Globe } from 'lucide-react';
 import { type Tema } from '@/lib/api-types';
+import { useAuthStore } from '@/stores/auth-store';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
 const PROTECTED_EMAILS = ['admin@coreassociates.com'];
@@ -23,20 +24,17 @@ const createUserSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(8, 'Mínimo 8 caracteres').regex(passwordRegex, 'Debe incluir mayúscula, minúscula y número'),
   confirmPassword: z.string().min(1, 'Confirma la contraseña'),
-  rol: z.enum(['operador', 'admin', 'proveedor']),
+  rolId: z.string().min(1, 'Selecciona un rol'),
   proveedorId: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Las contraseñas no coinciden',
   path: ['confirmPassword'],
-}).refine((data) => data.rol !== 'proveedor' || !!data.proveedorId, {
-  message: 'Selecciona un proveedor',
-  path: ['proveedorId'],
 });
 
 const editUserSchema = z.object({
   nombre: z.string().min(2, 'Mínimo 2 caracteres'),
   email: z.string().email('Email inválido'),
-  rol: z.enum(['operador', 'admin', 'proveedor']),
+  rolId: z.string().min(1, 'Selecciona un rol'),
 });
 
 const resetPasswordSchema = z.object({
@@ -76,6 +74,12 @@ function UserAvatarCell({ user }: { user: UsuarioCRM }) {
 
 export function UsuariosTab() {
   const { toast } = useToast();
+  const permisos = useAuthStore((s) => s.user?.permisos ?? []);
+  const hasGranular = permisos.some((p) => p.startsWith('configuracion:usuarios:'));
+  const canCreate = !hasGranular || permisos.includes('configuracion:usuarios:crear');
+  const canEdit = !hasGranular || permisos.includes('configuracion:usuarios:editar');
+  const canReset = !hasGranular || permisos.includes('configuracion:usuarios:resetear');
+  const canToggleEstado = !hasGranular || permisos.includes('configuracion:usuarios:estado');
   const [users, setUsers] = useState<UsuarioCRM[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -92,6 +96,7 @@ export function UsuariosTab() {
   const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
   const [temas, setTemas] = useState<Tema[]>([]);
   const [temaUserId, setTemaUserId] = useState<string | null>(null);
+  const [roles, setRoles] = useState<Rol[]>([]);
 
   const handleAvatarUpload = async (userId: string, file: File) => {
     setUploadingAvatar(true);
@@ -120,12 +125,12 @@ export function UsuariosTab() {
 
   const createForm = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: { nombre: '', email: '', password: '', confirmPassword: '', rol: 'operador', proveedorId: '' },
+    defaultValues: { nombre: '', email: '', password: '', confirmPassword: '', rolId: '', proveedorId: '' },
   });
 
   const editForm = useForm<EditUserData>({
     resolver: zodResolver(editUserSchema),
-    defaultValues: { nombre: '', email: '', rol: 'operador' },
+    defaultValues: { nombre: '', email: '', rolId: '' },
   });
 
   const resetForm = useForm<ResetPasswordInput>({
@@ -153,6 +158,9 @@ export function UsuariosTab() {
     apiClient<Tema[]>('/temas')
       .then((res) => setTemas(res))
       .catch(() => {});
+    apiClient<Rol[]>('/roles')
+      .then((res) => setRoles(res))
+      .catch(() => {});
   }, [fetchUsers]);
 
   const handleAssignTema = async (userId: string, temaId: string | null) => {
@@ -173,8 +181,10 @@ export function UsuariosTab() {
     setSaving(true);
     try {
       const { confirmPassword: _, proveedorId, ...rest } = data;
+      const selectedRol = roles.find(r => r.id === data.rolId);
       const payload: Record<string, unknown> = { ...rest };
-      if (data.rol === 'proveedor' && proveedorId) {
+      // Si el rol es proveedor, vincular proveedorId
+      if (selectedRol?.nombre === 'proveedor' && proveedorId) {
         payload.proveedorId = proveedorId;
       }
       const newUser = await apiClient<{ id: string }>('/auth/register-admin', {
@@ -202,9 +212,10 @@ export function UsuariosTab() {
     if (!editingUser) return;
     setSaving(true);
     try {
+      const { rolId, ...rest } = data;
       await apiClient(`/auth/users/${editingUser.id}`, {
         method: 'PUT',
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...rest, rolId }),
       });
       if (editAvatarFile) {
         const formData = new FormData();
@@ -260,7 +271,7 @@ export function UsuariosTab() {
 
   const openEdit = (user: UsuarioCRM) => {
     setEditingUser(user);
-    editForm.reset({ email: user.email, nombre: user.nombre, rol: user.rol as 'operador' | 'admin' });
+    editForm.reset({ email: user.email, nombre: user.nombre, rolId: user.rolId || '' });
     setEditAvatarFile(null);
     setEditAvatarPreview(null);
     setShowForm(false);
@@ -279,11 +290,14 @@ export function UsuariosTab() {
     {
       accessorKey: 'rol',
       header: 'Rol',
-      cell: ({ getValue }) => {
-        const rol = getValue() as string;
+      cell: ({ row }) => {
+        const user = row.original;
+        const rolRecord = roles.find(r => r.id === user.rolId);
+        const displayName = rolRecord ? rolRecord.nombre.charAt(0).toUpperCase() + rolRecord.nombre.slice(1) : user.rol;
+        const variant = user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : 'default';
         return (
-          <Badge variant={rol === 'admin' ? 'danger' : rol === 'operador' ? 'info' : 'default'}>
-            {rol}
+          <Badge variant={variant}>
+            {displayName}
           </Badge>
         );
       },
@@ -353,25 +367,29 @@ export function UsuariosTab() {
         const isProtected = PROTECTED_EMAILS.includes(user.email);
         return (
           <div className="flex gap-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); openEdit(user); }}
-              className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-600"
-              title="Editar"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setResetUserId(user.id); setEditingUser(null); setShowForm(false); }}
-              className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-orange-600"
-              title="Resetear contraseña"
-            >
-              <KeyRound className="h-4 w-4" />
-            </button>
+            {canEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); openEdit(user); }}
+                className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-600"
+                title="Editar"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
+            {canReset && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setResetUserId(user.id); setEditingUser(null); setShowForm(false); }}
+                className="rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-orange-600"
+                title="Resetear contraseña"
+              >
+                <KeyRound className="h-4 w-4" />
+              </button>
+            )}
             {isProtected ? (
               <span className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs text-amber-600" title="Super-admin protegido">
                 <Lock className="h-3.5 w-3.5" />
               </span>
-            ) : (
+            ) : canToggleEstado ? (
               <button
                 onClick={(e) => { e.stopPropagation(); handleToggleEstado(user); }}
                 className={`rounded p-1.5 hover:bg-gray-100 ${user.estado === 'activo' ? 'text-green-500 hover:text-red-600' : 'text-gray-400 hover:text-green-600'}`}
@@ -379,7 +397,7 @@ export function UsuariosTab() {
               >
                 <Power className="h-4 w-4" />
               </button>
-            )}
+            ) : null}
             <div className="relative">
               <button
                 onClick={(e) => { e.stopPropagation(); setTemaUserId(temaUserId === user.id ? null : user.id); }}
@@ -454,12 +472,14 @@ export function UsuariosTab() {
     <div>
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">Usuarios del sistema</h3>
-        <button
-          onClick={() => { setShowForm(!showForm); setEditingUser(null); setResetUserId(null); if (showForm) { setCreateAvatarFile(null); setCreateAvatarPreview(null); } }}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          {showForm ? 'Cancelar' : 'Nuevo Usuario'}
-        </button>
+        {canCreate && (
+          <button
+            onClick={() => { setShowForm(!showForm); setEditingUser(null); setResetUserId(null); if (showForm) { setCreateAvatarFile(null); setCreateAvatarPreview(null); } }}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            {showForm ? 'Cancelar' : 'Nuevo Usuario'}
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -532,13 +552,15 @@ export function UsuariosTab() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Rol</label>
-              <select {...createForm.register('rol')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                <option value="operador">Operador</option>
-                <option value="admin">Administrador</option>
-                <option value="proveedor">Proveedor</option>
+              <select {...createForm.register('rolId')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <option value="">Seleccionar rol...</option>
+                {roles.map((r) => (
+                  <option key={r.id} value={r.id}>{r.nombre.charAt(0).toUpperCase() + r.nombre.slice(1)}</option>
+                ))}
               </select>
+              {createForm.formState.errors.rolId && <p className="mt-1 text-xs text-red-600">{createForm.formState.errors.rolId.message}</p>}
             </div>
-            {createForm.watch('rol') === 'proveedor' && (
+            {roles.find(r => r.id === createForm.watch('rolId'))?.nombre === 'proveedor' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Proveedor a vincular *</label>
                 <select {...createForm.register('proveedorId')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
@@ -636,10 +658,11 @@ export function UsuariosTab() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Rol</label>
-              <select {...editForm.register('rol')} disabled={PROTECTED_EMAILS.includes(editingUser.email)} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500">
-                <option value="operador">Operador</option>
-                <option value="admin">Administrador</option>
-                <option value="proveedor">Proveedor</option>
+              <select {...editForm.register('rolId')} disabled={PROTECTED_EMAILS.includes(editingUser.email)} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500">
+                <option value="">Seleccionar rol...</option>
+                {roles.map((r) => (
+                  <option key={r.id} value={r.id}>{r.nombre.charAt(0).toUpperCase() + r.nombre.slice(1)}</option>
+                ))}
               </select>
             </div>
           </div>
