@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { apiClient } from '@/lib/api-client';
 import { useToast } from '@/components/ui/Toast';
 import { type Rol, type UsuarioCRM } from '@/lib/api-types';
 import { getIcon } from '@/lib/icon-map';
@@ -32,9 +32,9 @@ export function AsignacionesPanel({ rol, onRefresh }: AsignacionesPanelProps) {
     setLoading(true);
     try {
       // Get all usuarios and filter by rolId
-      const res = await apiClient<PaginatedResponse<UsuarioCRM>>('/usuarios?limit=200');
-      setAllUsuarios(res.data);
-      setUsuarios(res.data.filter((u) => u.rolId === rol.id));
+      const res = await apiClient<UsuarioCRM[]>('/auth/users');
+      setAllUsuarios(res);
+      setUsuarios(res.filter((u) => u.rolId === rol.id));
     } catch {
       toast('error', 'Error', 'No se pudieron cargar los usuarios');
     } finally {
