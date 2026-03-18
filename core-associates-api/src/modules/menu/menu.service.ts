@@ -14,14 +14,35 @@ const PROTECTED_CODES = ['configuracion'];
 export class MenuService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getMenuTree(userRol: string) {
-    const items = await this.prisma.moduloMenu.findMany({
-      where: {
-        visible: true,
-        permisos: { has: userRol },
-      },
-      orderBy: { orden: 'asc' },
-    });
+  async getMenuTree(userRol: string, rolId?: string) {
+    let items: any[];
+
+    if (rolId) {
+      // Nuevo sistema: buscar items via RolModuloMenu
+      const rolMenuItems = await this.prisma.rolModuloMenu.findMany({
+        where: { rolId },
+        include: { moduloMenu: true },
+        orderBy: { orden: 'asc' },
+      });
+
+      if (rolMenuItems.length > 0) {
+        items = rolMenuItems
+          .filter((rm) => rm.moduloMenu.visible)
+          .map((rm) => ({ ...rm.moduloMenu, orden: rm.orden }));
+      } else {
+        // Fallback: si el rol no tiene items asignados aún, usar el sistema legacy
+        items = await this.prisma.moduloMenu.findMany({
+          where: { visible: true, permisos: { has: userRol } },
+          orderBy: { orden: 'asc' },
+        });
+      }
+    } else {
+      // Sistema legacy: filtrar por array de strings
+      items = await this.prisma.moduloMenu.findMany({
+        where: { visible: true, permisos: { has: userRol } },
+        orderBy: { orden: 'asc' },
+      });
+    }
 
     // Build hierarchical tree
     const map = new Map<string, any>();

@@ -342,9 +342,10 @@ async function main() {
     { codigo: 'promociones', titulo: 'Promociones', ruta: '/promociones', icono: 'Tag', permisos: ['admin', 'operador', 'proveedor'], orden: 4 },
     { codigo: 'cupones', titulo: 'Cupones', ruta: '/cupones', icono: 'Ticket', permisos: ['admin', 'operador', 'proveedor'], orden: 5 },
     { codigo: 'casos-legales', titulo: 'Casos Legales', ruta: '/casos-legales', icono: 'Scale', permisos: ['admin', 'operador'], orden: 6 },
-    { codigo: 'mapa-sos', titulo: 'Mapa SOS', ruta: '/mapa-sos', icono: 'MapPinned', permisos: ['admin', 'operador'], orden: 7 },
-    { codigo: 'reportes', titulo: 'Reportes', ruta: '/reportes', icono: 'BarChart3', permisos: ['admin'], orden: 8 },
-    { codigo: 'configuracion', titulo: 'Configuraci\u00f3n', ruta: '/configuracion', icono: 'Settings', permisos: ['admin'], orden: 9 },
+    { codigo: 'documentos', titulo: 'Documentos', ruta: '/documentos', icono: 'FileText', permisos: ['admin', 'operador'], orden: 7 },
+    { codigo: 'mapa-sos', titulo: 'Mapa SOS', ruta: '/mapa-sos', icono: 'MapPinned', permisos: ['admin', 'operador'], orden: 8 },
+    { codigo: 'reportes', titulo: 'Reportes', ruta: '/reportes', icono: 'BarChart3', permisos: ['admin'], orden: 9 },
+    { codigo: 'configuracion', titulo: 'Configuración', ruta: '/configuracion', icono: 'Settings', permisos: ['admin'], orden: 10 },
   ];
 
   for (const item of menuItems) {
@@ -355,7 +356,36 @@ async function main() {
     });
   }
   console.log(`\u2713 ${menuItems.length} items de men\u00fa creados/actualizados`);
+  // ── ACTUALIZAR ROLES CON ICONO Y COLOR ──
+  await prisma.rol.update({ where: { id: ROL_ADMIN_ID }, data: { icono: 'ShieldCheck', color: '#EF4444' } });
+  await prisma.rol.update({ where: { id: ROL_OPERADOR_ID }, data: { icono: 'Headset', color: '#3B82F6' } });
+  await prisma.rol.update({ where: { id: ROL_PROVEEDOR_ID }, data: { icono: 'Building2', color: '#10B981' } });
+  console.log('✓ Roles actualizados con icono y color');
 
+  // ── ROLES ↔ MODULOS DE MENÚ (RolModuloMenu) ──
+  const allMenuItems = await prisma.moduloMenu.findMany();
+  const menuByCodigo = new Map(allMenuItems.map(m => [m.codigo, m.id]));
+
+  const rolMenuAssignments: { rolId: string; codigos: string[] }[] = [
+    { rolId: ROL_ADMIN_ID, codigos: ['dashboard', 'asociados', 'proveedores', 'promociones', 'cupones', 'casos-legales', 'documentos', 'mapa-sos', 'reportes', 'configuracion'] },
+    { rolId: ROL_OPERADOR_ID, codigos: ['dashboard', 'asociados', 'proveedores', 'promociones', 'cupones', 'casos-legales', 'documentos', 'mapa-sos'] },
+    { rolId: ROL_PROVEEDOR_ID, codigos: ['dashboard', 'promociones', 'cupones'] },
+  ];
+
+  for (const assignment of rolMenuAssignments) {
+    // Limpiar asignaciones previas
+    await prisma.rolModuloMenu.deleteMany({ where: { rolId: assignment.rolId } });
+    // Crear nuevas
+    for (let i = 0; i < assignment.codigos.length; i++) {
+      const menuId = menuByCodigo.get(assignment.codigos[i]);
+      if (menuId) {
+        await prisma.rolModuloMenu.create({
+          data: { rolId: assignment.rolId, moduloMenuId: menuId, orden: i + 1 },
+        });
+      }
+    }
+  }
+  console.log('✓ Asignaciones Rol ↔ Menú creadas');
   console.log('\n=== SEED DEMO COMPLETADO ===');
   console.log('Resumen:');
   console.log('  - 3 usuarios (admin, operador, proveedor)');

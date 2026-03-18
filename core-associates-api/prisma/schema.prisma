@@ -128,6 +128,9 @@ model ModuloMenu {
   parent    ModuloMenu?  @relation("MenuHierarchy", fields: [parentId], references: [id])
   children  ModuloMenu[] @relation("MenuHierarchy")
 
+  // Relación M:N con Roles
+  rolMenuItems  RolModuloMenu[]
+
   @@index([parentId])
   @@index([orden])
   @@map("modulos_menu")
@@ -492,18 +495,35 @@ model Tema {
 // ── RBAC: Roles y Permisos Dinámicos ──
 
 model Rol {
-  id           String       @id @default(uuid()) @db.Uuid
-  nombre       String       @unique @db.VarChar(50)
-  descripcion  String?      @db.VarChar(200)
-  esProtegido  Boolean      @default(false) @map("es_protegido")
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
+  id            String       @id @default(uuid()) @db.Uuid
+  nombre        String       @unique @db.VarChar(50)
+  descripcion   String?      @db.VarChar(200)
+  icono         String?      @db.VarChar(50)   // Nombre de ícono Lucide
+  color         String?      @db.VarChar(20)   // Color hex: #3B82F6
+  esProtegido   Boolean      @default(false) @map("es_protegido")
+  esPorDefecto  Boolean      @default(false) @map("es_por_defecto") // Rol asignado automáticamente a nuevos usuarios
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
 
   // Relaciones
-  permisos     RolPermiso[]
-  usuarios     Usuario[]
+  permisos      RolPermiso[]
+  menuItems     RolModuloMenu[]
+  usuarios      Usuario[]
 
   @@map("roles")
+}
+
+model RolModuloMenu {
+  rolId         String   @map("rol_id") @db.Uuid
+  moduloMenuId  String   @map("modulo_menu_id") @db.Uuid
+  orden         Int      @default(0)
+
+  // Relaciones
+  rol           Rol         @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  moduloMenu    ModuloMenu  @relation(fields: [moduloMenuId], references: [id], onDelete: Cascade)
+
+  @@id([rolId, moduloMenuId])
+  @@map("roles_modulos_menu")
 }
 
 model Permiso {
