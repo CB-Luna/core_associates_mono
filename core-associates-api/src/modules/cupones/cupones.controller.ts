@@ -3,9 +3,9 @@ import { Response } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { CuponesService } from './cupones.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 import { CreateCuponDto } from './dto/create-cupon.dto';
 import { ValidateCuponDto } from './dto/validate-cupon.dto';
 import { CuponesQueryDto } from './dto/cupones-query.dto';
@@ -38,8 +38,8 @@ export class CuponesController {
   }
 
   @Get('admin/all')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('cupones:ver')
   @ApiOperation({ summary: 'Listar todos los cupones (admin)' })
   @ApiResponse({ status: 200, description: 'Lista paginada de cupones' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -49,8 +49,8 @@ export class CuponesController {
   }
 
   @Get('estadisticas')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('cupones:ver')
   @ApiOperation({ summary: 'Estadísticas de cupones por estado' })
   @ApiResponse({ status: 200, description: 'Conteo de cupones por estado' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -60,8 +60,8 @@ export class CuponesController {
   }
 
   @Get('mis-cupones-proveedor')
-  @UseGuards(RolesGuard)
-  @Roles('proveedor')
+  @UseGuards(PermisosGuard)
+  @Permisos('cupones:ver')
   @ApiOperation({ summary: 'Listar cupones del proveedor' })
   @ApiResponse({ status: 200, description: 'Lista paginada de cupones del proveedor' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -74,8 +74,8 @@ export class CuponesController {
   }
 
   @Get('estadisticas-proveedor')
-  @UseGuards(RolesGuard)
-  @Roles('proveedor')
+  @UseGuards(PermisosGuard)
+  @Permisos('cupones:ver')
   @ApiOperation({ summary: 'Estadísticas de cupones del proveedor' })
   @ApiResponse({ status: 200, description: 'Conteo de cupones por estado del proveedor' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -107,8 +107,8 @@ export class CuponesController {
   }
 
   @Post('validar')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador', 'proveedor')
+  @UseGuards(PermisosGuard)
+  @Permisos('cupones:canjear')
   @ApiOperation({ summary: 'Validar y canjear cupón' })
   @ApiResponse({ status: 200, description: 'Cupón válido y canjeado' })
   @ApiResponse({ status: 400, description: 'Firma inválida, cupón vencido o ya canjeado' })

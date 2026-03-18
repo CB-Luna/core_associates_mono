@@ -201,8 +201,8 @@ class _VehiculoCard extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         '${vehiculo.marca} ${vehiculo.modelo}',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.3,
                             ),
@@ -232,9 +232,7 @@ class _VehiculoCard extends ConsumerWidget {
                             const SizedBox(width: 3),
                             Text(
                               'Principal',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
+                              style: Theme.of(context).textTheme.labelSmall
                                   ?.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w700,
@@ -251,9 +249,9 @@ class _VehiculoCard extends ConsumerWidget {
                 Text(
                   '${vehiculo.anio} · ${vehiculo.color}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                      ),
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
 
                 const SizedBox(height: 14),
@@ -378,10 +376,10 @@ class _DetailChip extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                  ),
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
+                fontSize: 12,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -424,9 +422,9 @@ class _ActionButton extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

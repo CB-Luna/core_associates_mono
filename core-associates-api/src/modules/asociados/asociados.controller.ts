@@ -4,9 +4,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { AsociadosService } from './asociados.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 import { UpdateAsociadoDto } from './dto/update-asociado.dto';
 import { CreateVehiculoDto } from './dto/create-vehiculo.dto';
 import { UpdateEstadoDto } from './dto/update-estado.dto';
@@ -101,8 +101,8 @@ export class AsociadosController {
   // ── Endpoints admin (CRM) ──
 
   @Get()
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('asociados:ver')
   @ApiOperation({ summary: 'Listar asociados (admin)' })
   @ApiResponse({ status: 200, description: 'Lista paginada de asociados' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -112,8 +112,8 @@ export class AsociadosController {
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('asociados:ver')
   @ApiOperation({ summary: 'Detalle de asociado (admin)' })
   @ApiResponse({ status: 200, description: 'Detalle del asociado con vehículos y documentos' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -124,8 +124,8 @@ export class AsociadosController {
   }
 
   @Get(':id/foto')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('asociados:ver')
   @ApiOperation({ summary: 'Obtener foto del asociado (admin)' })
   @ApiResponse({ status: 200, description: 'Imagen binaria de la foto' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -140,8 +140,8 @@ export class AsociadosController {
   }
 
   @Put(':id/estado')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('asociados:aprobar')
   @ApiOperation({ summary: 'Cambiar estado de asociado' })
   @ApiResponse({ status: 200, description: 'Estado actualizado' })
   @ApiResponse({ status: 400, description: 'Estado o motivo inválido' })
@@ -159,8 +159,8 @@ export class AsociadosController {
   // ── Notas / Timeline ──
 
   @Get(':id/notas')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('asociados:ver')
   @ApiOperation({ summary: 'Obtener notas/timeline de un asociado' })
   @ApiResponse({ status: 200, description: 'Lista de notas y cambios de estado' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -170,8 +170,8 @@ export class AsociadosController {
   }
 
   @Post(':id/notas')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('asociados:editar')
   @ApiOperation({ summary: 'Agregar nota interna a un asociado' })
   @ApiResponse({ status: 201, description: 'Nota creada' })
   @ApiResponse({ status: 400, description: 'Contenido inválido' })

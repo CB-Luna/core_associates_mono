@@ -8,8 +8,8 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AiAnalysisService } from './ai-analysis.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('AI Analysis')
@@ -20,8 +20,8 @@ export class AiAnalysisController {
   constructor(private readonly analysisService: AiAnalysisService) {}
 
   @Post('document/:documentoId')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('ia:analizar')
   @ApiOperation({ summary: 'Analizar documento con IA (admin/operador trigger manual)' })
   @ApiResponse({ status: 201, description: 'Análisis iniciado' })
   async analyzeDocument(@Param('documentoId') documentoId: string) {
@@ -29,8 +29,8 @@ export class AiAnalysisController {
   }
 
   @Post('document/:documentoId/reanalyze')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('ia:analizar')
   @ApiOperation({ summary: 'Re-analizar documento con IA' })
   async reanalyzeDocument(@Param('documentoId') documentoId: string) {
     return this.analysisService.reanalyzeDocument(documentoId);
@@ -43,8 +43,8 @@ export class AiAnalysisController {
   }
 
   @Get('asociado/:asociadoId')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('ia:analizar')
   @ApiOperation({ summary: 'Obtener todos los análisis de un asociado' })
   async getAsociadoAnalyses(@Param('asociadoId') asociadoId: string) {
     return this.analysisService.getAnalysesByAsociado(asociadoId);

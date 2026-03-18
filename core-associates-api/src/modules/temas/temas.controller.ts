@@ -10,8 +10,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { TemasService } from './temas.service';
 import { StorageService } from '../storage/storage.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateTemaDto } from './dto/create-tema.dto';
 import { UpdateTemaDto } from './dto/update-tema.dto';
@@ -47,32 +47,32 @@ export class TemasController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('admin')
+  @UseGuards(PermisosGuard)
+  @Permisos('temas:gestionar')
   @ApiOperation({ summary: 'Crear un tema' })
   create(@Body() dto: CreateTemaDto, @CurrentUser('id') userId: string) {
     return this.temasService.create(dto, userId);
   }
 
   @Put(':id')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
+  @UseGuards(PermisosGuard)
+  @Permisos('temas:gestionar')
   @ApiOperation({ summary: 'Actualizar un tema' })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTemaDto) {
     return this.temasService.update(id, dto);
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
+  @UseGuards(PermisosGuard)
+  @Permisos('temas:gestionar')
   @ApiOperation({ summary: 'Eliminar un tema' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.temasService.remove(id);
   }
 
   @Post(':id/logo')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
+  @UseGuards(PermisosGuard)
+  @Permisos('temas:gestionar')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Subir logo para un tema' })
@@ -86,8 +86,8 @@ export class TemasController {
   }
 
   @Patch('asignar/:userId')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
+  @UseGuards(PermisosGuard)
+  @Permisos('temas:gestionar')
   @ApiOperation({ summary: 'Asignar tema a un usuario (null para usar global)' })
   asignarTema(
     @Param('userId', ParseUUIDPipe) userId: string,

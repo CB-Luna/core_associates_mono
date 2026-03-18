@@ -4,8 +4,8 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiConsumes, ApiRespons
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PromocionesService } from './promociones.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreatePromocionDto } from './dto/create-promocion.dto';
 import { PromocionesQueryDto } from './dto/promociones-query.dto';
@@ -27,8 +27,8 @@ export class PromocionesController {
   }
 
   @Get('admin/all')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('promociones:ver')
   @ApiOperation({ summary: 'Listar todas las promociones (admin)' })
   @ApiResponse({ status: 200, description: 'Lista paginada de todas las promociones' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -40,8 +40,8 @@ export class PromocionesController {
   // ── Endpoints para proveedores autenticados (antes de :id) ──
 
   @Get('mis-promociones')
-  @UseGuards(RolesGuard)
-  @Roles('proveedor')
+  @UseGuards(PermisosGuard)
+  @Permisos('promociones:ver')
   @ApiOperation({ summary: 'Listar promociones del proveedor autenticado' })
   @ApiResponse({ status: 200, description: 'Lista paginada de promociones propias' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -57,8 +57,8 @@ export class PromocionesController {
   }
 
   @Post('mis-promociones')
-  @UseGuards(RolesGuard)
-  @Roles('proveedor')
+  @UseGuards(PermisosGuard)
+  @Permisos('promociones:crear')
   @ApiOperation({ summary: 'Crear promoción como proveedor' })
   @ApiResponse({ status: 201, description: 'Promoción creada' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
@@ -75,8 +75,8 @@ export class PromocionesController {
   }
 
   @Put('mis-promociones/:id')
-  @UseGuards(RolesGuard)
-  @Roles('proveedor')
+  @UseGuards(PermisosGuard)
+  @Permisos('promociones:editar')
   @ApiOperation({ summary: 'Editar promoción propia del proveedor' })
   @ApiResponse({ status: 200, description: 'Promoción actualizada' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
@@ -95,8 +95,8 @@ export class PromocionesController {
   }
 
   @Put('mis-promociones/:id/estado')
-  @UseGuards(RolesGuard)
-  @Roles('proveedor')
+  @UseGuards(PermisosGuard)
+  @Permisos('promociones:editar')
   @ApiOperation({ summary: 'Cambiar estado de promoción propia' })
   @ApiResponse({ status: 200, description: 'Estado actualizado' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -114,8 +114,8 @@ export class PromocionesController {
   }
 
   @Post('mis-promociones/:id/imagen')
-  @UseGuards(RolesGuard)
-  @Roles('proveedor')
+  @UseGuards(PermisosGuard)
+  @Permisos('promociones:editar')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Subir imagen de promoción propia' })
@@ -147,8 +147,8 @@ export class PromocionesController {
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('admin')
+  @UseGuards(PermisosGuard)
+  @Permisos('promociones:crear')
   @ApiOperation({ summary: 'Crear promoción' })
   @ApiResponse({ status: 201, description: 'Promoción creada' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
@@ -162,8 +162,8 @@ export class PromocionesController {
   }
 
   @Put(':id')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
+  @UseGuards(PermisosGuard)
+  @Permisos('promociones:editar')
   @ApiOperation({ summary: 'Actualizar promoción' })
   @ApiResponse({ status: 200, description: 'Promoción actualizada' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
@@ -175,8 +175,8 @@ export class PromocionesController {
   }
 
   @Put(':id/estado')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
+  @UseGuards(PermisosGuard)
+  @Permisos('promociones:editar')
   @ApiOperation({ summary: 'Cambiar estado de promoción' })
   @ApiResponse({ status: 200, description: 'Estado actualizado' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -187,8 +187,8 @@ export class PromocionesController {
   }
 
   @Post(':id/imagen')
-  @UseGuards(RolesGuard)
-  @Roles('admin')
+  @UseGuards(PermisosGuard)
+  @Permisos('promociones:editar')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Subir imagen de promoción (admin)' })

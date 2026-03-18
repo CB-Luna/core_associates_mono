@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { NotificacionesService } from './notificaciones.service';
 import { RegisterTokenDto } from './dto/register-token.dto';
@@ -39,8 +39,8 @@ export class NotificacionesController {
   }
 
   @Post('send')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('notificaciones:enviar')
   @ApiOperation({ summary: 'Enviar notificación a un asociado (admin/operador)' })
   @ApiResponse({ status: 200, description: 'Notificación enviada' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })

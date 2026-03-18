@@ -20,9 +20,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { DocumentosService } from './documentos.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 import { UploadDocumentDto } from './dto/upload-document.dto';
 import { UpdateDocumentEstadoDto } from './dto/update-document-estado.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
@@ -66,8 +66,8 @@ export class DocumentosController {
   }
 
   @Get('pendientes')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('documentos:ver')
   @ApiOperation({ summary: 'Listar documentos pendientes de revisión (admin)' })
   @ApiResponse({ status: 200, description: 'Lista paginada de documentos pendientes' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -94,8 +94,8 @@ export class DocumentosController {
   }
 
   @Put(':id/estado')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('documentos:revisar')
   @ApiOperation({ summary: 'Aprobar o rechazar documento' })
   @ApiResponse({ status: 200, description: 'Estado del documento actualizado' })
   @ApiResponse({ status: 400, description: 'Estado inválido o motivo faltante para rechazo' })

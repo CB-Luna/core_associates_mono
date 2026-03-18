@@ -2,9 +2,9 @@ import { Controller, Post, Get, Put, Param, Query, Body, UseGuards } from '@nest
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { CasosLegalesService } from './casos-legales.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 import { CreateCasoLegalDto } from './dto/create-caso-legal.dto';
 import { CreateNotaCasoDto } from './dto/create-nota-caso.dto';
 import { UpdateEstadoCasoDto } from './dto/update-estado-caso.dto';
@@ -52,8 +52,8 @@ export class CasosLegalesController {
   }
 
   @Get('admin/all')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver')
   @ApiOperation({ summary: 'Listar todos los casos (admin)' })
   @ApiResponse({ status: 200, description: 'Lista paginada de casos legales' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -63,8 +63,8 @@ export class CasosLegalesController {
   }
 
   @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver')
   @ApiOperation({ summary: 'Detalle de caso legal' })
   @ApiResponse({ status: 200, description: 'Detalle del caso con notas y asociado' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -75,8 +75,8 @@ export class CasosLegalesController {
   }
 
   @Put(':id/estado')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:cambiar-estado')
   @ApiOperation({ summary: 'Cambiar estado de caso' })
   @ApiResponse({ status: 200, description: 'Estado del caso actualizado' })
   @ApiResponse({ status: 400, description: 'Estado inválido' })
@@ -88,8 +88,8 @@ export class CasosLegalesController {
   }
 
   @Put(':id/prioridad')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:cambiar-prioridad')
   @ApiOperation({ summary: 'Cambiar prioridad de caso' })
   @ApiResponse({ status: 200, description: 'Prioridad del caso actualizada' })
   @ApiResponse({ status: 400, description: 'Prioridad inválida' })
@@ -101,8 +101,8 @@ export class CasosLegalesController {
   }
 
   @Put(':id/asignar-abogado')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:asignar')
   @ApiOperation({ summary: 'Asignar abogado al caso' })
   @ApiResponse({ status: 200, description: 'Abogado asignado al caso' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
@@ -114,8 +114,8 @@ export class CasosLegalesController {
   }
 
   @Get(':id/notas')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver')
   @ApiOperation({ summary: 'Listar notas del caso' })
   @ApiResponse({ status: 200, description: 'Lista de notas del caso' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -125,8 +125,8 @@ export class CasosLegalesController {
   }
 
   @Post(':id/notas')
-  @UseGuards(RolesGuard)
-  @Roles('admin', 'operador')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver')
   @ApiOperation({ summary: 'Agregar nota al caso' })
   @ApiResponse({ status: 201, description: 'Nota creada' })
   @ApiResponse({ status: 400, description: 'Contenido inválido' })

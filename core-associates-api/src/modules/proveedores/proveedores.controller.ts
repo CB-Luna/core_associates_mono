@@ -8,8 +8,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { ProveedoresService } from './proveedores.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateProveedorDto } from './dto/create-proveedor.dto';
 import { UpdateProveedorDto } from './dto/update-proveedor.dto';
@@ -17,13 +17,13 @@ import { ProveedoresQueryDto } from './dto/proveedores-query.dto';
 
 @ApiTags('Proveedores')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermisosGuard)
 @Controller('proveedores')
 export class ProveedoresController {
   constructor(private readonly proveedoresService: ProveedoresService) {}
 
   @Get('mi-perfil')
-  @Roles('proveedor')
+  @Permisos('proveedores:ver')
   @ApiOperation({ summary: 'Obtener datos del proveedor autenticado' })
   @ApiResponse({ status: 200, description: 'Datos del proveedor' })
   @ApiResponse({ status: 404, description: 'Proveedor no vinculado' })
@@ -32,7 +32,7 @@ export class ProveedoresController {
   }
 
   @Get()
-  @Roles('admin', 'operador')
+  @Permisos('proveedores:ver')
   @ApiOperation({ summary: 'Listar proveedores' })
   @ApiResponse({ status: 200, description: 'Lista paginada de proveedores' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -42,7 +42,7 @@ export class ProveedoresController {
   }
 
   @Get(':id')
-  @Roles('admin', 'operador')
+  @Permisos('proveedores:ver')
   @ApiOperation({ summary: 'Detalle de proveedor' })
   @ApiResponse({ status: 200, description: 'Detalle del proveedor' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -53,7 +53,7 @@ export class ProveedoresController {
   }
 
   @Post()
-  @Roles('admin')
+  @Permisos('proveedores:crear')
   @ApiOperation({ summary: 'Crear proveedor' })
   @ApiResponse({ status: 201, description: 'Proveedor creado' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
@@ -64,7 +64,7 @@ export class ProveedoresController {
   }
 
   @Put(':id')
-  @Roles('admin')
+  @Permisos('proveedores:editar')
   @ApiOperation({ summary: 'Actualizar proveedor' })
   @ApiResponse({ status: 200, description: 'Proveedor actualizado' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
@@ -76,7 +76,7 @@ export class ProveedoresController {
   }
 
   @Delete(':id')
-  @Roles('admin')
+  @Permisos('proveedores:eliminar')
   @ApiOperation({ summary: 'Eliminar proveedor' })
   @ApiResponse({ status: 200, description: 'Proveedor eliminado' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -88,7 +88,7 @@ export class ProveedoresController {
   }
 
   @Post(':id/logotipo')
-  @Roles('admin', 'proveedor')
+  @Permisos('proveedores:ver', 'proveedores:editar')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Subir logotipo del proveedor' })
@@ -110,7 +110,7 @@ export class ProveedoresController {
   }
 
   @Get(':id/logotipo')
-  @Roles('admin', 'operador', 'proveedor')
+  @Permisos('proveedores:ver')
   @ApiOperation({ summary: 'Obtener logotipo del proveedor (streaming)' })
   @ApiResponse({ status: 200, description: 'Imagen del logotipo' })
   @ApiResponse({ status: 404, description: 'Proveedor o logotipo no encontrado' })

@@ -3,18 +3,18 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagg
 import { AuditoriaService } from './auditoria.service';
 import { AuditoriaQueryDto } from './dto/auditoria-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 
 @ApiTags('Auditoría')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermisosGuard)
 @Controller('auditoria')
 export class AuditoriaController {
   constructor(private readonly auditoriaService: AuditoriaService) {}
 
   @Get()
-  @Roles('admin')
+  @Permisos('auditoria:ver')
   @ApiOperation({ summary: 'Listar registros de auditoría con filtros' })
   @ApiResponse({ status: 200, description: 'Lista paginada de registros de auditoría' })
   @ApiResponse({ status: 401, description: 'No autenticado' })

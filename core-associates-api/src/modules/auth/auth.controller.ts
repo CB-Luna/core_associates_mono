@@ -12,8 +12,8 @@ import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Autenticación')
@@ -99,8 +99,8 @@ export class AuthController {
   // ── Gestión de Usuarios CRM (solo admin) ──
 
   @Get('users')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('usuarios:ver')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Listar usuarios del CRM' })
   @ApiResponse({ status: 200, description: 'Lista de usuarios' })
@@ -111,8 +111,8 @@ export class AuthController {
   }
 
   @Post('register-admin')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('usuarios:crear')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Crear usuario del CRM' })
   @ApiResponse({ status: 201, description: 'Usuario creado' })
@@ -124,8 +124,8 @@ export class AuthController {
   }
 
   @Put('users/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('usuarios:editar')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Actualizar usuario del CRM' })
   @ApiResponse({ status: 200, description: 'Usuario actualizado' })
@@ -138,8 +138,8 @@ export class AuthController {
   }
 
   @Post('users/:id/reset-password')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('usuarios:editar')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Resetear contraseña de usuario' })
@@ -154,8 +154,8 @@ export class AuthController {
   // ── Avatar de Usuario ──
 
   @Post('users/:id/avatar')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('usuarios:editar')
   @ApiBearerAuth()
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
@@ -185,8 +185,8 @@ export class AuthController {
   }
 
   @Delete('users/:id/avatar')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('usuarios:editar')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Eliminar avatar de usuario' })
   @ApiResponse({ status: 200, description: 'Avatar eliminado' })

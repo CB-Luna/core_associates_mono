@@ -11,14 +11,14 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermisosGuard } from '../../common/guards/permisos.guard';
+import { Permisos } from '../../common/decorators/permisos.decorator';
 import { CreateAiConfigDto, UpdateAiConfigDto } from './dto/ai-config.dto';
 
 @ApiTags('AI Config')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@UseGuards(JwtAuthGuard, PermisosGuard)
+@Permisos('ia:configurar')
 @Controller('ai/config')
 export class AiConfigController {
   constructor(private readonly prisma: PrismaService) {}
