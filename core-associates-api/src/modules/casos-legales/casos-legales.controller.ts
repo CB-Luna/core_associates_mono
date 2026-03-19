@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermisosGuard } from '../../common/guards/permisos.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permisos } from '../../common/decorators/permisos.decorator';
+import { RequireActivo } from '../../common/decorators/require-activo.decorator';
 import { CreateCasoLegalDto } from './dto/create-caso-legal.dto';
 import { CreateNotaCasoDto } from './dto/create-nota-caso.dto';
 import { UpdateEstadoCasoDto } from './dto/update-estado-caso.dto';
@@ -20,6 +21,7 @@ export class CasosLegalesController {
   constructor(private readonly casosLegalesService: CasosLegalesService) {}
 
   @Post()
+  @RequireActivo()
   @ApiOperation({ summary: 'Reportar percance (SOS)' })
   @ApiResponse({ status: 201, description: 'Caso legal creado' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })

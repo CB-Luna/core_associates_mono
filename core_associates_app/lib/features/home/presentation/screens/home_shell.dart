@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/services/push_notification_service.dart';
 import '../../../../shared/theme/app_theme.dart';
+import '../../../../shared/widgets/kyc_guard.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
@@ -24,6 +25,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     super.initState();
     _initPush();
     _wireSessionExpired();
+    _wireKycBlocked();
   }
 
   Future<void> _initPush() async {
@@ -39,6 +41,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   void _wireSessionExpired() {
     ref.read(apiClientProvider).onSessionExpired = () {
       ref.read(authStateProvider.notifier).logout();
+    };
+  }
+
+  void _wireKycBlocked() {
+    ref.read(apiClientProvider).onKycBlocked = (message) {
+      if (!mounted) return;
+      final estado = estadoFromKycMessage(message);
+      showKycBlockedDialog(context, estado);
     };
   }
 

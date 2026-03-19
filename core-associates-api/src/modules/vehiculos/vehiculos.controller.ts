@@ -5,6 +5,7 @@ import { Response } from 'express';
 import { VehiculosService } from './vehiculos.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { RequireActivo } from '../../common/decorators/require-activo.decorator';
 import { UpdateVehiculoDto } from './dto/update-vehiculo.dto';
 
 @ApiTags('Vehículos')
@@ -15,6 +16,7 @@ export class VehiculosController {
   constructor(private readonly vehiculosService: VehiculosService) {}
 
   @Put(':id')
+  @RequireActivo()
   @ApiOperation({ summary: 'Actualizar vehículo propio' })
   @ApiResponse({ status: 200, description: 'Vehículo actualizado' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
@@ -30,6 +32,7 @@ export class VehiculosController {
   }
 
   @Delete(':id')
+  @RequireActivo()
   @ApiOperation({ summary: 'Eliminar vehículo propio' })
   @ApiResponse({ status: 200, description: 'Vehículo eliminado' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -43,6 +46,7 @@ export class VehiculosController {
   }
 
   @Post(':id/foto')
+  @RequireActivo()
   @ApiOperation({ summary: 'Subir foto del vehículo' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Foto subida correctamente' })

@@ -8,6 +8,7 @@ import { PermisosGuard } from '../../common/guards/permisos.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permisos } from '../../common/decorators/permisos.decorator';
 import { UpdateAsociadoDto } from './dto/update-asociado.dto';
+import { RequireActivo } from '../../common/decorators/require-activo.decorator';
 import { CreateVehiculoDto } from './dto/create-vehiculo.dto';
 import { UpdateEstadoDto } from './dto/update-estado.dto';
 import { AsociadosQueryDto } from './dto/asociados-query.dto';
@@ -52,6 +53,7 @@ export class AsociadosController {
   }
 
   @Post('me/vehiculos')
+  @RequireActivo()
   @ApiOperation({ summary: 'Agregar vehículo' })
   @ApiResponse({ status: 201, description: 'Vehículo agregado' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })

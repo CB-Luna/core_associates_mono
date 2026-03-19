@@ -22,6 +22,10 @@ class ApiClient {
   /// Wire this to auth logout so GoRouter redirects to /login.
   VoidCallback? onSessionExpired;
 
+  /// Called when a 403 indicates a KYC-blocked asociado.
+  /// Wire this to show a contextual dialog.
+  void Function(String message)? onKycBlocked;
+
   ApiClient({required this.storage}) {
     _dio = Dio(
       BaseOptions(
@@ -57,6 +61,24 @@ class ApiClient {
                 ),
               );
               return;
+            }
+          }
+          // KYC 403: show dialog via callback, reject with marker
+          if (error.response?.statusCode == 403 && onKycBlocked != null) {
+            final data = error.response?.data;
+            if (data is Map<String, dynamic>) {
+              final msg = data['message'];
+              if (msg is String && _isKycMessage(msg)) {
+                onKycBlocked!.call(msg);
+                handler.reject(
+                  DioException(
+                    requestOptions: error.requestOptions,
+                    error: 'kyc_blocked',
+                    type: DioExceptionType.unknown,
+                  ),
+                );
+                return;
+              }
             }
           }
           _showGlobalError(error);
@@ -117,6 +139,13 @@ class ApiClient {
           duration: const Duration(seconds: 4),
         ),
       );
+  }
+
+  static bool _isKycMessage(String msg) {
+    return msg.contains('pendiente de aprobación') ||
+        msg.contains('ha sido suspendida') ||
+        msg.contains('ha sido rechazada') ||
+        msg.contains('no está activa');
   }
 
   String _prefixed(String path) => '${AppConstants.apiPrefix}$path';

@@ -1,6 +1,6 @@
 # Pendientes — Core Associates
 
-> **Última actualización**: 18 de marzo de 2026
+> **Última actualización**: 19 de marzo de 2026
 > Documento unificado con TODO lo que falta por implementar. Consolida y reemplaza los documentos fragmentados que ahora viven en `.github/completados/`.
 
 ---
@@ -11,7 +11,7 @@ Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de
 
 | # | Feature | Impacto | Esfuerzo | Alcance |
 |---|---------|---------|----------|---------|
-| **A** | KYC Guard — Restricción por estado | 🔴 Crítico | Medio | API + App |
+| **A** | ~~KYC Guard — Restricción por estado~~ | ✅ Completado | — | API + App |
 | **B** | IA Bilateral — Validación de documentos | 🔴 Alto | Alto | API + App + CRM |
 | **C** | Rol de Abogado/Profesional | 🟡 Medio | Medio | API + CRM |
 | **D** | RBAC v2 — Plantillas de rol | 🟡 Medio | Medio | API + CRM |
@@ -19,7 +19,14 @@ Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de
 
 ---
 
-## A. KYC Guard — Restricción por Estado del Asociado
+## ~~A. KYC Guard — Restricción por Estado del Asociado~~ ✅
+
+> **Completado** el 19 de marzo de 2026.
+> - Guard `EstadoAsociadoGuard` + decorador `@RequireActivo()` creados (sincrónico, lee estado del JWT).
+> - Aplicado a 6 endpoints: `POST /cupones`, `POST /casos-legales`, `POST /asociados/me/vehiculos`, `PUT /vehiculos/:id`, `DELETE /vehiculos/:id`, `POST /vehiculos/:id/foto`.
+> - Flutter: interceptor Dio 403 con callback `onKycBlocked`, diálogo contextual `showKycBlockedDialog()`, check proactivo `checkKycBlocked()` en pantallas de promociones y SOS.
+
+<details><summary>Detalle original (colapsado)</summary>
 
 **Problema**: El campo `estado` del asociado (`pendiente/activo/suspendido/baja/rechazado`) no tiene efecto funcional. Un asociado `pendiente` o `suspendido` puede hacer todo: generar cupones, reportar SOS, agregar vehículos. El flujo KYC es puramente cosmético.
 
@@ -60,6 +67,8 @@ Crear guard reutilizable que verifica `estado === 'activo'` antes de permitir ac
 - **Banner en Home**: Si `estado !== 'activo'`, banner persistente con mensaje contextual y botón "Completar documentos"
 - **Overlay en tabs restringidas**: Si `estado !== 'activo'`, al tocar Promociones/SOS mostrar overlay "Completa tu KYC para desbloquear"
 - **Archivo**: `api_client.dart`, `home_screen.dart`, widgets de overlay
+
+</details>
 
 ---
 

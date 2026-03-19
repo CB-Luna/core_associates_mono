@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermisosGuard } from '../../common/guards/permisos.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permisos } from '../../common/decorators/permisos.decorator';
+import { RequireActivo } from '../../common/decorators/require-activo.decorator';
 import { CreateCuponDto } from './dto/create-cupon.dto';
 import { ValidateCuponDto } from './dto/validate-cupon.dto';
 import { CuponesQueryDto } from './dto/cupones-query.dto';
@@ -18,6 +19,7 @@ export class CuponesController {
   constructor(private readonly cuponesService: CuponesService) {}
 
   @Post()
+  @RequireActivo()
   @ApiOperation({ summary: 'Generar cupón desde promoción' })
   @ApiResponse({ status: 201, description: 'Cupón generado con firma HMAC-SHA256' })
   @ApiResponse({ status: 400, description: 'Promoción inválida o no disponible' })

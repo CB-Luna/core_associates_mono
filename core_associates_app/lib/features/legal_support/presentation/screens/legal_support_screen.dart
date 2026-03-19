@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/theme/app_theme.dart';
+import '../../../../shared/widgets/kyc_guard.dart';
 import '../../data/models/caso_legal.dart';
 import '../providers/legal_provider.dart';
 
@@ -174,6 +175,8 @@ class LegalSupportScreen extends ConsumerWidget {
   }
 
   void _showSOSDialog(BuildContext context, WidgetRef ref) {
+    if (checkKycBlocked(context, ref)) return;
+
     String selectedTipo = 'accidente';
     final descripcionController = TextEditingController();
 
@@ -374,12 +377,15 @@ class LegalSupportScreen extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        final msg = e.toString();
+        if (msg.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     }
   }

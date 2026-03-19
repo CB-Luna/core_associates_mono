@@ -14,6 +14,10 @@ class ApiException {
       );
     }
 
+    if (e.error == 'kyc_blocked') {
+      return const ApiException(message: '', statusCode: 403);
+    }
+
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
