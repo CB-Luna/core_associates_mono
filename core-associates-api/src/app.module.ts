@@ -24,6 +24,7 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { HealthModule } from './modules/health/health.module';
 import { AiModule } from './modules/ai/ai.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { NotificacionesCrmModule } from './modules/notificaciones-crm/notificaciones-crm.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { RolesModule } from './modules/roles/roles.module';
     HealthModule,
     AiModule,
     RolesModule,
+    NotificacionesCrmModule,
   ],
   providers: [
     {

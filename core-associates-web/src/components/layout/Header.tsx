@@ -2,17 +2,19 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, ChevronRight, Settings, User as UserIcon, Menu, Search, Bell, X } from 'lucide-react';
+import { LogOut, ChevronRight, Settings, User as UserIcon, Menu, Search, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useMenuStore } from '@/stores/menu-store';
 import { Badge } from '@/components/ui/Badge';
 import { DarkModeToggle } from '@/components/ui/DarkModeToggle';
 import { apiImageUrl } from '@/lib/api-client';
+import { NotificationBell } from './NotificationBell';
 
 const rolLabels: Record<string, string> = {
   admin: 'Administrador',
   operador: 'Operador',
   proveedor: 'Proveedor',
+  abogado: 'Abogado',
 };
 
 const breadcrumbMap: Record<string, string> = {
@@ -26,6 +28,8 @@ const breadcrumbMap: Record<string, string> = {
   '/reportes': 'Reportes',
   '/documentos': 'Documentos',
   '/configuracion': 'Configuración',
+  '/mis-casos': 'Mis Casos',
+  '/casos-disponibles': 'Casos Disponibles',
 };
 
 function UserAvatar({ user, size = 'sm' }: { user: { id: string; nombre: string; avatarUrl?: string } | null; size?: 'sm' | 'md' }) {
@@ -70,8 +74,6 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [notiOpen, setNotiOpen] = useState(false);
-  const notiRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -84,13 +86,10 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
-      if (notiRef.current && !notiRef.current.contains(e.target as Node)) {
-        setNotiOpen(false);
-      }
     };
-    if (dropdownOpen || notiOpen) document.addEventListener('mousedown', handler);
+    if (dropdownOpen) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [dropdownOpen, notiOpen]);
+  }, [dropdownOpen]);
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
@@ -173,25 +172,7 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
         </button>
 
         {/* Notifications */}
-        <div className="relative" ref={notiRef}>
-          <button
-            onClick={() => setNotiOpen(!notiOpen)}
-            className="relative rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-          >
-            <Bell className="h-4 w-4" />
-          </button>
-          {notiOpen && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-              <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">Notificaciones</p>
-              </div>
-              <div className="px-4 py-8 text-center">
-                <Bell className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600" />
-                <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">No hay notificaciones</p>
-              </div>
-            </div>
-          )}
-        </div>
+        <NotificationBell />
 
         <DarkModeToggle />
 

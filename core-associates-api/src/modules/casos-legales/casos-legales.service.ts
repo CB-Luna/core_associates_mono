@@ -1,6 +1,7 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificacionesCrmService } from '../notificaciones-crm/notificaciones-crm.service';
 import { CreateCasoLegalDto } from './dto/create-caso-legal.dto';
 import { TipoPercance } from '@prisma/client';
 
@@ -8,7 +9,10 @@ import { TipoPercance } from '@prisma/client';
 export class CasosLegalesService {
   private readonly logger = new Logger(CasosLegalesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificacionesCrm: NotificacionesCrmService,
+  ) {}
 
   async createCaso(asociadoId: string, dto: CreateCasoLegalDto) {
     const count = await this.prisma.casoLegal.count();
@@ -155,24 +159,43 @@ export class CasosLegalesService {
     });
   }
 
-  async assignAbogado(id: string, abogadoId: string) {
-    const proveedor = await this.prisma.proveedor.findUnique({ where: { id: abogadoId } });
-    if (!proveedor) throw new NotFoundException('Proveedor no encontrado');
-    if (proveedor.tipo !== 'abogado') {
-      throw new BadRequestException('Solo proveedores de tipo abogado pueden ser asignados');
+  async assignAbogado(id: string, abogadoUsuarioId: string) {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: abogadoUsuarioId },
+      select: { id: true, nombre: true, rol: true, estado: true, proveedorId: true },
+    });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+    if (usuario.rol !== 'abogado') {
+      throw new BadRequestException('Solo usuarios con rol abogado pueden ser asignados');
+    }
+    if (usuario.estado !== 'activo') {
+      throw new BadRequestException('El abogado no está activo');
     }
 
-    return this.prisma.casoLegal.update({
+    const caso = await this.prisma.casoLegal.update({
       where: { id },
       data: {
-        abogadoId,
+        abogadoUsuarioId,
+        abogadoId: usuario.proveedorId || undefined,
         fechaAsignacion: new Date(),
-        estado: 'en_atencion',
       },
       include: {
+        abogadoUsuario: { select: { nombre: true } },
         abogado: { select: { razonSocial: true, telefono: true } },
       },
     });
+
+    // Notificar al abogado
+    await this.notificacionesCrm.crear({
+      usuarioId: abogadoUsuarioId,
+      titulo: 'Caso asignado',
+      mensaje: `Se te asignó el caso ${caso.codigo} (${caso.tipoPercance})`,
+      tipo: 'caso_asignado',
+      referenciaId: caso.id,
+      referenciaTipo: 'caso_legal',
+    });
+
+    return caso;
   }
 
   async addNote(casoId: string, autorId: string, contenido: string, esPrivada = false) {
@@ -191,6 +214,220 @@ export class CasosLegalesService {
       orderBy: { createdAt: 'desc' },
       include: { autor: { select: { nombre: true, rol: true } } },
     });
+  }
+
+  // ── Endpoints del Abogado ──
+
+  async getMisCasosAbogado(abogadoUsuarioId: string, query: { page?: number; limit?: number; estado?: string }) {
+    const { page = 1, limit = 10, estado } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = { abogadoUsuarioId };
+    if (estado) where.estado = estado;
+
+    const [data, total] = await Promise.all([
+      this.prisma.casoLegal.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { fechaApertura: 'desc' },
+        include: {
+          asociado: {
+            select: {
+              id: true, idUnico: true, nombre: true, apellidoPat: true, telefono: true, fotoUrl: true,
+            },
+          },
+          _count: { select: { notas: true } },
+        },
+      }),
+      this.prisma.casoLegal.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async getMiCasoAbogadoDetail(abogadoUsuarioId: string, casoId: string) {
+    const caso = await this.prisma.casoLegal.findFirst({
+      where: { id: casoId, abogadoUsuarioId },
+      include: {
+        asociado: {
+          select: {
+            idUnico: true, nombre: true, apellidoPat: true, telefono: true, fotoUrl: true,
+            vehiculos: {
+              select: { id: true, marca: true, modelo: true, anio: true, color: true, placas: true, esPrincipal: true },
+            },
+          },
+        },
+        notas: {
+          orderBy: { createdAt: 'desc' },
+          include: { autor: { select: { nombre: true, rol: true } } },
+        },
+      },
+    });
+    if (!caso) throw new NotFoundException('Caso no encontrado o no asignado a ti');
+    return caso;
+  }
+
+  async getCasosDisponibles(query: { page?: number; limit?: number }) {
+    const { page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const where = { estado: 'abierto' as const, abogadoUsuarioId: null };
+
+    const [data, total] = await Promise.all([
+      this.prisma.casoLegal.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { fechaApertura: 'desc' },
+        include: {
+          asociado: {
+            select: { idUnico: true, nombre: true, apellidoPat: true },
+          },
+        },
+      }),
+      this.prisma.casoLegal.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async aceptarCaso(casoId: string, abogadoUsuarioId: string) {
+    const caso = await this.prisma.casoLegal.findFirst({
+      where: { id: casoId, abogadoUsuarioId },
+    });
+    if (!caso) throw new NotFoundException('Caso no encontrado o no asignado a ti');
+    if (caso.estado !== 'abierto') {
+      throw new BadRequestException('Solo se pueden aceptar casos en estado abierto');
+    }
+
+    const updated = await this.prisma.casoLegal.update({
+      where: { id: casoId },
+      data: { estado: 'en_atencion' },
+    });
+
+    // Notificar a operadores
+    await this.notificarOperadores(
+      'Caso aceptado',
+      `El abogado aceptó el caso ${caso.codigo}`,
+      'estado_cambio',
+      caso.id,
+    );
+
+    return updated;
+  }
+
+  async rechazarCaso(casoId: string, abogadoUsuarioId: string, motivo?: string) {
+    const caso = await this.prisma.casoLegal.findFirst({
+      where: { id: casoId, abogadoUsuarioId },
+    });
+    if (!caso) throw new NotFoundException('Caso no encontrado o no asignado a ti');
+    if (caso.estado !== 'abierto') {
+      throw new BadRequestException('Solo se pueden rechazar casos pendientes de aceptación');
+    }
+
+    const updated = await this.prisma.casoLegal.update({
+      where: { id: casoId },
+      data: { abogadoUsuarioId: null, abogadoId: null, fechaAsignacion: null },
+    });
+
+    // Nota automática con motivo de rechazo
+    if (motivo) {
+      await this.prisma.notaCaso.create({
+        data: {
+          casoId,
+          autorId: abogadoUsuarioId,
+          contenido: `Asignación rechazada: ${motivo}`,
+          esPrivada: true,
+        },
+      });
+    }
+
+    // Notificar a operadores
+    await this.notificarOperadores(
+      'Caso rechazado',
+      `El abogado rechazó el caso ${caso.codigo}${motivo ? ': ' + motivo : ''}`,
+      'estado_cambio',
+      caso.id,
+    );
+
+    return updated;
+  }
+
+  async postularseCaso(casoId: string, abogadoUsuarioId: string) {
+    const caso = await this.prisma.casoLegal.findUnique({ where: { id: casoId } });
+    if (!caso) throw new NotFoundException('Caso no encontrado');
+    if (caso.estado !== 'abierto' || caso.abogadoUsuarioId) {
+      throw new BadRequestException('Este caso no está disponible para postulación');
+    }
+
+    // Crear nota de postulación y notificar operadores
+    await this.prisma.notaCaso.create({
+      data: {
+        casoId,
+        autorId: abogadoUsuarioId,
+        contenido: 'Abogado se postuló para este caso',
+        esPrivada: true,
+      },
+    });
+
+    await this.notificarOperadores(
+      'Postulación de abogado',
+      `Un abogado se postuló para el caso ${caso.codigo}`,
+      'caso_asignado',
+      caso.id,
+    );
+
+    return { message: 'Postulación registrada exitosamente' };
+  }
+
+  async cambiarEstadoAbogado(casoId: string, abogadoUsuarioId: string, estado: 'en_atencion' | 'escalado') {
+    const caso = await this.prisma.casoLegal.findFirst({
+      where: { id: casoId, abogadoUsuarioId },
+    });
+    if (!caso) throw new NotFoundException('Caso no encontrado o no asignado a ti');
+    if (!['abierto', 'en_atencion', 'escalado'].includes(caso.estado)) {
+      throw new BadRequestException('No se puede cambiar el estado de este caso');
+    }
+
+    const updated = await this.prisma.casoLegal.update({
+      where: { id: casoId },
+      data: { estado },
+    });
+
+    if (estado === 'escalado') {
+      await this.notificarOperadores(
+        'Caso escalado',
+        `El abogado escaló el caso ${caso.codigo}`,
+        'estado_cambio',
+        caso.id,
+      );
+    }
+
+    return updated;
+  }
+
+  private async notificarOperadores(titulo: string, mensaje: string, tipo: string, referenciaId: string) {
+    const operadores = await this.prisma.usuario.findMany({
+      where: { rol: { in: ['admin', 'operador'] }, estado: 'activo' },
+      select: { id: true },
+    });
+    for (const op of operadores) {
+      await this.notificacionesCrm.crear({
+        usuarioId: op.id,
+        titulo,
+        mensaje,
+        tipo,
+        referenciaId,
+        referenciaTipo: 'caso_legal',
+      });
+    }
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_8AM)

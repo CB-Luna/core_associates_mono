@@ -59,18 +59,42 @@ export class NotificacionesService implements OnModuleInit {
   }
 
   async registerToken(asociadoId: string, dto: RegisterTokenDto) {
-    await this.prisma.dispositivoToken.upsert({
-      where: {
-        asociadoId_token: { asociadoId, token: dto.token },
-      },
-      update: { plataforma: dto.platform, activo: true, updatedAt: new Date() },
-      create: {
-        asociadoId,
-        token: dto.token,
-        plataforma: dto.platform,
-      },
+    const existing = await this.prisma.dispositivoToken.findFirst({
+      where: { asociadoId, token: dto.token },
     });
+
+    if (existing) {
+      await this.prisma.dispositivoToken.update({
+        where: { id: existing.id },
+        data: { plataforma: dto.platform, activo: true, updatedAt: new Date() },
+      });
+    } else {
+      await this.prisma.dispositivoToken.create({
+        data: { asociadoId, token: dto.token, plataforma: dto.platform },
+      });
+    }
+
     this.logger.log(`Token registered for asociado ${asociadoId}`);
+    return { message: 'Token registrado exitosamente' };
+  }
+
+  async registerTokenUsuario(usuarioId: string, dto: RegisterTokenDto) {
+    const existing = await this.prisma.dispositivoToken.findFirst({
+      where: { usuarioId, token: dto.token },
+    });
+
+    if (existing) {
+      await this.prisma.dispositivoToken.update({
+        where: { id: existing.id },
+        data: { plataforma: dto.platform, activo: true, updatedAt: new Date() },
+      });
+    } else {
+      await this.prisma.dispositivoToken.create({
+        data: { usuarioId, token: dto.token, plataforma: dto.platform },
+      });
+    }
+
+    this.logger.log(`Token registered for usuario ${usuarioId}`);
     return { message: 'Token registrado exitosamente' };
   }
 
@@ -160,6 +184,66 @@ export class NotificacionesService implements OnModuleInit {
       return { enviado: true, canal: 'push', exitosos: response.successCount, fallidos: response.failureCount };
     } catch (error) {
       this.logger.error(`FCM send failed for ${asociadoId}: ${error}`);
+      return { enviado: false, canal: 'push', error: 'FCM send failed' };
+    }
+  }
+
+  async sendPushUsuario(
+    usuarioId: string,
+    titulo: string,
+    mensaje: string,
+    data?: Record<string, string>,
+  ) {
+    const tokens = await this.prisma.dispositivoToken.findMany({
+      where: { usuarioId, activo: true },
+      select: { token: true },
+    });
+
+    if (tokens.length === 0) {
+      this.logger.warn(`No active tokens for usuario ${usuarioId}`);
+      return { enviado: false, motivo: 'Sin tokens registrados' };
+    }
+
+    const tokenList = tokens.map((t) => t.token);
+
+    if (!this.fcmAvailable) {
+      this.logger.log(
+        `[DEV PUSH] To usuario: ${usuarioId} | Title: ${titulo} | Body: ${mensaje} | Tokens: ${tokenList.length}`,
+      );
+      return { enviado: true, canal: 'push', modo: 'dev' };
+    }
+
+    try {
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens: tokenList,
+        notification: { title: titulo, body: mensaje },
+        data: data || {},
+      });
+
+      this.logger.log(
+        `FCM response for usuario ${usuarioId}: success=${response.successCount}, failure=${response.failureCount}`,
+      );
+
+      for (let i = 0; i < response.responses.length; i++) {
+        const resp = response.responses[i];
+        if (!resp.success && resp.error) {
+          const code = resp.error.code;
+          if (
+            code === 'messaging/registration-token-not-registered' ||
+            code === 'messaging/invalid-registration-token'
+          ) {
+            await this.prisma.dispositivoToken.updateMany({
+              where: { token: tokenList[i] },
+              data: { activo: false },
+            });
+            this.logger.log(`Deactivated invalid token for usuario ${usuarioId}`);
+          }
+        }
+      }
+
+      return { enviado: true, canal: 'push', exitosos: response.successCount, fallidos: response.failureCount };
+    } catch (error) {
+      this.logger.error(`FCM send failed for usuario ${usuarioId}: ${error}`);
       return { enviado: false, canal: 'push', error: 'FCM send failed' };
     }
   }

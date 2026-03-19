@@ -95,6 +95,7 @@ enum RolUsuario {
   admin
   operador
   proveedor
+  abogado
 }
 
 enum EstadoUsuario {
@@ -359,29 +360,32 @@ model Cupon {
 }
 
 model CasoLegal {
-  id               String           @id @default(uuid()) @db.Uuid
-  codigo           String           @unique @db.VarChar(30)
-  asociadoId       String           @map("asociado_id") @db.Uuid
-  abogadoId        String?          @map("abogado_id") @db.Uuid
-  tipoPercance     TipoPercance     @map("tipo_percance")
-  descripcion      String?
-  latitud          Decimal          @db.Decimal(10, 8)
-  longitud         Decimal          @db.Decimal(11, 8)
-  direccionAprox   String?          @map("direccion_aprox")
-  estado           EstadoCasoLegal  @default(abierto)
-  prioridad        PrioridadCaso    @default(media)
-  fechaApertura    DateTime         @default(now()) @map("fecha_apertura")
-  fechaAsignacion  DateTime?        @map("fecha_asignacion")
-  fechaCierre      DateTime?        @map("fecha_cierre")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
+  id                String           @id @default(uuid()) @db.Uuid
+  codigo            String           @unique @db.VarChar(30)
+  asociadoId        String           @map("asociado_id") @db.Uuid
+  abogadoId         String?          @map("abogado_id") @db.Uuid
+  abogadoUsuarioId  String?          @map("abogado_usuario_id") @db.Uuid
+  tipoPercance      TipoPercance     @map("tipo_percance")
+  descripcion       String?
+  latitud           Decimal          @db.Decimal(10, 8)
+  longitud          Decimal          @db.Decimal(11, 8)
+  direccionAprox    String?          @map("direccion_aprox")
+  estado            EstadoCasoLegal  @default(abierto)
+  prioridad         PrioridadCaso    @default(media)
+  fechaApertura     DateTime         @default(now()) @map("fecha_apertura")
+  fechaAsignacion   DateTime?        @map("fecha_asignacion")
+  fechaCierre       DateTime?        @map("fecha_cierre")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
 
   // Relaciones
-  asociado         Asociado         @relation(fields: [asociadoId], references: [id])
-  abogado          Proveedor?       @relation(fields: [abogadoId], references: [id])
-  notas            NotaCaso[]
+  asociado          Asociado         @relation(fields: [asociadoId], references: [id])
+  abogado           Proveedor?       @relation(fields: [abogadoId], references: [id])
+  abogadoUsuario    Usuario?         @relation("AbogadoCasoLegal", fields: [abogadoUsuarioId], references: [id])
+  notas             NotaCaso[]
 
   @@index([estado])
+  @@index([abogadoUsuarioId])
   @@map("casos_legales")
 }
 
@@ -425,6 +429,9 @@ model Usuario {
   notasCaso            NotaCaso[]
   notasAsociado        NotaAsociado[]
   auditorias           Auditoria[]
+  casosComoAbogado     CasoLegal[] @relation("AbogadoCasoLegal")
+  dispositivoTokens    DispositivoToken[]
+  notificacionesCrm    NotificacionCRM[]
 
   @@map("usuarios")
 }
@@ -447,19 +454,21 @@ model Auditoria {
 }
 
 model DispositivoToken {
-  id           String   @id @default(uuid()) @db.Uuid
-  asociadoId   String   @map("asociado_id") @db.Uuid
-  token        String   @db.VarChar(500)
-  plataforma   String   @db.VarChar(10) // android | ios
-  activo       Boolean  @default(true)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id           String    @id @default(uuid()) @db.Uuid
+  asociadoId   String?   @map("asociado_id") @db.Uuid
+  usuarioId    String?   @map("usuario_id") @db.Uuid
+  token        String    @db.VarChar(500)
+  plataforma   String    @db.VarChar(10) // android | ios
+  activo       Boolean   @default(true)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   // Relaciones
-  asociado     Asociado @relation(fields: [asociadoId], references: [id], onDelete: Cascade)
+  asociado     Asociado? @relation(fields: [asociadoId], references: [id], onDelete: Cascade)
+  usuario      Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
-  @@unique([asociadoId, token])
   @@index([asociadoId])
+  @@index([usuarioId])
   @@map("dispositivos_token")
 }
 
@@ -517,6 +526,24 @@ model Tema {
 }
 
 // ── RBAC: Roles y Permisos Dinámicos ──
+
+model NotificacionCRM {
+  id              String   @id @default(uuid()) @db.Uuid
+  usuarioId       String   @map("usuario_id") @db.Uuid
+  titulo          String   @db.VarChar(200)
+  mensaje         String
+  tipo            String   @db.VarChar(50)       // caso_asignado | nota_nueva | estado_cambio | general
+  referenciaId    String?  @map("referencia_id") @db.Uuid
+  referenciaTipo  String?  @map("referencia_tipo") @db.VarChar(50) // caso_legal | asociado
+  leida           Boolean  @default(false)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  usuario         Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, leida])
+  @@index([createdAt])
+  @@map("notificaciones_crm")
+}
 
 model Rol {
   id                String       @id @default(uuid()) @db.Uuid

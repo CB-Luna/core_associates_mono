@@ -9,13 +9,13 @@
 
 Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de negocio.
 
-> ⚠️ **Prioridad actual**: Sección C (Rol de Abogado) — refactoring arquitectónico mayor para desacoplar al abogado del modelo `Proveedor` y convertirlo en un `Usuario` con rol RBAC propio.
+> ⚠️ **Prioridad actual**: Sección D (RBAC v2 — Plantillas de Rol) y C.3 (App Móvil — Shell del Abogado).
 
 | # | Feature | Impacto | Esfuerzo | Alcance |
 |---|---------|---------|----------|---------|
 | **A** | ~~KYC Guard — Restricción por estado~~ | ✅ Completado | — | API + App |
 | **B** | ~~IA Bilateral — B.1/B.2/B.3/B.4/B.5~~ ✅ Completo | ✅ Completo | — | API + App + CRM |
-| **C** | Rol de Abogado — Refactoring completo | 🔴 Alto | Alto | API + CRM + App |
+| **C** | ~~Rol de Abogado — C.0/C.1/C.2/C.4~~ ✅ (falta C.3 App) | ✅ API+CRM | Pendiente App | API + CRM + App |
 | **D** | RBAC v2 — Plantillas de rol | 🟡 Medio | Medio | API + CRM |
 | **E** | Mejoras menores (App + CRM + API) | 🟢 Bajo | Bajo-Medio | Varios |
 
@@ -122,9 +122,11 @@ Crear guard reutilizable que verifica `estado === 'activo'` antes de permitir ac
 
 ---
 
-## C. Rol de Abogado — Refactoring Completo
+## ~~C. Rol de Abogado — Refactoring Completo~~ ✅ (API + CRM Web)
 
-### Diagnóstico del problema
+> **Nota**: C.3 (App Móvil — Shell del Abogado) queda pendiente como tarea separada.
+
+### Diagnóstico del problema (resuelto)
 
 El abogado está modelado como `Proveedor tipo='abogado'` (una entidad de empresa) en lugar de ser un **Usuario con rol RBAC "abogado"** (una persona). Esto causa:
 
@@ -141,7 +143,7 @@ El abogado está modelado como `Proveedor tipo='abogado'` (una entidad de empres
 
 ---
 
-### C.0 — Modelo de datos + Migración
+### ~~C.0 — Modelo de datos + Migración~~ ✅
 
 **C.0.1 — Enum `RolUsuario`: agregar `abogado`**
 
@@ -238,7 +240,7 @@ Asignar vía `RolModuloMenu` (el configurador ya lo soporta):
 
 ---
 
-### C.1 — Backend: Endpoints y Servicios
+### ~~C.1 — Backend: Endpoints y Servicios~~ ✅
 
 **C.1.1 — Asignación individual de abogado (refactorizar)**
 
@@ -319,7 +321,7 @@ Adaptar el flujo actual de creación de usuarios (`configuracion/UsuariosTab`) p
 
 ---
 
-### C.2 — CRM Web: Vistas para el Abogado
+### ~~C.2 — CRM Web: Vistas para el Abogado~~ ✅
 
 **C.2.1 — Dashboard parcial**
 
@@ -442,7 +444,7 @@ features/profesional/
 
 ---
 
-### C.4 — Operador: Adaptar flujo de asignación
+### ~~C.4 — Operador: Adaptar flujo de asignación~~ ✅
 
 **C.4.1 — Selector de abogado individual**
 

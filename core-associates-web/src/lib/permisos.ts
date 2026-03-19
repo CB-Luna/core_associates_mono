@@ -25,8 +25,9 @@ export function usePermisos() {
   const esAdmin = user?.rol === 'admin';
   const esOperador = user?.rol === 'operador';
   const esProveedor = user?.rol === 'proveedor';
+  const esAbogado = user?.rol === 'abogado';
 
-  return { puede, esAdmin, esOperador, esProveedor, rol: user?.rol, permisos };
+  return { puede, esAdmin, esOperador, esProveedor, esAbogado, rol: user?.rol, permisos };
 }
 
 /**

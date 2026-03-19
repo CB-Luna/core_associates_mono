@@ -11,6 +11,8 @@ import { CreateNotaCasoDto } from './dto/create-nota-caso.dto';
 import { UpdateEstadoCasoDto } from './dto/update-estado-caso.dto';
 import { UpdatePrioridadCasoDto } from './dto/update-prioridad-caso.dto';
 import { AsignarAbogadoDto } from './dto/asignar-abogado.dto';
+import { RechazarAsignacionDto } from './dto/rechazar-asignacion.dto';
+import { CambiarEstadoAbogadoDto } from './dto/cambiar-estado-abogado.dto';
 import { CasosLegalesQueryDto } from './dto/casos-legales-query.dto';
 
 @ApiTags('Casos Legales')
@@ -64,6 +66,42 @@ export class CasosLegalesController {
     return this.casosLegalesService.findAll(query);
   }
 
+  // ── Endpoints del Abogado (rutas estáticas antes de :id) ──
+
+  @Get('abogado/mis-casos')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver-propios')
+  @ApiOperation({ summary: 'Listar casos asignados al abogado' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de casos del abogado' })
+  getMisCasosAbogado(
+    @CurrentUser('id') abogadoUsuarioId: string,
+    @Query() query: CasosLegalesQueryDto,
+  ) {
+    return this.casosLegalesService.getMisCasosAbogado(abogadoUsuarioId, query);
+  }
+
+  @Get('abogado/mis-casos/:id')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver-propios')
+  @ApiOperation({ summary: 'Detalle de caso asignado al abogado' })
+  @ApiResponse({ status: 200, description: 'Detalle del caso con notas y asociado' })
+  @ApiResponse({ status: 404, description: 'Caso no encontrado o no asignado' })
+  getMiCasoAbogadoDetail(
+    @CurrentUser('id') abogadoUsuarioId: string,
+    @Param('id') casoId: string,
+  ) {
+    return this.casosLegalesService.getMiCasoAbogadoDetail(abogadoUsuarioId, casoId);
+  }
+
+  @Get('abogado/disponibles')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver-disponibles')
+  @ApiOperation({ summary: 'Listar casos sin abogado (disponibles)' })
+  @ApiResponse({ status: 200, description: 'Lista de casos disponibles' })
+  getCasosDisponibles(@Query() query: CasosLegalesQueryDto) {
+    return this.casosLegalesService.getCasosDisponibles(query);
+  }
+
   @Get(':id')
   @UseGuards(PermisosGuard)
   @Permisos('casos-legales:ver')
@@ -112,7 +150,7 @@ export class CasosLegalesController {
   @ApiResponse({ status: 403, description: 'Solo admin/operador' })
   @ApiResponse({ status: 404, description: 'Caso no encontrado' })
   assignAbogado(@Param('id') id: string, @Body() dto: AsignarAbogadoDto) {
-    return this.casosLegalesService.assignAbogado(id, dto.abogadoId);
+    return this.casosLegalesService.assignAbogado(id, dto.abogadoUsuarioId);
   }
 
   @Get(':id/notas')
@@ -128,17 +166,77 @@ export class CasosLegalesController {
 
   @Post(':id/notas')
   @UseGuards(PermisosGuard)
-  @Permisos('casos-legales:ver')
+  @Permisos('casos-legales:ver', 'casos-legales:agregar-notas')
   @ApiOperation({ summary: 'Agregar nota al caso' })
   @ApiResponse({ status: 201, description: 'Nota creada' })
   @ApiResponse({ status: 400, description: 'Contenido inválido' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
-  @ApiResponse({ status: 403, description: 'Solo admin/operador' })
+  @ApiResponse({ status: 403, description: 'Sin permiso' })
   addNote(
     @Param('id') casoId: string,
     @CurrentUser('id') autorId: string,
     @Body() dto: CreateNotaCasoDto,
   ) {
     return this.casosLegalesService.addNote(casoId, autorId, dto.contenido, dto.esPrivada);
+  }
+
+  // ── Acciones del Abogado sobre :id ──
+
+  @Post(':id/aceptar')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:aceptar-rechazar')
+  @ApiOperation({ summary: 'Abogado acepta asignación de caso' })
+  @ApiResponse({ status: 200, description: 'Caso aceptado' })
+  @ApiResponse({ status: 400, description: 'Caso no aceptable' })
+  @ApiResponse({ status: 404, description: 'Caso no encontrado' })
+  aceptarCaso(
+    @Param('id') casoId: string,
+    @CurrentUser('id') abogadoUsuarioId: string,
+  ) {
+    return this.casosLegalesService.aceptarCaso(casoId, abogadoUsuarioId);
+  }
+
+  @Post(':id/rechazar')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:aceptar-rechazar')
+  @ApiOperation({ summary: 'Abogado rechaza asignación de caso' })
+  @ApiResponse({ status: 200, description: 'Caso rechazado, vuelve al pool' })
+  @ApiResponse({ status: 400, description: 'Caso no rechazable' })
+  @ApiResponse({ status: 404, description: 'Caso no encontrado' })
+  rechazarCaso(
+    @Param('id') casoId: string,
+    @CurrentUser('id') abogadoUsuarioId: string,
+    @Body() dto: RechazarAsignacionDto,
+  ) {
+    return this.casosLegalesService.rechazarCaso(casoId, abogadoUsuarioId, dto.motivo);
+  }
+
+  @Post(':id/postularse')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver-disponibles')
+  @ApiOperation({ summary: 'Abogado se postula para caso disponible' })
+  @ApiResponse({ status: 200, description: 'Postulación registrada' })
+  @ApiResponse({ status: 400, description: 'Caso no disponible' })
+  @ApiResponse({ status: 404, description: 'Caso no encontrado' })
+  postularseCaso(
+    @Param('id') casoId: string,
+    @CurrentUser('id') abogadoUsuarioId: string,
+  ) {
+    return this.casosLegalesService.postularseCaso(casoId, abogadoUsuarioId);
+  }
+
+  @Put(':id/estado-abogado')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:cambiar-estado-limitado')
+  @ApiOperation({ summary: 'Abogado cambia estado (limitado a en_atencion/escalado)' })
+  @ApiResponse({ status: 200, description: 'Estado actualizado' })
+  @ApiResponse({ status: 400, description: 'Estado inválido o no permitido' })
+  @ApiResponse({ status: 404, description: 'Caso no encontrado' })
+  cambiarEstadoAbogado(
+    @Param('id') casoId: string,
+    @CurrentUser('id') abogadoUsuarioId: string,
+    @Body() dto: CambiarEstadoAbogadoDto,
+  ) {
+    return this.casosLegalesService.cambiarEstadoAbogado(casoId, abogadoUsuarioId, dto.estado);
   }
 }

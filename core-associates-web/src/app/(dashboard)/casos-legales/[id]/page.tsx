@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send, Car, Maximize2, Minimize2 } from 'lucide-react';
 import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
-import type { CasoLegal, NotaCaso, Proveedor } from '@/lib/api-types';
+import type { CasoLegal, NotaCaso, UsuarioCRM } from '@/lib/api-types';
 import { Badge } from '@/components/ui/Badge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
@@ -57,7 +57,7 @@ export default function CasoLegalDetailPage() {
   const id = typeof params.id === 'string' ? params.id : params.id?.[0] ?? '';
   const [caso, setCaso] = useState<CasoLegal | null>(null);
   const [loading, setLoading] = useState(true);
-  const [abogados, setAbogados] = useState<Proveedor[]>([]);
+  const [abogados, setAbogados] = useState<UsuarioCRM[]>([]);
   const [selectedAbogado, setSelectedAbogado] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [updatingEstado, setUpdatingEstado] = useState(false);
@@ -85,7 +85,7 @@ export default function CasoLegalDetailPage() {
     try {
       const data = await apiClient<CasoLegal>(`/casos-legales/${id}`);
       setCaso(data);
-      setSelectedAbogado(data.abogadoId || '');
+      setSelectedAbogado(data.abogadoUsuarioId || '');
     } catch (err) {
       console.error(err);
     } finally {
@@ -95,8 +95,8 @@ export default function CasoLegalDetailPage() {
 
   useEffect(() => {
     fetchCaso();
-    apiClient<PaginatedResponse<Proveedor>>('/proveedores?tipo=abogado&limit=100')
-      .then((res) => setAbogados(res.data))
+    apiClient<UsuarioCRM[]>('/auth/users')
+      .then((res) => setAbogados(res.filter((u) => u.rol === 'abogado' && u.estado === 'activo')))
       .catch(() => {});
   }, [fetchCaso]);
 
@@ -119,7 +119,7 @@ export default function CasoLegalDetailPage() {
     try {
       const updated = await apiClient<CasoLegal>(`/casos-legales/${caso.id}/asignar-abogado`, {
         method: 'PUT',
-        body: JSON.stringify({ abogadoId: selectedAbogado }),
+        body: JSON.stringify({ abogadoUsuarioId: selectedAbogado }),
       });
       setCaso((prev) => prev ? { ...prev, ...updated } : prev);
     } catch (err) {
@@ -457,18 +457,16 @@ export default function CasoLegalDetailPage() {
               <Gavel className="h-4 w-4" />
               Abogado asignado
             </h3>
-            {caso.abogado ? (
+            {caso.abogadoUsuario ? (
               <dl className="mt-3 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-gray-500">Nombre</dt>
-                  <dd className="text-gray-900">{caso.abogado.razonSocial}</dd>
+                  <dd className="text-gray-900">{caso.abogadoUsuario.nombre}</dd>
                 </div>
-                {caso.abogado.telefono && (
-                  <div className="flex justify-between">
-                    <dt className="text-gray-500">Teléfono</dt>
-                    <dd className="text-gray-900">{caso.abogado.telefono}</dd>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Email</dt>
+                  <dd className="text-gray-900">{caso.abogadoUsuario.email}</dd>
+                </div>
                 {caso.fechaAsignacion && (
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Asignado</dt>
@@ -484,7 +482,7 @@ export default function CasoLegalDetailPage() {
 
             <div className="mt-4">
               <label className="block text-xs font-medium text-gray-600">
-                {caso.abogado ? 'Reasignar abogado' : 'Asignar abogado'}
+                {caso.abogadoUsuario ? 'Reasignar abogado' : 'Asignar abogado'}
               </label>
               <div className="mt-1 flex gap-2">
                 <select
@@ -495,13 +493,13 @@ export default function CasoLegalDetailPage() {
                   <option value="">Seleccionar...</option>
                   {abogados.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.razonSocial}
+                      {a.nombre} ({a.email})
                     </option>
                   ))}
                 </select>
                 <button
                   onClick={handleAsignarAbogado}
-                  disabled={assigning || !selectedAbogado || selectedAbogado === caso.abogadoId}
+                  disabled={assigning || !selectedAbogado || selectedAbogado === caso.abogadoUsuarioId}
                   className="rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
                 >
                   {assigning ? '...' : 'Asignar'}

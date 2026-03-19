@@ -16,7 +16,7 @@ export class NotificacionesController {
   constructor(private readonly notificacionesService: NotificacionesService) {}
 
   @Post('register-token')
-  @ApiOperation({ summary: 'Registrar token FCM del dispositivo' })
+  @ApiOperation({ summary: 'Registrar token FCM del dispositivo (asociado)' })
   @ApiResponse({ status: 201, description: 'Token registrado' })
   @ApiResponse({ status: 400, description: 'Token inválido' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
@@ -25,6 +25,18 @@ export class NotificacionesController {
     @Body() dto: RegisterTokenDto,
   ) {
     return this.notificacionesService.registerToken(asociadoId, dto);
+  }
+
+  @Post('register-token-usuario')
+  @ApiOperation({ summary: 'Registrar token FCM del navegador (usuario CRM)' })
+  @ApiResponse({ status: 201, description: 'Token registrado' })
+  @ApiResponse({ status: 400, description: 'Token inválido' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  registerTokenUsuario(
+    @CurrentUser('id') usuarioId: string,
+    @Body() dto: RegisterTokenDto,
+  ) {
+    return this.notificacionesService.registerTokenUsuario(usuarioId, dto);
   }
 
   @Delete('remove-token')

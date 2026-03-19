@@ -17,7 +17,7 @@ export interface User {
   id: string;
   email: string;
   nombre: string;
-  rol: 'admin' | 'operador' | 'proveedor';
+  rol: 'admin' | 'operador' | 'proveedor' | 'abogado';
   rolId?: string;
   permisos?: string[];
   proveedorId?: string;
@@ -201,6 +201,7 @@ export interface CasoLegal {
   fechaCierre: string | null;
   asociadoId: string;
   abogadoId: string | null;
+  abogadoUsuarioId: string | null;
   asociado?: {
     idUnico: string;
     nombre: string;
@@ -213,6 +214,11 @@ export interface CasoLegal {
   abogado?: {
     razonSocial: string;
     telefono?: string;
+  };
+  abogadoUsuario?: {
+    id: string;
+    nombre: string;
+    email: string;
   };
   notas?: NotaCaso[];
   _count?: {
@@ -338,7 +344,7 @@ export interface UsuarioCRM {
   id: string;
   email: string;
   nombre: string;
-  rol: 'admin' | 'operador' | 'proveedor';
+  rol: 'admin' | 'operador' | 'proveedor' | 'abogado';
   rolId?: string;
   proveedorId?: string;
   avatarUrl?: string | null;
@@ -416,4 +422,17 @@ export interface ConfiguracionIA {
   horasBloqueoPreval: number;
   createdAt: string;
   updatedAt: string;
+}
+
+// Notificación CRM (para usuarios del panel)
+export interface NotificacionCRM {
+  id: string;
+  usuarioId: string;
+  titulo: string;
+  mensaje: string;
+  tipo: string;
+  referenciaId: string | null;
+  referenciaTipo: string | null;
+  leida: boolean;
+  createdAt: string;
 }

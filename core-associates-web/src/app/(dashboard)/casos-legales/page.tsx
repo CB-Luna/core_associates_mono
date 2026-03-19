@@ -179,10 +179,10 @@ export default function CasosLegalesPage() {
       id: 'abogado',
       header: 'Abogado',
       meta: {
-        exportValue: (c: any) => c.abogado?.razonSocial || '',
+        exportValue: (c: any) => c.abogadoUsuario?.nombre || '',
       },
       cell: ({ row }) => {
-        const name = row.original.abogado?.razonSocial;
+        const name = row.original.abogadoUsuario?.nombre;
         return name ? <span className="text-gray-600">{name}</span> : <span className="text-xs text-gray-300">Sin asignar</span>;
       },
     },
