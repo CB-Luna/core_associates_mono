@@ -12,6 +12,7 @@ const ROLE_COLORS: Record<string, string> = {
   admin: 'bg-red-100 text-red-700',
   operador: 'bg-blue-100 text-blue-700',
   proveedor: 'bg-amber-100 text-amber-700',
+  abogado: 'bg-purple-100 text-purple-700',
 };
 const DEFAULT_ROLE_COLOR = 'bg-gray-100 text-gray-700';
 

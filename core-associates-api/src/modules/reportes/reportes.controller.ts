@@ -36,6 +36,18 @@ export class ReportesController {
     return this.reportesService.getDashboardProveedorMetrics(user.proveedorId!);
   }
 
+  @Get('dashboard-abogado')
+  @Permisos('dashboard:ver')
+  @ApiOperation({ summary: 'Métricas del dashboard para abogado' })
+  @ApiResponse({ status: 200, description: 'Métricas del abogado: casos asignados, resueltos, disponibles' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 403, description: 'Solo abogado' })
+  getDashboardAbogado(
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.reportesService.getDashboardAbogadoMetrics(user.id);
+  }
+
   @Get('avanzado')
   @Permisos('reportes:ver')
   @ApiOperation({ summary: 'Reportes avanzados con filtros por fecha' })

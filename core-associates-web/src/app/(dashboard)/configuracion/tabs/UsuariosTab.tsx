@@ -294,7 +294,7 @@ export function UsuariosTab() {
         const user = row.original;
         const rolRecord = roles.find(r => r.id === user.rolId);
         const displayName = rolRecord ? rolRecord.nombre.charAt(0).toUpperCase() + rolRecord.nombre.slice(1) : user.rol;
-        const variant = user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : 'default';
+        const variant = user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : user.rol === 'abogado' ? 'secondary' : 'default';
         return (
           <Badge variant={variant}>
             {displayName}

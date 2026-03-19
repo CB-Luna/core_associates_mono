@@ -337,7 +337,7 @@ export class AuthService {
     }
 
     // Determinar el valor del enum RolUsuario (campo legacy)
-    const validEnumValues = ['admin', 'operador', 'proveedor'];
+    const validEnumValues = ['admin', 'operador', 'proveedor', 'abogado'];
     const rolEnum = rolRecord && validEnumValues.includes(rolRecord.nombre)
       ? rolRecord.nombre
       : (validEnumValues.includes(data.rol) ? data.rol : 'operador');
@@ -395,7 +395,7 @@ export class AuthService {
     if (data.rolId) {
       const rolRecord = await this.prisma.rol.findUnique({ where: { id: data.rolId } });
       if (!rolRecord) throw new NotFoundException('Rol no encontrado');
-      const validEnumValues = ['admin', 'operador', 'proveedor'];
+      const validEnumValues = ['admin', 'operador', 'proveedor', 'abogado'];
       const rolEnum = validEnumValues.includes(rolRecord.nombre) ? rolRecord.nombre : 'operador';
       rolUpdateData = { rol: rolEnum as RolUsuario, rolId: rolRecord.id };
     } else if (data.rol) {

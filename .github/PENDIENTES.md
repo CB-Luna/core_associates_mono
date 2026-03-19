@@ -1,6 +1,6 @@
 # Pendientes — Core Associates
 
-> **Última actualización**: 20 de marzo de 2026
+> **Última actualización**: 21 de marzo de 2026
 > Documento unificado con TODO lo que falta por implementar. Consolida y reemplaza los documentos fragmentados que ahora viven en `.github/completados/`.
 
 ---
@@ -9,7 +9,7 @@
 
 Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de negocio.
 
-> ⚠️ **Prioridad actual**: C.3 (App Móvil — Shell del Abogado) y D.3 (Consolidación RBAC).
+> ⚠️ **Prioridad actual**: G.4/G.5 (Flujo abogado en CRM), C.3 (App Móvil — Shell del Abogado) y D.3 (Consolidación RBAC).
 
 | # | Feature | Impacto | Esfuerzo | Alcance |
 |---|---------|---------|----------|----------|
@@ -19,6 +19,7 @@ Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de
 | **D** | RBAC v2 — Plantillas de rol | ✅ D.1+D.2 | ❌ D.3 Consolidación | API + CRM |
 | **E** | Mejoras menores (App + CRM + API) | ✅ E1.1+E1.2 | Resto pendiente | Varios |
 | **F** | ~~Abogados Management CRM~~ | ✅ Completado | — | CRM |
+| **G** | Experiencia Abogado — Mejoras CRM | Pendiente | G.1-G.6 | API + CRM |
 
 ---
 
@@ -582,7 +583,72 @@ Reemplazar las tabs actuales (Roles + Permisos + Menú Dinámico) por:
 
 ---
 
-## F. Abogados Management — Gestión de Abogados CRM ✅
+## G. Experiencia Abogado — Mejoras Pendientes (21-mar-2026)
+
+Features solicitadas para completar la experiencia del rol abogado en el CRM y preparar su extensión a la app móvil.
+
+### G.1 — Crear abogados desde Abogados page (modal)
+
+Similar al modal de creación de proveedores en `/proveedores`, agregar botón "Nuevo Abogado" en `/abogados` que abra modal con:
+- Campos: nombre, email, contraseña, especialidad, dirección, teléfono
+- Auto-asigna `rolId` del rol "abogado"
+- POST a `/auth/users` con rol abogado
+- Refresh de la tabla tras crear
+
+**Esfuerzo**: Bajo | **Prioridad**: Alta
+
+### G.2 — Más campos para abogado
+
+Ampliar el modelo de abogado con campos adicionales:
+- `direccion` — dirección de contacto
+- `telefono` — teléfono directo
+- `cedula` — cédula profesional
+- Requiere migración Prisma + actualizar DTOs + formularios CRM
+
+**Esfuerzo**: Bajo-Medio | **Prioridad**: Media
+
+### G.3 — Dashboard con widgets controlados por rol
+
+En vez de 3 componentes distintos (`DashboardAdmin`, `DashboardProveedor`, `DashboardAbogado`), un solo componente `Dashboard` con widgets configurables por rol:
+- Cada widget tiene permisos asociados (ej: widget "Asociados" requiere `asociados:ver`)
+- Layout responsive tipo grid
+- Widgets arrastrables (drag & drop) — opcional, fase posterior
+
+**Esfuerzo**: Alto | **Prioridad**: Baja (funcional actual es suficiente)
+
+### G.4 — Flujo de aceptación de casos para abogado
+
+Cuando un abogado ve "Casos Disponibles", poder:
+- Ver resumen del caso sin revelar información sensible
+- Botón "Tomar Caso" → `PUT /casos-legales/:id/tomar-caso`
+- El caso cambia `abogadoUsuarioId` al usuario y estado a `en_atencion`
+- Notificación al operador de que el caso fue tomado
+
+**Esfuerzo**: Medio | **Prioridad**: Alta
+
+### G.5 — Pantallas de seguimiento de caso (abogado)
+
+Vista de caso del abogado con:
+- Timeline de notas (ya existe endpoint `abogado/mis-casos/:id`)
+- Agregar notas al caso
+- Cambiar estado del caso (resolver, escalar)
+- Subir documentos al caso
+- Ver datos del asociado/vehículo implicado
+
+**Esfuerzo**: Medio | **Prioridad**: Alta
+
+### G.6 — Notificaciones CRM para abogado
+
+El sistema ya tiene `notificaciones_crm` pero falta:
+- Trigger: al asignar caso a abogado, crear notificación
+- Trigger: al recibir nota nueva en caso asignado
+- Trigger: caso escalado/resuelto por operador
+- Mostrar badge contador en campana del header
+
+**Esfuerzo**: Medio | **Prioridad**: Media
+
+---
+
 
 > **Completado** el 20 de marzo de 2026.
 
@@ -651,14 +717,23 @@ Estos documentos fueron consolidados aquí y movidos a `.github/completados/`:
 
 ---
 
-## Estado del Sistema (20-mar-2026)
+## Estado del Sistema (21-mar-2026)
 
 | Componente | Progreso | Notas |
 |------------|----------|-------|
-| **API** | ~99% | Twilio SMS ✅, Rate limiting ✅, RBAC v2 backend ✅. Falta: cifrar API keys, D.3 consolidación |
-| **CRM Web** | ~97% | 18+ rutas (incl. abogados, mis-casos, casos-disponibles). RBAC v2 tabs ✅. Falta: D.3, responsive tabs menores |
+| **API** | ~99% | Twilio SMS ✅, Rate limiting ✅, RBAC v2 backend ✅, Dashboard abogado ✅. Falta: cifrar API keys, D.3 consolidación |
+| **CRM Web** | ~97% | 18+ rutas. RBAC v2 tabs ✅, Dashboard por rol (admin/proveedor/abogado) ✅. Falta: D.3, crear abogados modal, responsive tabs menores |
 | **App Flutter** | ~92% | 139 tests. Falta: C.3 shell profesional, perfil completitud, mapa proveedores |
 | **Infra** | ✅ | Docker + Nginx + SSL + deploy script funcionando |
 
 **Desplegado en**: `https://core-asoc.cbluna-dev.com`
-**Último commit**: `c437d2f` — Sección C: Rol de Abogado (C.0+C.1+C.2+C.4)
+
+### Bugs corregidos (21-mar-2026)
+
+| Bug | Causa raíz | Fix |
+|-----|-----------|-----|
+| Header mostraba "Operador" para abogados | `validEnumValues` en `createUser()` y `updateUser()` no incluía `'abogado'` → campo enum `rol` se default a `'operador'` | Agregado `'abogado'` a `validEnumValues` en `auth.service.ts` |
+| Abogados no aparecían en lista ni dropdown de asignación | Mismo bug: `getAbogados()` filtra por `rol: 'abogado'` pero el usuario tenía `rol: 'operador'` | Mismo fix + migración SQL `20260321000000_fix_abogado_rol_enum` |
+| Dashboard abogado mostraba "Error cargando métricas" | No existía endpoint `/reportes/dashboard-abogado` y el abogado no tiene permiso `reportes:ver` para el dashboard general | Creado endpoint `dashboard-abogado` con métricas de casos + trend mensual |
+| Badge color de abogado igual a operador en Usuarios tab | `UsuariosTab.tsx` solo manejaba `admin`/`operador`/`default` | Agregado variant `'secondary'` (púrpura) para abogado |
+| Sin color de abogado en Permisos tab | `ROLE_COLORS` en `PermisosTab.tsx` no tenía entrada para abogado | Agregado `abogado: 'bg-purple-100 text-purple-700'` |

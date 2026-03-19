@@ -138,14 +138,18 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.warning_amber_rounded, size: 48, color: AppColors.error),
+        icon: const Icon(
+          Icons.warning_amber_rounded,
+          size: 48,
+          color: AppColors.error,
+        ),
         title: const Text('Documento no válido'),
         content: Text(
           motivo,
           textAlign: TextAlign.center,
-          style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-            color: AppColors.textSecondary,
-          ),
+          style: Theme.of(
+            ctx,
+          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(

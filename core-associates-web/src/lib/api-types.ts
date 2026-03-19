@@ -276,6 +276,25 @@ export interface DashboardProveedorMetrics {
   }[];
 }
 
+export interface DashboardAbogadoMetrics {
+  casos: {
+    asignados: number;
+    enAtencion: number;
+    resueltos: number;
+    escalados: number;
+    disponibles: number;
+    delMes: number;
+  };
+  notas: {
+    delMes: number;
+  };
+  trend: {
+    mes: string;
+    asignados: number;
+    resueltos: number;
+  }[];
+}
+
 // Reporte avanzado con filtros
 export interface ReporteAvanzado {
   periodo: { desde: string | null; hasta: string | null };

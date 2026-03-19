@@ -72,6 +72,83 @@ export class ReportesService {
     };
   }
 
+  // ── Dashboard para Abogado ──
+
+  async getDashboardAbogadoMetrics(abogadoUsuarioId: string) {
+    const [
+      casosAsignados,
+      casosEnAtencion,
+      casosResueltos,
+      casosEscalados,
+      casosDisponibles,
+      casosDelMes,
+      notasDelMes,
+    ] = await Promise.all([
+      this.prisma.casoLegal.count({ where: { abogadoUsuarioId } }),
+      this.prisma.casoLegal.count({ where: { abogadoUsuarioId, estado: 'en_atencion' } }),
+      this.prisma.casoLegal.count({ where: { abogadoUsuarioId, estado: 'resuelto' } }),
+      this.prisma.casoLegal.count({ where: { abogadoUsuarioId, estado: 'escalado' } }),
+      this.prisma.casoLegal.count({ where: { estado: 'abierto', abogadoUsuarioId: null } }),
+      this.prisma.casoLegal.count({
+        where: {
+          abogadoUsuarioId,
+          fechaApertura: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
+        },
+      }),
+      this.prisma.notaCaso.count({
+        where: {
+          autorId: abogadoUsuarioId,
+          createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
+        },
+      }),
+    ]);
+
+    const trend = await this.getMonthlyTrendAbogado(abogadoUsuarioId);
+
+    return {
+      casos: {
+        asignados: casosAsignados,
+        enAtencion: casosEnAtencion,
+        resueltos: casosResueltos,
+        escalados: casosEscalados,
+        disponibles: casosDisponibles,
+        delMes: casosDelMes,
+      },
+      notas: {
+        delMes: notasDelMes,
+      },
+      trend,
+    };
+  }
+
+  private async getMonthlyTrendAbogado(abogadoUsuarioId: string) {
+    const months: { mes: string; asignados: number; resueltos: number }[] = [];
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    while (current <= endDate) {
+      const monthStart = new Date(current);
+      const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+      const mesLabel = current.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+
+      const [asignados, resueltos] = await Promise.all([
+        this.prisma.casoLegal.count({
+          where: { abogadoUsuarioId, fechaApertura: { gte: monthStart, lt: monthEnd } },
+        }),
+        this.prisma.casoLegal.count({
+          where: { abogadoUsuarioId, estado: 'resuelto', fechaCierre: { gte: monthStart, lt: monthEnd } },
+        }),
+      ]);
+
+      months.push({ mes: mesLabel, asignados, resueltos });
+      current.setMonth(current.getMonth() + 1);
+    }
+
+    return months;
+  }
+
   // ── Reportes avanzados con filtros de fecha ──
 
   async getReporteAvanzado(desde?: string, hasta?: string) {
