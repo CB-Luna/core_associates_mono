@@ -17,8 +17,8 @@ VALUES (
   NOW()
 ) ON CONFLICT ("codigo") DO NOTHING;
 
--- Asignar el nuevo menú al rol admin (orden 7)
-INSERT INTO "rol_modulo_menu" ("rol_id", "modulo_menu_id", "orden")
+-- Asignar el nuevo menú al rol admin y operador (orden 7)
+INSERT INTO "roles_modulos_menu" ("rol_id", "modulo_menu_id", "orden")
 VALUES
   ('a0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000011', 7),
   ('a0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000011', 7)
