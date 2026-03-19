@@ -12,7 +12,7 @@ Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de
 | # | Feature | Impacto | Esfuerzo | Alcance |
 |---|---------|---------|----------|---------|
 | **A** | ~~KYC Guard — Restricción por estado~~ | ✅ Completado | — | API + App |
-| **B** | IA Bilateral — Validación de documentos | 🔴 Alto | Alto | API + App + CRM |
+| **B** | ~~IA Bilateral — B.1/B.2/B.3~~ · B.4/B.5 pendientes | 🟠 Parcial | — | API + App + CRM |
 | **C** | Rol de Abogado/Profesional | 🟡 Medio | Medio | API + CRM |
 | **D** | RBAC v2 — Plantillas de rol | 🟡 Medio | Medio | API + CRM |
 | **E** | Mejoras menores (App + CRM + API) | 🟢 Bajo | Bajo-Medio | Varios |
@@ -76,59 +76,30 @@ Crear guard reutilizable que verifica `estado === 'activo'` antes de permitir ac
 
 **Arquitectura de 2 capas**: La IA valida documentos tanto en la App (antes de subir) como en el CRM (análisis profundo después de subir).
 
-### B.1 — Capa 1: Pre-validación en App (filtro rápido)
+### ~~B.1 — Capa 1: Pre-validación en App (filtro rápido)~~ ✅
 
-Nuevo endpoint que analiza la imagen ANTES de subirla a MinIO. Evita que lleguen al CRM fotos de paisajes, memes, o imágenes ilegibles.
+> **Completado** el 19 de marzo de 2026 (commit `f5bd43b`).
+> - `POST /documentos/pre-validar` con prompt ligero de clasificación
+> - `PRE_VALIDACION_PROMPT`: tolerante, solo rechaza tipo incorrecto o ilegible
+> - Flutter: flujo pick → preview → pre-validar IA → upload (con dialog de error si falla)
+> - `documents_repository.dart`: `preValidar()` multipart
 
-**Endpoint**: `POST /documentos/pre-validar`
-- Input: imagen (multipart) + `tipo` esperado (ine_frente, ine_reverso, selfie, tarjeta_circulacion)
-- IA: Prompt ligero de clasificación (Claude Haiku o similar)
-- Output: `{ valida: boolean, motivo?: string, advertencia?: string }`
-- Si `valida: true` → la app procede a subir normalmente
-- Si `valida: false` → la app muestra el motivo y NO sube
+### ~~B.2 — Capa 2: Auto-aprobación/rechazo~~ ✅
 
-**Flutter**: Modificar `documents_screen.dart` para llamar pre-validar antes de upload. Mostrar resultado en un dialog.
+> **Completado** el 19 de marzo de 2026 (commit `f5bd43b`).
+> - `autoDecideDocumento()` en `ai-analysis.service.ts` tras análisis completo
+> - Umbrales configurables desde ConfiguracionIA (clave `document_analyzer`)
+> - Detecta fallos críticos (`es_ine_valida`, `imagen_legible`, etc.)
+> - Auto-rechaza con motivo `[Auto-IA]`, auto-aprueba si confianza alta, deja `pendiente` si intermedio
+> - CRM ConfAITab: sección "Validación Documental IA" con sliders umbral y campos anti-abuso
 
-**Archivos a crear/modificar:**
-- `documentos.controller.ts` — nuevo endpoint `pre-validar`
-- `documentos.service.ts` — método `preValidar()`
-- `ai/prompts/pre-validacion-prompt.ts` — prompt ligero de clasificación
-- `documents_repository.dart` — método `preValidar()`
-- `documents_screen.dart` — flujo: seleccionar → pre-validar → subir
+### ~~B.3 — Anti-troll: Límite de rechazos~~ ✅
 
-### B.2 — Capa 2: Análisis profundo en CRM (ya existe, mejorar)
-
-El análisis profundo con Claude ya funciona. Mejoras:
-
-- **Auto-aprobación**: Si todos los campos tienen confianza ≥ 90%, marcar documento como `aprobado` automáticamente (sin intervención manual)
-- **Auto-rechazo**: Si validaciones críticas fallan (imagen ilegible, documento equivocado), marcar como `rechazado` con motivo
-- **Re-análisis**: Permitir re-ejecutar análisis cuando el operador lo necesite (ya existe botón)
-
-**Archivos a modificar:**
-- `ai-analysis.service.ts` — lógica de auto-aprobación/rechazo
-- `documentos.service.ts` — actualizar estado según resultado IA
-
-### B.3 — Anti-troll: Límite de rechazos
-
-Evitar abuso del endpoint pre-validar / upload con imágenes basura.
-
-**Modelo nuevo**: `IntentoDocumento`
-```
-IntentoDocumento {
-  id, asociadoId, tipo, resultado (aprobado/rechazado),
-  motivoRechazo?, creadoEn
-}
-```
-
-**Reglas**:
-- Máx 5 rechazos por tipo por día
-- Tras 5 rechazos: bloquear pre-validación por 24h para ese tipo, notificar al operador
-- Tras 15 rechazos acumulados (cualquier tipo): marcar asociado para revisión manual
-
-**Archivos a crear:**
-- `schema.prisma` — modelo `IntentoDocumento`
-- Migración Prisma
-- `documentos.service.ts` — verificar intentos antes de pre-validar
+> **Completado** el 19 de marzo de 2026 (commit `f5bd43b`).
+> - Modelo `IntentoDocumento` (`intentos_documentos`) con migración
+> - `checkAntiTroll()`: max rechazos por tipo en ventana de tiempo configurable
+> - Campos en ConfiguracionIA: `maxRechazosPreval`, `horasBloqueoPreval`
+> - `BadRequestException` si excede límite
 
 ### B.4 — CRM: Admin sube documentos por un asociado
 
