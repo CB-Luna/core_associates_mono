@@ -12,7 +12,14 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { type UsuarioCRM, type Proveedor, type Rol } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
-import { Pencil, KeyRound, Power, Camera, Trash2, Palette, Lock, Check, Globe } from 'lucide-react';
+import { Pencil, KeyRound, Power, Camera, Trash2, Palette, Lock, Check, Globe, ShieldCheck, UserCog, Building2, Scale } from 'lucide-react';
+
+const ROL_ICONS: Record<string, React.ReactNode> = {
+  admin: <ShieldCheck className="h-3 w-3" />,
+  operador: <UserCog className="h-3 w-3" />,
+  proveedor: <Building2 className="h-3 w-3" />,
+  abogado: <Scale className="h-3 w-3" />,
+};
 import { type Tema } from '@/lib/api-types';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -296,7 +303,7 @@ export function UsuariosTab() {
         const displayName = rolRecord ? rolRecord.nombre.charAt(0).toUpperCase() + rolRecord.nombre.slice(1) : user.rol;
         const variant = user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : user.rol === 'abogado' ? 'secondary' : 'default';
         return (
-          <Badge variant={variant}>
+          <Badge variant={variant} icon={ROL_ICONS[user.rol]}>
             {displayName}
           </Badge>
         );
@@ -742,7 +749,7 @@ export function UsuariosTab() {
             </div>
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Badge variant={user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : 'default'}>
+                <Badge variant={user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : user.rol === 'abogado' ? 'secondary' : 'default'} icon={ROL_ICONS[user.rol]}>
                   {user.rol}
                 </Badge>
                 {/* Theme indicator in mobile */}

@@ -162,8 +162,8 @@ export class RolesService {
     const rol = await this.prisma.rol.findUnique({ where: { id: rolId } });
     if (!rol) throw new NotFoundException('Rol no encontrado');
 
-    // Protección: rol protegido debe conservar el menú de configuración
-    if (rol.esProtegido) {
+    // Protección: solo el rol admin debe conservar el menú de configuración
+    if (rol.esProtegido && rol.nombre === 'admin') {
       const configMenu = await this.prisma.moduloMenu.findUnique({ where: { codigo: 'configuracion' } });
       if (configMenu) {
         const keepsCfg = items.some((i) => i.moduloMenuId === configMenu.id);

@@ -89,17 +89,19 @@ const fieldLabels: Record<string, string> = {
 export function AIAnalysisPanel({ analisis, documentoId, documentoTipo, onAnalysisUpdated }: AIAnalysisPanelProps) {
   const [expanded, setExpanded] = useState(true);
   const [reanalyzing, setReanalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   const handleAnalyze = async () => {
     setReanalyzing(true);
+    setAnalyzeError(null);
     try {
       const endpoint = analisis
         ? `/ai/analysis/document/${documentoId}/reanalyze`
         : `/ai/analysis/document/${documentoId}`;
       await apiClient(endpoint, { method: 'POST' });
       onAnalysisUpdated?.();
-    } catch {
-      // ignore
+    } catch (err: any) {
+      setAnalyzeError(err?.message || 'No se pudo analizar. Verifica la configuración de IA.');
     } finally {
       setReanalyzing(false);
     }
@@ -123,6 +125,9 @@ export function AIAnalysisPanel({ analisis, documentoId, documentoTipo, onAnalys
             Analizar con IA
           </button>
         </div>
+        {analyzeError && (
+          <p className="mt-2 text-xs text-red-600">{analyzeError}</p>
+        )}
       </div>
     );
   }

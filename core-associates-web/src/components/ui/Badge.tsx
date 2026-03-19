@@ -17,9 +17,10 @@ interface BadgeProps {
   children: React.ReactNode;
   variant?: BadgeVariant;
   className?: string;
+  icon?: React.ReactNode;
 }
 
-export function Badge({ children, variant = 'default', className }: BadgeProps) {
+export function Badge({ children, variant = 'default', className, icon }: BadgeProps) {
   return (
     <span
       className={cn(
@@ -28,7 +29,7 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
         className,
       )}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+      {icon ?? <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />}
       {children}
     </span>
   );

@@ -49,6 +49,13 @@ import {
   MessageSquare,
   AlertTriangle,
   Info,
+  Gavel,
+  Hammer,
+  GraduationCap,
+  Award,
+  UserCheck,
+  ClipboardList,
+  BadgeCheck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -103,6 +110,13 @@ export const iconMap: Record<string, LucideIcon> = {
   MessageSquare,
   AlertTriangle,
   Info,
+  Gavel,
+  Hammer,
+  GraduationCap,
+  Award,
+  UserCheck,
+  ClipboardList,
+  BadgeCheck,
 };
 
 export const iconNames = Object.keys(iconMap);

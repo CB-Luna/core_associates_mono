@@ -51,10 +51,19 @@ const PRESET_USERS = [
     id: 'proveedor',
     name: 'Proveedor',
     role: 'Proveedor',
-    email: 'proveedor@elrapido.com',
-    password: 'Proveedor2026!',
+    email: 'proveedor2@gmail.com',
+    password: 'Proveedor2',
     initials: 'PR',
     color: 'bg-amber-500',
+  },
+  {
+    id: 'abogado',
+    name: 'Abogado',
+    role: 'Abogado',
+    email: 'abogado1@gmail.com',
+    password: 'Abogado1',
+    initials: 'AB',
+    color: 'bg-purple-500',
   },
 ] as const;
 

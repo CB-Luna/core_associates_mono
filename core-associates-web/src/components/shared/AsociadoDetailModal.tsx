@@ -1,7 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Car, FileText, Ticket, Phone, Mail, Calendar, CheckCircle, XCircle, AlertTriangle, Eye, Clock, MessageSquare, Send } from 'lucide-react';
+import { X, Car, FileText, Ticket, Phone, Mail, Calendar, CheckCircle, XCircle, AlertTriangle, Eye, Clock, MessageSquare, Send, CreditCard, Camera, ScanLine, RotateCcw } from 'lucide-react';
+
+const DOC_ICONS: Record<string, React.ReactNode> = {
+  ine_frente: <CreditCard className="h-4 w-4 text-blue-500" />,
+  ine_reverso: <ScanLine className="h-4 w-4 text-indigo-500" />,
+  selfie: <Camera className="h-4 w-4 text-violet-500" />,
+  tarjeta_circulacion: <Car className="h-4 w-4 text-teal-500" />,
+};
 import { apiClient, apiImageUrl } from '@/lib/api-client';
 import type { Asociado, Documento, NotaAsociado } from '@/lib/api-types';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
@@ -119,6 +126,27 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
       });
     } catch {
       alert('Error al aprobar');
+    } finally {
+      setDocUpdating(null);
+    }
+  };
+
+  const handleRevertDocument = async (doc: Documento) => {
+    if (!asociado) return;
+    setDocUpdating(doc.id);
+    try {
+      await apiClient(`/documentos/${doc.id}/estado`, {
+        method: 'PUT',
+        body: JSON.stringify({ estado: 'pendiente' }),
+      });
+      setAsociado({
+        ...asociado,
+        documentos: asociado.documentos?.map((d) =>
+          d.id === doc.id ? { ...d, estado: 'pendiente' as const, motivoRechazo: undefined } : d
+        ),
+      });
+    } catch {
+      alert('Error al revertir');
     } finally {
       setDocUpdating(null);
     }
@@ -281,7 +309,10 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
                   {asociado.documentos.map((d) => (
                     <div key={d.id} className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium capitalize text-gray-900 dark:text-gray-100">{d.tipo.replace(/_/g, ' ')}</span>
+                        <span className="flex items-center gap-1.5 font-medium capitalize text-gray-900 dark:text-gray-100">
+                          {DOC_ICONS[d.tipo] ?? <FileText className="h-4 w-4 text-gray-400" />}
+                          {d.tipo.replace(/_/g, ' ')}
+                        </span>
                         <Badge variant={d.estado === 'aprobado' ? 'success' : d.estado === 'rechazado' ? 'danger' : 'warning'}>
                           {d.estado}
                         </Badge>
@@ -317,14 +348,26 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
                             </button>
                           </>
                         )}
+                        {d.estado === 'aprobado' && puede('aprobar:asociados') && (
+                          <button
+                            onClick={() => handleRevertDocument(d)}
+                            disabled={docUpdating === d.id}
+                            className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            Revertir
+                          </button>
+                        )}
                       </div>
-                      {/* AI Analysis */}
-                      <AIAnalysisPanel
-                        analisis={(d as any).analisis}
-                        documentoId={d.id}
-                        documentoTipo={d.tipo}
-                        onAnalysisUpdated={refreshAsociado}
-                      />
+                      {/* AI Analysis - solo si no está aprobado */}
+                      {d.estado !== 'aprobado' && (
+                        <AIAnalysisPanel
+                          analisis={(d as any).analisis}
+                          documentoId={d.id}
+                          documentoTipo={d.tipo}
+                          onAnalysisUpdated={refreshAsociado}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
