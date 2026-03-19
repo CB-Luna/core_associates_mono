@@ -142,7 +142,7 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
       setAsociado({
         ...asociado,
         documentos: asociado.documentos?.map((d) =>
-          d.id === doc.id ? { ...d, estado: 'pendiente' as const, motivoRechazo: undefined } : d
+          d.id === doc.id ? { ...d, estado: 'pendiente' as const, motivoRechazo: null } : d
         ),
       });
     } catch {
