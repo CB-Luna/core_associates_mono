@@ -118,6 +118,14 @@ export class AsociadosService {
         orderBy: { createdAt: 'desc' },
         include: {
           _count: { select: { vehiculos: true, documentos: true, cupones: true } },
+          documentos: {
+            select: { tipo: true, estado: true },
+          },
+          vehiculos: {
+            select: { marca: true, modelo: true, placas: true, esPrincipal: true },
+            take: 3,
+            orderBy: { esPrincipal: 'desc' },
+          },
         },
       }),
       this.prisma.asociado.count({ where }),

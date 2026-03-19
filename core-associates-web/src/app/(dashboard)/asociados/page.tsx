@@ -12,7 +12,7 @@ import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
 import { formatFechaLegible } from '@/lib/utils';
 import { AsociadoDetailModal } from '@/components/shared/AsociadoDetailModal';
-import { Eye, Phone, Calendar } from 'lucide-react';
+import { Eye, Phone, Calendar, Car, FileCheck2, FileX2, FileClock, FileQuestion } from 'lucide-react';
 
 function AsociadoPhoto({ asociado }: { asociado: Asociado }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -149,6 +149,70 @@ export default function AsociadosPage() {
       },
     },
     {
+      id: 'documentos',
+      header: 'Documentos',
+      meta: {
+        exportValue: (a: Asociado) => {
+          const tipos = ['ine_frente', 'ine_reverso', 'selfie', 'tarjeta_circulacion'] as const;
+          return tipos.map(t => {
+            const doc = a.documentos?.find(d => d.tipo === t);
+            return `${t}: ${doc?.estado || 'sin enviar'}`;
+          }).join(', ');
+        },
+      },
+      cell: ({ row }) => {
+        const docs = row.original.documentos || [];
+        const tipos: { key: string; label: string }[] = [
+          { key: 'ine_frente', label: 'INE-F' },
+          { key: 'ine_reverso', label: 'INE-R' },
+          { key: 'selfie', label: 'Selfie' },
+          { key: 'tarjeta_circulacion', label: 'T.Circ' },
+        ];
+        return (
+          <div className="flex items-center gap-1">
+            {tipos.map(({ key, label }) => {
+              const doc = docs.find((d: any) => d.tipo === key);
+              const estado = doc?.estado;
+              let Icon = FileQuestion;
+              let color = 'text-gray-300';
+              let title = `${label}: Sin enviar`;
+              if (estado === 'aprobado') { Icon = FileCheck2; color = 'text-green-500'; title = `${label}: Aprobado`; }
+              else if (estado === 'pendiente') { Icon = FileClock; color = 'text-amber-500'; title = `${label}: Pendiente`; }
+              else if (estado === 'rechazado') { Icon = FileX2; color = 'text-red-500'; title = `${label}: Rechazado`; }
+              return <span key={key} title={title}><Icon className={`h-4 w-4 ${color}`} /></span>;
+            })}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'vehiculos',
+      header: 'Vehículos',
+      meta: {
+        exportValue: (a: Asociado) => {
+          if (!a.vehiculos?.length) return 'Sin vehículos';
+          return a.vehiculos.map(v => `${v.marca} ${v.modelo} (${v.placas})`).join(', ');
+        },
+      },
+      cell: ({ row }) => {
+        const vehs = row.original.vehiculos || [];
+        const count = row.original._count?.vehiculos ?? vehs.length;
+        if (count === 0) {
+          return <span className="text-xs text-gray-300">—</span>;
+        }
+        const principal = vehs[0];
+        return (
+          <div className="flex items-center gap-1.5">
+            <Car className="h-3.5 w-3.5 text-primary-400" />
+            <span className="text-xs text-gray-700 dark:text-gray-300">
+              {principal ? `${principal.marca} ${principal.modelo}` : `${count}`}
+              {count > 1 && <span className="ml-1 text-gray-400">+{count - 1}</span>}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: 'fechaRegistro',
       header: 'Registro',
       cell: ({ getValue }) => (
@@ -235,7 +299,23 @@ export default function AsociadosPage() {
                     <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{a.telefono}</span>
                     <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{formatFechaLegible(a.fechaRegistro)}</span>
                   </div>
-                  <div className="mt-2 flex items-center gap-1">
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      {(['ine_frente','ine_reverso','selfie','tarjeta_circulacion'] as const).map(key => {
+                        const doc = a.documentos?.find(d => d.tipo === key);
+                        const estado = doc?.estado;
+                        let Icon = FileQuestion; let color = 'text-gray-300';
+                        if (estado === 'aprobado') { Icon = FileCheck2; color = 'text-green-500'; }
+                        else if (estado === 'pendiente') { Icon = FileClock; color = 'text-amber-500'; }
+                        else if (estado === 'rechazado') { Icon = FileX2; color = 'text-red-500'; }
+                        return <Icon key={key} className={`h-3.5 w-3.5 ${color}`} />;
+                      })}
+                      {(a._count?.vehiculos ?? 0) > 0 && (
+                        <span className="ml-2 inline-flex items-center gap-0.5 text-[11px] text-primary-500">
+                          <Car className="h-3 w-3" />{a._count?.vehiculos}
+                        </span>
+                      )}
+                    </div>
                     <button onClick={(e) => { e.stopPropagation(); setDetailId(a.id); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary-200 text-primary-500 hover:bg-primary-50"><Eye className="h-3.5 w-3.5" /></button>
                   </div>
                 </div>
