@@ -26,4 +26,9 @@ export class UpdateUsuarioDto {
   @IsOptional()
   @IsEnum(['activo', 'inactivo'])
   estado?: string;
+
+  @ApiPropertyOptional({ example: 'penal', description: 'Especialidad del abogado' })
+  @IsOptional()
+  @IsString()
+  especialidad?: string;
 }

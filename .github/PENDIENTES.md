@@ -1,6 +1,6 @@
 # Pendientes — Core Associates
 
-> **Última actualización**: 18 de marzo de 2026
+> **Última actualización**: 20 de marzo de 2026
 > Documento unificado con TODO lo que falta por implementar. Consolida y reemplaza los documentos fragmentados que ahora viven en `.github/completados/`.
 
 ---
@@ -9,15 +9,16 @@
 
 Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de negocio.
 
-> ⚠️ **Prioridad actual**: Sección D (RBAC v2 — Plantillas de Rol) y C.3 (App Móvil — Shell del Abogado).
+> ⚠️ **Prioridad actual**: C.3 (App Móvil — Shell del Abogado) y D.3 (Consolidación RBAC).
 
 | # | Feature | Impacto | Esfuerzo | Alcance |
-|---|---------|---------|----------|---------|
+|---|---------|---------|----------|----------|
 | **A** | ~~KYC Guard — Restricción por estado~~ | ✅ Completado | — | API + App |
 | **B** | ~~IA Bilateral — B.1/B.2/B.3/B.4/B.5~~ ✅ Completo | ✅ Completo | — | API + App + CRM |
 | **C** | ~~Rol de Abogado — C.0/C.1/C.2/C.4~~ ✅ (falta C.3 App) | ✅ API+CRM | Pendiente App | API + CRM + App |
-| **D** | RBAC v2 — Plantillas de rol | 🟡 Medio | Medio | API + CRM |
-| **E** | Mejoras menores (App + CRM + API) | 🟢 Bajo | Bajo-Medio | Varios |
+| **D** | RBAC v2 — Plantillas de rol | ✅ D.1+D.2 | ❌ D.3 Consolidación | API + CRM |
+| **E** | Mejoras menores (App + CRM + API) | ✅ E1.1+E1.2 | Resto pendiente | Varios |
+| **F** | ~~Abogados Management CRM~~ | ✅ Completado | — | CRM |
 
 ---
 
@@ -581,6 +582,22 @@ Reemplazar las tabs actuales (Roles + Permisos + Menú Dinámico) por:
 
 ---
 
+## F. Abogados Management — Gestión de Abogados CRM ✅
+
+> **Completado** el 20 de marzo de 2026.
+
+- ✅ **Migración**: `20260320100000_abogado_especialidad` — campo `especialidad` en usuarios + menú "Abogados" + asignación a admin/operador
+- ✅ **API endpoints**: `GET /auth/users/abogados` (paginado, búsqueda, filtro estado) + `GET /auth/users/abogados/:id` (detalle con breakdown de casos)
+- ✅ **DTO**: `UpdateUsuarioDto` acepta `especialidad` + servicio `updateUser()` actualizado
+- ✅ **CRM lista** (`/abogados`): DataTable con avatar, especialidad, casos activos, estado, último acceso. Mobile cardRenderer.
+- ✅ **CRM detalle** (`/abogados/[id]`): Perfil con editor de especialidad, stats grid, breakdown por estado, tabla de casos recientes clickeables.
+- ✅ **Tipos**: `AbogadoCRM` + `AbogadoDetalle` en `api-types.ts`
+- ✅ **Menú**: Ítem dinámico "Abogados" (icono Gavel, orden 7) asignado a admin y operador vía `RolModuloMenu`
+- ✅ **Breadcrumbs**: `/abogados` → "Abogados" en Header
+- ✅ **Seed**: actualizado con nuevo menú + orden corregido
+
+---
+
 ## Orden de Implementación Sugerido
 
 ```
@@ -590,26 +607,29 @@ Fase 1 (Completada ✅):
   ├─ B.2 Auto-aprobación/rechazo ✅
   └─ B.3 Anti-troll ✅
 
-Fase 2 (Actual — Rol Abogado, máxima prioridad):
-  ├─ C.0 Modelo de datos + migración
-  ├─ C.1 Backend: endpoints abogado + notificaciones CRM
-  ├─ C.2 CRM Web: vistas abogado + campana notificaciones
+Fase 2 (Completada ✅ — API + CRM):
+  ├─ C.0 Modelo de datos + migración ✅
+  ├─ C.1 Backend: endpoints abogado + notificaciones CRM ✅
+  ├─ C.2 CRM Web: vistas abogado + campana notificaciones ✅
+  ├─ C.4 Operador: adaptar asignación ✅
+  └─ F. Abogados Management CRM ✅
+
+Fase 3 (Completada ✅):
+  ├─ E1.1 SMS real (Twilio) ✅
+  ├─ E1.2 Rate limiting (Throttler) ✅
+  ├─ B.4 Admin sube docs por asociado ✅
+  ├─ B.5 Notificaciones docs incompletos ✅
+  └─ D.1 + D.2 RBAC v2 Backend + Frontend ✅
+
+Fase 4 (Pendiente — Consolidación + App):
   ├─ C.3 App Móvil: shell profesional + push
-  └─ C.4 Operador: adaptar asignación
+  └─ D.3 Consolidación RBAC (eliminar enum legacy)
 
-Fase 3 (Seguridad + Features pendientes):
-  ├─ E1.1 SMS real (Twilio)
-  ├─ E1.2 Rate limiting (Throttler)
-  ├─ B.4 Admin sube docs por asociado
-  └─ B.5 Notificaciones docs incompletos
-
-Fase 4 (RBAC v2 — consolidación técnica):
-  └─ D. Plantillas de rol + eliminar enum legacy
-
-Fase 5 (Mejoras y polish):
+Fase 5 (Pendiente — Mejoras y polish):
+  ├─ E1.3 Cifrar API keys IA
   ├─ E2.1 Perfil completitud
-  ├─ E2.2 Filtro cupones
-  └─ Resto de mejoras menores
+  ├─ E2.2 Filtro cupones (completar TabBar)
+  └─ Resto de mejoras menores (E1.4, E2.3, E2.4, E3.1-E3.4)
 ```
 
 ---
@@ -631,14 +651,14 @@ Estos documentos fueron consolidados aquí y movidos a `.github/completados/`:
 
 ---
 
-## Estado del Sistema (18-mar-2026)
+## Estado del Sistema (20-mar-2026)
 
 | Componente | Progreso | Notas |
 |------------|----------|-------|
-| **API** | ~98% | 73 unit + 11 e2e tests. Falta: SMS real, rate limiting |
-| **CRM Web** | ~95% | 16 rutas, 60 tests. Falta: RBAC v2, responsive tabs menores |
-| **App Flutter** | ~92% | 139 tests. Falta: KYC overlay, pre-validación IA, mapa proveedores |
+| **API** | ~99% | Twilio SMS ✅, Rate limiting ✅, RBAC v2 backend ✅. Falta: cifrar API keys, D.3 consolidación |
+| **CRM Web** | ~97% | 18+ rutas (incl. abogados, mis-casos, casos-disponibles). RBAC v2 tabs ✅. Falta: D.3, responsive tabs menores |
+| **App Flutter** | ~92% | 139 tests. Falta: C.3 shell profesional, perfil completitud, mapa proveedores |
 | **Infra** | ✅ | Docker + Nginx + SSL + deploy script funcionando |
 
 **Desplegado en**: `https://core-asoc.cbluna-dev.com`
-**Último commit**: `f185ca8` — columnas Documentos y Vehículos en tabla asociados
+**Último commit**: `c437d2f` — Sección C: Rol de Abogado (C.0+C.1+C.2+C.4)

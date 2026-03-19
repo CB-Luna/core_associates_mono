@@ -436,3 +436,23 @@ export interface NotificacionCRM {
   leida: boolean;
   createdAt: string;
 }
+
+// Abogado CRM
+export interface AbogadoCRM {
+  id: string;
+  email: string;
+  nombre: string;
+  rol: string;
+  estado: 'activo' | 'inactivo';
+  avatarUrl: string | null;
+  especialidad: string | null;
+  ultimoAcceso: string | null;
+  createdAt: string;
+  _count: { casosComoAbogado: number };
+  casosBreakdown: Record<string, number>;
+}
+
+export interface AbogadoDetalle extends AbogadoCRM {
+  proveedor: Proveedor | null;
+  casosRecientes: CasoLegal[];
+}

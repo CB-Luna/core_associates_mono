@@ -24,6 +24,7 @@ const breadcrumbMap: Record<string, string> = {
   '/promociones': 'Promociones',
   '/cupones': 'Cupones',
   '/casos-legales': 'Casos Legales',
+  '/abogados': 'Abogados',
   '/mapa-sos': 'Mapa SOS',
   '/reportes': 'Reportes',
   '/documentos': 'Documentos',

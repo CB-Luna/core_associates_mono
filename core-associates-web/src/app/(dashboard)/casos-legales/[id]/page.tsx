@@ -200,136 +200,149 @@ export default function CasoLegalDetailPage() {
   }
 
   return (
-    <div>
-      <button
-        onClick={() => router.back()}
-        className="mb-4 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Volver
-      </button>
-
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Caso {caso.codigo}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
+    <div className="space-y-6">
+      {/* Back + Header */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.back()}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:bg-gray-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Caso {caso.codigo}</h1>
+            <Badge variant={estadoVariant[caso.estado] || 'default'} className="text-sm px-3 py-1">
+              {estadoLabels[caso.estado] || caso.estado}
+            </Badge>
+            <Badge variant={prioridadVariant[caso.prioridad] || 'default'} className="text-sm px-3 py-1">
+              {caso.prioridad}
+            </Badge>
+          </div>
+          <p className="mt-0.5 text-sm text-gray-500">
             {tipoPercanceLabels[caso.tipoPercance] || caso.tipoPercance} &middot;{' '}
             {formatFechaConHora(caso.fechaApertura)}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Badge variant={prioridadVariant[caso.prioridad] || 'default'} className="text-sm px-3 py-1">
-            {caso.prioridad}
-          </Badge>
-          <Badge variant={estadoVariant[caso.estado] || 'default'} className="text-sm px-3 py-1">
-            {estadoLabels[caso.estado] || caso.estado}
-          </Badge>
-        </div>
       </div>
 
-      {/* Estado actions */}
-      {puede('cambiar:estado-caso') && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {estadoOptions
-            .filter((e) => e !== caso.estado)
-            .map((e) => (
-              <button
-                key={e}
-                onClick={() => { setPendingEstado(e); setConfirmOpen(true); }}
-                disabled={updatingEstado}
-                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-              >
-                Cambiar a {estadoLabels[e]}
-              </button>
-            ))}
+      {/* Actions bar */}
+      {(puede('cambiar:estado-caso') || puede('cambiar:prioridad-caso')) && (
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+          {puede('cambiar:estado-caso') && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Estado</span>
+              <div className="flex flex-wrap gap-1.5">
+                {estadoOptions
+                  .filter((e) => e !== caso.estado)
+                  .map((e) => (
+                    <button
+                      key={e}
+                      onClick={() => { setPendingEstado(e); setConfirmOpen(true); }}
+                      disabled={updatingEstado}
+                      className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 disabled:opacity-50"
+                    >
+                      {estadoLabels[e]}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+          {puede('cambiar:prioridad-caso') && (
+            <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Prioridad</span>
+              <div className="flex gap-1">
+                {(['baja', 'media', 'alta', 'urgente'] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => handleCambiarPrioridad(p)}
+                    disabled={updatingPrioridad || caso.prioridad === p}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:cursor-default ${
+                      caso.prioridad === p
+                        ? p === 'urgente' ? 'bg-red-100 text-red-700 ring-1 ring-red-300'
+                        : p === 'alta' ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-300'
+                        : p === 'media' ? 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-300'
+                        : 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Prioridad */}
-      {puede('cambiar:prioridad-caso') && (
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-500">Prioridad:</span>
-        {(['baja', 'media', 'alta', 'urgente'] as const).map((p) => (
-          <button
-            key={p}
-            onClick={() => handleCambiarPrioridad(p)}
-            disabled={updatingPrioridad || caso.prioridad === p}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-40 ${
-              caso.prioridad === p
-                ? p === 'urgente' ? 'bg-red-100 text-red-700 ring-1 ring-red-300'
-                : p === 'alta' ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-300'
-                : p === 'media' ? 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-300'
-                : 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
       )}
 
       {/* Main grid */}
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left column - Info */}
         <div className="space-y-6 lg:col-span-2">
           {/* Description */}
           {caso.descripcion && (
-            <div className="rounded-xl border border-gray-200 bg-white p-5">
-              <h3 className="text-sm font-semibold text-gray-900">Descripción</h3>
-              <p className="mt-2 text-sm text-gray-700">{caso.descripcion}</p>
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+              <div className="border-b border-gray-100 px-5 py-3">
+                <h3 className="text-sm font-semibold text-gray-700">Descripción del percance</h3>
+              </div>
+              <div className="px-5 py-4">
+                <p className="text-sm leading-relaxed text-gray-700">{caso.descripcion}</p>
+              </div>
             </div>
           )}
 
           {/* Location */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <div className="flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-                <MapPin className="h-4 w-4" />
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <MapPin className="h-4 w-4 text-red-400" />
                 Ubicación
               </h3>
               {caso.latitud && caso.longitud && (
                 <button
                   onClick={() => setMapExpanded((p) => !p)}
-                  className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700"
+                  className="flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-200"
                 >
                   {mapExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                   {mapExpanded ? 'Reducir' : 'Expandir'}
                 </button>
               )}
             </div>
-            <dl className="mt-3 space-y-2 text-sm">
-              {caso.direccionAprox && (
+            <div className="px-5 py-4">
+              <dl className="space-y-2 text-sm">
+                {caso.direccionAprox && (
+                  <div className="flex justify-between">
+                    <dt className="text-gray-500">Dirección</dt>
+                    <dd className="text-right text-gray-900">{caso.direccionAprox}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Dirección</dt>
-                  <dd className="text-gray-900">{caso.direccionAprox}</dd>
+                  <dt className="text-gray-500">Coordenadas</dt>
+                  <dd className="font-mono text-xs text-gray-600">{caso.latitud}, {caso.longitud}</dd>
+                </div>
+              </dl>
+              {caso.latitud && caso.longitud && (
+                <div className="mt-3 overflow-hidden rounded-lg">
+                  <MapView
+                    markers={[{ lat: caso.latitud, lng: caso.longitud, label: caso.codigo || 'Ubicación', color: 'red' }]}
+                    zoom={15}
+                    height={mapExpanded ? '420px' : '220px'}
+                  />
                 </div>
               )}
-              <div className="flex justify-between">
-                <dt className="text-gray-500">Coordenadas</dt>
-                <dd className="text-gray-900">{caso.latitud}, {caso.longitud}</dd>
-              </div>
-            </dl>
-            {caso.latitud && caso.longitud && (
-              <div className="mt-3">
-                <MapView
-                  markers={[{ lat: caso.latitud, lng: caso.longitud, label: caso.codigo || 'Ubicación', color: 'red' }]}
-                  zoom={15}
-                  height={mapExpanded ? '420px' : '220px'}
-                />
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Notes */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <MessageSquare className="h-4 w-4" />
-              Notas ({caso.notas?.length || 0})
-            </h3>
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-100 px-5 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <MessageSquare className="h-4 w-4 text-primary-400" />
+                Notas de seguimiento
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{caso.notas?.length || 0}</span>
+              </h3>
+            </div>
+            <div className="px-5 py-4">
 
             {/* Add note form */}
             <form onSubmit={handleAddNota} className="mt-4">
@@ -406,62 +419,70 @@ export default function CasoLegalDetailPage() {
                 </div>
               )}
             </div>
+            </div>
           </div>
         </div>
 
         {/* Right column - Sidebar */}
         <div className="space-y-6">
           {/* Asociado info */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <User className="h-4 w-4" />
-              Asociado
-            </h3>
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-100 px-5 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <User className="h-4 w-4 text-blue-400" />
+                Asociado
+              </h3>
+            </div>
+            <div className="px-5 py-4">
             {caso.asociado ? (
-              <div className="mt-3">
+              <div>
                 {/* Avatar */}
-                <div className="mb-3 flex items-center gap-3">
+                <div className="flex items-center gap-3">
                   {asociadoFotoUrl ? (
                     <img
                       src={asociadoFotoUrl}
                       alt={`${caso.asociado.nombre} ${caso.asociado.apellidoPat}`}
-                      className="h-12 w-12 rounded-full object-cover ring-2 ring-gray-200"
+                      className="h-12 w-12 rounded-full object-cover ring-2 ring-blue-100 shadow-sm"
                     />
                   ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 ring-2 ring-blue-200">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-sm font-bold text-white ring-2 ring-blue-100 shadow-sm">
                       {caso.asociado.nombre?.[0]}{caso.asociado.apellidoPat?.[0]}
                     </div>
                   )}
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-semibold text-gray-900">
                       {caso.asociado.nombre} {caso.asociado.apellidoPat}
                     </p>
-                    <p className="text-xs text-gray-500">{caso.asociado.idUnico}</p>
+                    <p className="font-mono text-[11px] text-gray-400">{caso.asociado.idUnico}</p>
                   </div>
                 </div>
-                <dl className="space-y-2 text-sm">
+                <dl className="mt-3 space-y-2 text-sm">
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Teléfono</dt>
-                    <dd className="text-gray-900">{caso.asociado.telefono}</dd>
+                    <dd className="font-medium text-gray-900">{caso.asociado.telefono}</dd>
                   </div>
                 </dl>
               </div>
             ) : (
-              <p className="mt-2 text-sm text-gray-400">Sin datos</p>
+              <p className="text-sm text-gray-400">Sin datos</p>
             )}
+            </div>
           </div>
 
           {/* Abogado assignment */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <Gavel className="h-4 w-4" />
-              Abogado asignado
-            </h3>
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-100 px-5 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Gavel className="h-4 w-4 text-violet-400" />
+                Abogado asignado
+              </h3>
+            </div>
+            <div className="px-5 py-4">
             {caso.abogadoUsuario ? (
-              <dl className="mt-3 space-y-2 text-sm">
+              <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-gray-500">Nombre</dt>
-                  <dd className="text-gray-900">{caso.abogadoUsuario.nombre}</dd>
+                  <dd className="font-medium text-gray-900">{caso.abogadoUsuario.nombre}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-gray-500">Email</dt>
@@ -477,11 +498,11 @@ export default function CasoLegalDetailPage() {
                 )}
               </dl>
             ) : (
-              <p className="mt-2 text-sm text-gray-400">Sin abogado asignado</p>
+              <p className="text-sm text-gray-400">Sin abogado asignado</p>
             )}
 
-            <div className="mt-4">
-              <label className="block text-xs font-medium text-gray-600">
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
                 {caso.abogadoUsuario ? 'Reasignar abogado' : 'Asignar abogado'}
               </label>
               <div className="mt-1 flex gap-2">
@@ -506,15 +527,19 @@ export default function CasoLegalDetailPage() {
                 </button>
               </div>
             </div>
+            </div>
           </div>
 
           {/* Dates */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <Calendar className="h-4 w-4" />
-              Fechas
-            </h3>
-            <dl className="mt-3 space-y-2 text-sm">
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-100 px-5 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Calendar className="h-4 w-4 text-amber-400" />
+                Fechas
+              </h3>
+            </div>
+            <div className="px-5 py-4">
+              <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-gray-500">Apertura</dt>
                 <dd className="text-gray-900">
@@ -538,18 +563,22 @@ export default function CasoLegalDetailPage() {
                 </div>
               )}
             </dl>
+            </div>
           </div>
 
-          {/* Vehiculos — always visible */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <Car className="h-4 w-4" />
-              Vehículos del asociado
-            </h3>
+          {/* Vehiculos */}
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-100 px-5 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Car className="h-4 w-4 text-primary-400" />
+                Vehículos del asociado
+              </h3>
+            </div>
+            <div className="px-5 py-4">
             {caso.asociado?.vehiculos && caso.asociado.vehiculos.length > 0 ? (
-              <div className="mt-3 space-y-3">
+              <div className="space-y-3">
                 {caso.asociado.vehiculos.map((v) => (
-                  <div key={v.id} className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
+                  <div key={v.id} className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
                     <VehiclePhoto vehiculoId={v.id} fotoUrl={v.fotoUrl} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-900">
@@ -567,11 +596,12 @@ export default function CasoLegalDetailPage() {
                 ))}
               </div>
             ) : (
-              <div className="mt-3 flex flex-col items-center gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/50 py-6">
+              <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/50 py-6">
                 <Car className="h-8 w-8 text-gray-300" />
                 <p className="text-xs text-gray-400">Sin vehículos registrados</p>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

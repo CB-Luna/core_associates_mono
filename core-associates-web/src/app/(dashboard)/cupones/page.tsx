@@ -323,7 +323,9 @@ export default function CuponesPage() {
               {selectedCupon.qrPayload && (
                 <div className="mt-4 flex flex-col items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 py-4">
                   <QRDisplay value={selectedCupon.qrPayload} size={160} />
-                  <span className="mt-1 max-w-full break-all px-4 text-center font-mono text-xs text-gray-400">{selectedCupon.qrPayload}</span>
+                  <span className="mt-1 flex items-center gap-1 text-xs text-gray-400">
+                    <QrCode className="h-3.5 w-3.5" /> Código QR del cupón
+                  </span>
                 </div>
               )}
               {!selectedCupon.qrPayload && selectedCupon.codigo && (

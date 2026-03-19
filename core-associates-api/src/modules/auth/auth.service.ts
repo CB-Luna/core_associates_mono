@@ -194,12 +194,120 @@ export class AuthService {
         estado: true,
         proveedorId: true,
         avatarUrl: true,
+        especialidad: true,
         temaId: true,
         ultimoAcceso: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async getAbogados(query: { page?: number; limit?: number; search?: string; estado?: string }) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const where: any = { rol: 'abogado' as const };
+    if (query.estado) where.estado = query.estado;
+    if (query.search) {
+      where.OR = [
+        { nombre: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
+        { especialidad: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.usuario.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          nombre: true,
+          rol: true,
+          rolId: true,
+          estado: true,
+          avatarUrl: true,
+          especialidad: true,
+          ultimoAcceso: true,
+          createdAt: true,
+          _count: {
+            select: { casosComoAbogado: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.usuario.count({ where }),
+    ]);
+
+    // Enrich with case breakdown per abogado
+    const enriched = await Promise.all(
+      data.map(async (abogado) => {
+        const casosStats = await this.prisma.casoLegal.groupBy({
+          by: ['estado'],
+          where: { abogadoUsuarioId: abogado.id },
+          _count: true,
+        });
+        const breakdown: Record<string, number> = {};
+        for (const s of casosStats) breakdown[s.estado] = s._count;
+        return { ...abogado, casosBreakdown: breakdown };
+      }),
+    );
+
+    return {
+      data: enriched,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async getAbogadoDetail(id: string) {
+    const abogado = await this.prisma.usuario.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        rol: true,
+        rolId: true,
+        estado: true,
+        avatarUrl: true,
+        especialidad: true,
+        proveedorId: true,
+        ultimoAcceso: true,
+        createdAt: true,
+        proveedor: { select: { id: true, razonSocial: true } },
+        _count: { select: { casosComoAbogado: true } },
+      },
+    });
+    if (!abogado) throw new NotFoundException('Abogado no encontrado');
+
+    const casosRecientes = await this.prisma.casoLegal.findMany({
+      where: { abogadoUsuarioId: id },
+      select: {
+        id: true,
+        codigo: true,
+        tipoPercance: true,
+        estado: true,
+        prioridad: true,
+        fechaApertura: true,
+        asociado: { select: { nombre: true, apellidoPat: true, idUnico: true } },
+      },
+      orderBy: { fechaApertura: 'desc' },
+      take: 20,
+    });
+
+    const casosStats = await this.prisma.casoLegal.groupBy({
+      by: ['estado'],
+      where: { abogadoUsuarioId: id },
+      _count: true,
+    });
+    const breakdown: Record<string, number> = {};
+    for (const s of casosStats) breakdown[s.estado] = s._count;
+
+    return { ...abogado, casosBreakdown: breakdown, casosRecientes };
   }
 
   async createUser(data: {
@@ -265,6 +373,7 @@ export class AuthService {
     rol?: string;
     rolId?: string;
     estado?: string;
+    especialidad?: string;
   }) {
     const usuario = await this.prisma.usuario.findUnique({ where: { id } });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
@@ -301,6 +410,7 @@ export class AuthService {
         ...(data.nombre && { nombre: data.nombre }),
         ...rolUpdateData,
         ...(data.estado && { estado: data.estado as EstadoUsuario }),
+        ...(data.especialidad !== undefined && { especialidad: data.especialidad || null }),
       },
       select: {
         id: true,

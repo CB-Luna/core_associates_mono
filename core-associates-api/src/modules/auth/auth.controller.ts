@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Delete, Param, Body, HttpCode, HttpStatus, UseGuards, UseInterceptors, UploadedFile, Res, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Param, Body, Query, HttpCode, HttpStatus, UseGuards, UseInterceptors, UploadedFile, Res, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
@@ -108,6 +108,36 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'Solo admin' })
   getUsers() {
     return this.authService.getUsers();
+  }
+
+  // ── Abogados (rutas estáticas antes de :id) ──
+
+  @Get('users/abogados')
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('usuarios:ver')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Listar abogados con paginación y estadísticas de casos' })
+  getAbogados(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('estado') estado?: string,
+  ) {
+    return this.authService.getAbogados({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+      estado,
+    });
+  }
+
+  @Get('users/abogados/:id')
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('usuarios:ver')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Detalle de abogado con casos recientes' })
+  getAbogadoDetail(@Param('id', ParseUUIDPipe) id: string) {
+    return this.authService.getAbogadoDetail(id);
   }
 
   @Post('register-admin')

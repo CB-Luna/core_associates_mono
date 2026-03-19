@@ -342,10 +342,11 @@ async function main() {
     { codigo: 'promociones', titulo: 'Promociones', ruta: '/promociones', icono: 'Tag', permisos: ['admin', 'operador', 'proveedor'], orden: 4 },
     { codigo: 'cupones', titulo: 'Cupones', ruta: '/cupones', icono: 'Ticket', permisos: ['admin', 'operador', 'proveedor'], orden: 5 },
     { codigo: 'casos-legales', titulo: 'Casos Legales', ruta: '/casos-legales', icono: 'Scale', permisos: ['admin', 'operador'], orden: 6 },
-    { codigo: 'documentos', titulo: 'Documentos', ruta: '/documentos', icono: 'FileText', permisos: ['admin', 'operador'], orden: 7 },
-    { codigo: 'mapa-sos', titulo: 'Mapa SOS', ruta: '/mapa-sos', icono: 'MapPinned', permisos: ['admin', 'operador'], orden: 8 },
-    { codigo: 'reportes', titulo: 'Reportes', ruta: '/reportes', icono: 'BarChart3', permisos: ['admin'], orden: 9 },
-    { codigo: 'configuracion', titulo: 'Configuración', ruta: '/configuracion', icono: 'Settings', permisos: ['admin'], orden: 10 },
+    { codigo: 'abogados', titulo: 'Abogados', ruta: '/abogados', icono: 'Gavel', permisos: ['admin', 'operador'], orden: 7 },
+    { codigo: 'documentos', titulo: 'Documentos', ruta: '/documentos', icono: 'FileText', permisos: ['admin', 'operador'], orden: 8 },
+    { codigo: 'mapa-sos', titulo: 'Mapa SOS', ruta: '/mapa-sos', icono: 'MapPinned', permisos: ['admin', 'operador'], orden: 9 },
+    { codigo: 'reportes', titulo: 'Reportes', ruta: '/reportes', icono: 'BarChart3', permisos: ['admin'], orden: 10 },
+    { codigo: 'configuracion', titulo: 'Configuración', ruta: '/configuracion', icono: 'Settings', permisos: ['admin'], orden: 11 },
   ];
 
   for (const item of menuItems) {
@@ -367,8 +368,8 @@ async function main() {
   const menuByCodigo = new Map(allMenuItems.map(m => [m.codigo, m.id]));
 
   const rolMenuAssignments: { rolId: string; codigos: string[] }[] = [
-    { rolId: ROL_ADMIN_ID, codigos: ['dashboard', 'asociados', 'proveedores', 'promociones', 'cupones', 'casos-legales', 'documentos', 'mapa-sos', 'reportes', 'configuracion'] },
-    { rolId: ROL_OPERADOR_ID, codigos: ['dashboard', 'asociados', 'proveedores', 'promociones', 'cupones', 'casos-legales', 'documentos', 'mapa-sos'] },
+    { rolId: ROL_ADMIN_ID, codigos: ['dashboard', 'asociados', 'proveedores', 'promociones', 'cupones', 'casos-legales', 'abogados', 'documentos', 'mapa-sos', 'reportes', 'configuracion'] },
+    { rolId: ROL_OPERADOR_ID, codigos: ['dashboard', 'asociados', 'proveedores', 'promociones', 'cupones', 'casos-legales', 'abogados', 'documentos', 'mapa-sos'] },
     { rolId: ROL_PROVEEDOR_ID, codigos: ['dashboard', 'promociones', 'cupones'] },
   ];
 

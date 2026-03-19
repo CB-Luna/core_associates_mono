@@ -413,6 +413,7 @@ model Usuario {
   rolId         String?       @map("rol_id") @db.Uuid
   proveedorId   String?       @map("proveedor_id") @db.Uuid
   avatarUrl     String?       @map("avatar_url") @db.VarChar(255)
+  especialidad  String?       @db.VarChar(100)
   temaId        String?       @map("tema_id") @db.Uuid
   estado        EstadoUsuario @default(activo)
   ultimoAcceso  DateTime?     @map("ultimo_acceso")

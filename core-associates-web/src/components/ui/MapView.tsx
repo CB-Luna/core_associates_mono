@@ -76,9 +76,8 @@ export function MapView({ markers, center, zoom = 13, className = '', height = '
     const defaultCenter: [number, number] =
       center || (markers.length > 0 ? [markers[0].lat, markers[0].lng] : [19.4326, -99.1332]);
 
-    const map = L.map(containerRef.current).setView(defaultCenter, zoom);
+    const map = L.map(containerRef.current, { attributionControl: false }).setView(defaultCenter, zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '',
       maxZoom: 19,
     }).addTo(map);
 
