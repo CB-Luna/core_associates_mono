@@ -45,6 +45,34 @@ export class CreateAiConfigDto {
   @Min(100)
   @Max(16384)
   maxTokens?: number;
+
+  @ApiPropertyOptional({ example: 0.90, description: 'Umbral de confianza para auto-aprobar documento' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  umbralAutoAprobacion?: number;
+
+  @ApiPropertyOptional({ example: 0.40, description: 'Umbral de confianza para auto-rechazar documento' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  umbralAutoRechazo?: number;
+
+  @ApiPropertyOptional({ example: 5, description: 'Max rechazos pre-validacion antes de bloquear' })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(50)
+  maxRechazosPreval?: number;
+
+  @ApiPropertyOptional({ example: 24, description: 'Horas de bloqueo tras exceder rechazos' })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(168)
+  horasBloqueoPreval?: number;
 }
 
 export class UpdateAiConfigDto {
@@ -94,4 +122,32 @@ export class UpdateAiConfigDto {
   @IsOptional()
   @IsBoolean()
   activo?: boolean;
+
+  @ApiPropertyOptional({ example: 0.90 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  umbralAutoAprobacion?: number;
+
+  @ApiPropertyOptional({ example: 0.40 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  umbralAutoRechazo?: number;
+
+  @ApiPropertyOptional({ example: 5 })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(50)
+  maxRechazosPreval?: number;
+
+  @ApiPropertyOptional({ example: 24 })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(168)
+  horasBloqueoPreval?: number;
 }

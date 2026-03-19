@@ -410,6 +410,10 @@ export interface ConfiguracionIA {
   temperatura: number;
   maxTokens: number;
   activo: boolean;
+  umbralAutoAprobacion: number;
+  umbralAutoRechazo: number;
+  maxRechazosPreval: number;
+  horasBloqueoPreval: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -25,6 +25,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permisos } from '../../common/decorators/permisos.decorator';
 import { UploadDocumentDto } from './dto/upload-document.dto';
 import { UpdateDocumentEstadoDto } from './dto/update-document-estado.dto';
+import { PreValidarDocumentoDto } from './dto/pre-validar-documento.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Documentos')
@@ -33,6 +34,28 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 @Controller('documentos')
 export class DocumentosController {
   constructor(private readonly documentosService: DocumentosService) {}
+
+  @Post('pre-validar')
+  @ApiOperation({ summary: 'Pre-validar imagen con IA antes de subir' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: '{ valida, motivo?, advertencia? }' })
+  @ApiResponse({ status: 400, description: 'Imagen rechazada o límite anti-troll alcanzado' })
+  @UseInterceptors(FileInterceptor('file'))
+  preValidar(
+    @CurrentUser('id') asociadoId: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp)|application\/pdf$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+    @Body() dto: PreValidarDocumentoDto,
+  ) {
+    return this.documentosService.preValidar(asociadoId, file, dto.tipo);
+  }
 
   @Post('upload')
   @ApiOperation({ summary: 'Subir documento' })

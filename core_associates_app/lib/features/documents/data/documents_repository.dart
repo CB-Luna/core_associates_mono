@@ -30,6 +30,18 @@ class DocumentsRepository {
     return Documento.fromJson(response.data as Map<String, dynamic>);
   }
 
+  /// Pre-validates an image with AI before uploading.
+  /// Returns `{valida: bool, motivo?: String, advertencia?: String}`.
+  Future<Map<String, dynamic>> preValidar(String filePath, String tipo) async {
+    final response = await apiClient.uploadFile(
+      '/documentos/pre-validar',
+      filePath: filePath,
+      fieldName: 'file',
+      fields: {'tipo': tipo},
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
   /// Returns the full streaming URL for a document.
   String getDocumentUrl(String id) {
     return apiClient.imageUrl('/documentos/$id/url');

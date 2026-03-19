@@ -79,6 +79,7 @@ export class AiAnalysisService {
 
   /**
    * Run the actual AI analysis (async, fire-and-forget).
+   * After completing, auto-approve/reject the document based on AI confidence thresholds.
    */
   private async runAnalysis(
     analisisId: string,
@@ -100,7 +101,7 @@ export class AiAnalysisService {
       );
 
       // Update analysis record
-      await this.prisma.analisisDocumento.update({
+      const analisis = await this.prisma.analisisDocumento.update({
         where: { id: analisisId },
         data: {
           estado: 'completado',
@@ -114,6 +115,9 @@ export class AiAnalysisService {
       });
 
       this.logger.log(`Analysis ${analisisId} completed: confidence=${data.confianza_global}`);
+
+      // Auto-approve/reject the document based on thresholds
+      await this.autoDecideDocumento(analisis.documentoId, data);
     } catch (err) {
       this.logger.error(`Analysis ${analisisId} error: ${err.message}`);
       await this.prisma.analisisDocumento.update({
@@ -163,5 +167,71 @@ export class AiAnalysisService {
       where: { documentoId },
     });
     return this.analyzeDocument(documentoId);
+  }
+
+  /**
+   * Auto-approve or auto-reject a document based on AI confidence vs configured thresholds.
+   */
+  private async autoDecideDocumento(documentoId: string, aiData: any) {
+    const confianza: number = aiData.confianza_global ?? 0;
+    const validaciones: Record<string, boolean> = aiData.validaciones || {};
+
+    // Get configurable thresholds
+    const config = await this.prisma.configuracionIA.findUnique({
+      where: { clave: 'document_analyzer' },
+    }).catch(() => null);
+
+    const umbralAprobacion = config?.umbralAutoAprobacion ?? 0.90;
+    const umbralRechazo = config?.umbralAutoRechazo ?? 0.40;
+
+    // Check critical validation failures
+    const criticalKeys = [
+      'es_ine_valida', 'es_ine_reverso', 'es_selfie_valida',
+      'es_tarjeta_circulacion', 'imagen_legible',
+    ];
+    const hasCriticalFailure = criticalKeys.some(
+      (key) => validaciones[key] === false,
+    );
+
+    if (hasCriticalFailure || confianza < umbralRechazo) {
+      // Auto-reject
+      const motivos: string[] = [];
+      if (hasCriticalFailure) {
+        const failed = criticalKeys.filter((k) => validaciones[k] === false);
+        motivos.push(`Validación IA fallida: ${failed.join(', ')}`);
+      }
+      if (confianza < umbralRechazo) {
+        motivos.push(`Confianza muy baja: ${(confianza * 100).toFixed(0)}%`);
+      }
+
+      await this.prisma.documento.update({
+        where: { id: documentoId },
+        data: {
+          estado: 'rechazado',
+          motivoRechazo: `[Auto-IA] ${motivos.join('. ')}`,
+          fechaRevision: new Date(),
+        },
+      });
+      this.logger.log(`Document ${documentoId} auto-rejected: ${motivos.join('. ')}`);
+      return;
+    }
+
+    // All validations passed and high confidence → auto-approve
+    const allValidationsPass = Object.values(validaciones).every((v) => v === true);
+    if (allValidationsPass && confianza >= umbralAprobacion) {
+      await this.prisma.documento.update({
+        where: { id: documentoId },
+        data: {
+          estado: 'aprobado',
+          motivoRechazo: null,
+          fechaRevision: new Date(),
+        },
+      });
+      this.logger.log(`Document ${documentoId} auto-approved: confidence=${(confianza * 100).toFixed(0)}%`);
+      return;
+    }
+
+    // Between thresholds → leave as 'pendiente' for manual review
+    this.logger.log(`Document ${documentoId} left for manual review: confidence=${(confianza * 100).toFixed(0)}%`);
   }
 }

@@ -380,10 +380,7 @@ class LegalSupportScreen extends ConsumerWidget {
         final msg = e.toString();
         if (msg.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(msg),
-              backgroundColor: AppColors.error,
-            ),
+            SnackBar(content: Text(msg), backgroundColor: AppColors.error),
           );
         }
       }

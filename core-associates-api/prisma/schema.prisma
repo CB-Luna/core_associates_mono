@@ -162,6 +162,7 @@ model Asociado {
   casosLegales     CasoLegal[]
   dispositivos     DispositivoToken[]
   notas            NotaAsociado[]
+  intentosDocumento IntentoDocumento[]
 
   @@index([estado])
   @@index([telefono])
@@ -250,10 +251,32 @@ model ConfiguracionIA {
   temperatura     Float    @default(0.3)
   maxTokens       Int      @default(4096) @map("max_tokens")
   activo          Boolean  @default(true)
+
+  // Umbrales de auto-decisión y anti-troll (configurables desde CRM Conf AI)
+  umbralAutoAprobacion  Float  @default(0.90) @map("umbral_auto_aprobacion")
+  umbralAutoRechazo     Float  @default(0.40) @map("umbral_auto_rechazo")
+  maxRechazosPreval     Int    @default(5)    @map("max_rechazos_preval")
+  horasBloqueoPreval    Int    @default(24)   @map("horas_bloqueo_preval")
+
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("configuracion_ia")
+}
+
+// ── Intentos de pre-validación (anti-troll) ──
+
+model IntentoDocumento {
+  id              String        @id @default(uuid()) @db.Uuid
+  asociadoId      String        @map("asociado_id") @db.Uuid
+  tipo            TipoDocumento
+  resultado       String        @db.VarChar(20) // 'aprobado' | 'rechazado'
+  motivoRechazo   String?       @map("motivo_rechazo")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  asociado        Asociado      @relation(fields: [asociadoId], references: [id], onDelete: Cascade)
+
+  @@map("intentos_documentos")
 }
 
 model Proveedor {

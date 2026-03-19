@@ -4,6 +4,8 @@ import { DocumentosService } from './documentos.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { AiAnalysisService } from '../ai/ai-analysis.service';
+import { AiService } from '../ai/ai.service';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 describe('DocumentosService', () => {
@@ -45,12 +47,22 @@ describe('DocumentosService', () => {
       sendPush: jest.fn().mockResolvedValue(undefined),
     };
 
+    const aiAnalysis = {
+      analyzeDocument: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const aiService = {
+      analyzeImage: jest.fn().mockResolvedValue('{}'),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DocumentosService,
         { provide: PrismaService, useValue: prisma },
         { provide: StorageService, useValue: storage },
         { provide: NotificacionesService, useValue: notificaciones },
+        { provide: AiAnalysisService, useValue: aiAnalysis },
+        { provide: AiService, useValue: aiService },
       ],
     }).compile();
 

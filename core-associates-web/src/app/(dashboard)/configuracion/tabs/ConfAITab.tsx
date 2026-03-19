@@ -40,6 +40,10 @@ export function ConfAITab() {
     temperatura: 0.3,
     maxTokens: 4096,
     activo: true,
+    umbralAutoAprobacion: 0.90,
+    umbralAutoRechazo: 0.40,
+    maxRechazosPreval: 5,
+    horasBloqueoPreval: 24,
   });
 
   const populateForm = useCallback((config: ConfiguracionIA) => {
@@ -52,6 +56,10 @@ export function ConfAITab() {
       temperatura: config.temperatura,
       maxTokens: config.maxTokens,
       activo: config.activo,
+      umbralAutoAprobacion: config.umbralAutoAprobacion ?? 0.90,
+      umbralAutoRechazo: config.umbralAutoRechazo ?? 0.40,
+      maxRechazosPreval: config.maxRechazosPreval ?? 5,
+      horasBloqueoPreval: config.horasBloqueoPreval ?? 24,
     });
   }, []);
 
@@ -96,6 +104,10 @@ export function ConfAITab() {
         temperatura: form.temperatura,
         maxTokens: form.maxTokens,
         activo: form.activo,
+        umbralAutoAprobacion: form.umbralAutoAprobacion,
+        umbralAutoRechazo: form.umbralAutoRechazo,
+        maxRechazosPreval: form.maxRechazosPreval,
+        horasBloqueoPreval: form.horasBloqueoPreval,
       };
       if (form.apiKey) body.apiKey = form.apiKey;
       if (form.promptSistema) body.promptSistema = form.promptSistema;
@@ -311,6 +323,54 @@ export function ConfAITab() {
                     onChange={(e) => setForm((f) => ({ ...f, maxTokens: parseInt(e.target.value) || 4096 }))}
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Validacion Documental IA */}
+            <div className="rounded-xl border bg-white p-5 shadow-sm">
+              <h4 className="mb-1 text-sm font-semibold text-gray-700">Validacion Documental IA</h4>
+              <p className="mb-4 text-xs text-gray-400">Umbrales de confianza para auto-aprobacion/rechazo y limites anti-abuso</p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Auto-aprobar si confianza ≥ <span className="font-mono text-green-600">{(form.umbralAutoAprobacion * 100).toFixed(0)}%</span>
+                  </label>
+                  <input type="range" min="0.5" max="1" step="0.05" value={form.umbralAutoAprobacion}
+                    onChange={(e) => setForm((f) => ({ ...f, umbralAutoAprobacion: parseFloat(e.target.value) }))}
+                    className="mt-2 w-full accent-green-600"
+                  />
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>50%</span><span>100%</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Auto-rechazar si confianza &lt; <span className="font-mono text-red-600">{(form.umbralAutoRechazo * 100).toFixed(0)}%</span>
+                  </label>
+                  <input type="range" min="0" max="0.8" step="0.05" value={form.umbralAutoRechazo}
+                    onChange={(e) => setForm((f) => ({ ...f, umbralAutoRechazo: parseFloat(e.target.value) }))}
+                    className="mt-2 w-full accent-red-500"
+                  />
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>0%</span><span>80%</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Max rechazos pre-validacion</label>
+                  <input type="number" min="1" max="50" value={form.maxRechazosPreval}
+                    onChange={(e) => setForm((f) => ({ ...f, maxRechazosPreval: parseInt(e.target.value) || 5 }))}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                  <p className="mt-1 text-xs text-gray-400">Intentos fallidos permitidos por tipo antes de bloquear</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Horas de bloqueo</label>
+                  <input type="number" min="1" max="168" value={form.horasBloqueoPreval}
+                    onChange={(e) => setForm((f) => ({ ...f, horasBloqueoPreval: parseInt(e.target.value) || 24 }))}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                  <p className="mt-1 text-xs text-gray-400">Duracion del bloqueo tras exceder rechazos</p>
                 </div>
               </div>
             </div>

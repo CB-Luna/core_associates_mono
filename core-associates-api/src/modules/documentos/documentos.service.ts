@@ -1,9 +1,11 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { AiAnalysisService } from '../ai/ai-analysis.service';
+import { AiService } from '../ai/ai.service';
+import { PRE_VALIDACION_PROMPT } from '../ai/prompts/pre-validacion-prompt';
 
 const BUCKET = 'core-associates-documents';
 
@@ -16,6 +18,7 @@ export class DocumentosService {
     private readonly storage: StorageService,
     private readonly notificaciones: NotificacionesService,
     private readonly aiAnalysis: AiAnalysisService,
+    private readonly aiService: AiService,
   ) {}
 
   async uploadDocument(
@@ -184,6 +187,97 @@ export class DocumentosService {
     return {
       data,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  /**
+   * Pre-validar imagen antes de subir. Llama a IA con prompt ligero
+   * y registra el intento para anti-troll.
+   */
+  async preValidar(
+    asociadoId: string,
+    file: Express.Multer.File,
+    tipo: string,
+  ): Promise<{ valida: boolean; motivo?: string; advertencia?: string }> {
+    // 1) Anti-troll: verificar límite de rechazos
+    const config = await this.getAiConfig();
+    await this.checkAntiTroll(asociadoId, tipo, config.maxRechazosPreval, config.horasBloqueoPreval);
+
+    // 2) Llamar IA con prompt ligero
+    const prompt = PRE_VALIDACION_PROMPT(tipo);
+    let resultado: { valida: boolean; motivo?: string; advertencia?: string };
+
+    try {
+      const { data } = await this.aiService.analyzeImage(
+        file.buffer,
+        file.mimetype,
+        prompt,
+        'pre_validador',
+      );
+      resultado = {
+        valida: !!data.valida,
+        motivo: data.motivo || undefined,
+        advertencia: data.advertencia || undefined,
+      };
+    } catch (err) {
+      this.logger.warn(`Pre-validación IA falló, dejando pasar: ${err.message}`);
+      // Si la IA falla, no bloqueamos al usuario — dejamos pasar
+      return { valida: true, advertencia: 'No se pudo verificar automáticamente la imagen.' };
+    }
+
+    // 3) Registrar intento
+    await this.prisma.intentoDocumento.create({
+      data: {
+        asociadoId,
+        tipo: tipo as any,
+        resultado: resultado.valida ? 'aprobado' : 'rechazado',
+        motivoRechazo: resultado.motivo || null,
+      },
+    });
+
+    return resultado;
+  }
+
+  /**
+   * Verificar que el asociado no haya excedido el límite anti-troll.
+   */
+  private async checkAntiTroll(
+    asociadoId: string,
+    tipo: string,
+    maxRechazos: number,
+    horasBloqueo: number,
+  ) {
+    const desde = new Date(Date.now() - horasBloqueo * 60 * 60 * 1000);
+
+    const rechazosRecientes = await this.prisma.intentoDocumento.count({
+      where: {
+        asociadoId,
+        tipo: tipo as any,
+        resultado: 'rechazado',
+        createdAt: { gte: desde },
+      },
+    });
+
+    if (rechazosRecientes >= maxRechazos) {
+      throw new BadRequestException(
+        `Has alcanzado el límite de ${maxRechazos} intentos rechazados para este tipo de documento. Intenta de nuevo en ${horasBloqueo} horas.`,
+      );
+    }
+  }
+
+  /**
+   * Obtener configuración de IA con umbrales (o defaults).
+   */
+  private async getAiConfig() {
+    const config = await this.prisma.configuracionIA.findUnique({
+      where: { clave: 'document_analyzer' },
+    }).catch(() => null);
+
+    return {
+      umbralAutoAprobacion: config?.umbralAutoAprobacion ?? 0.90,
+      umbralAutoRechazo: config?.umbralAutoRechazo ?? 0.40,
+      maxRechazosPreval: config?.maxRechazosPreval ?? 5,
+      horasBloqueoPreval: config?.horasBloqueoPreval ?? 24,
     };
   }
 }

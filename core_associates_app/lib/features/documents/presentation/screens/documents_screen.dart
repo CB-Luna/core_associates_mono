@@ -81,6 +81,32 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     setState(() => _uploadingTipo = tipo);
 
     try {
+      // Pre-validación IA
+      final repo = ref.read(documentsRepositoryProvider);
+      final preResult = await repo.preValidar(picked.path, tipo);
+      if (!mounted) return;
+
+      final valida = preResult['valida'] as bool? ?? true;
+      final motivo = preResult['motivo'] as String?;
+      final advertencia = preResult['advertencia'] as String?;
+
+      if (!valida) {
+        setState(() => _uploadingTipo = null);
+        await _showPreValidationError(motivo ?? 'No se pudo validar');
+        return;
+      }
+
+      if (advertencia != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(advertencia),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+
+      // Upload si pasó pre-validación
       await ref
           .read(documentsProvider.notifier)
           .uploadDocument(picked.path, tipo);
@@ -104,6 +130,31 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     } finally {
       if (mounted) setState(() => _uploadingTipo = null);
     }
+  }
+
+  Future<void> _showPreValidationError(String motivo) async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(Icons.warning_amber_rounded, size: 48, color: AppColors.error),
+        title: const Text('Documento no válido'),
+        content: Text(
+          motivo,
+          textAlign: TextAlign.center,
+          style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<bool?> _showPreviewDialog(String filePath, String tipo) {
