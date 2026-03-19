@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, ChevronRight, Settings, User as UserIcon, Menu, Search, Bell, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useMenuStore } from '@/stores/menu-store';
 import { Badge } from '@/components/ui/Badge';
 import { DarkModeToggle } from '@/components/ui/DarkModeToggle';
 import { apiImageUrl } from '@/lib/api-client';
@@ -64,6 +65,7 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loadFromStorage, logout } = useAuthStore();
+  const menuItems = useMenuStore((s) => s.items);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -111,22 +113,14 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
     }
   }, [searchOpen]);
 
-  const SEARCH_PAGES = [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Asociados', path: '/asociados' },
-    { label: 'Proveedores', path: '/proveedores' },
-    { label: 'Promociones', path: '/promociones' },
-    { label: 'Cupones', path: '/cupones' },
-    { label: 'Casos Legales', path: '/casos-legales' },
-    { label: 'Mapa SOS', path: '/mapa-sos' },
-    { label: 'Reportes', path: '/reportes' },
-    { label: 'Documentos', path: '/documentos' },
-    { label: 'Configuración', path: '/configuracion' },
-  ];
+  // Build search pages from dynamic menu items
+  const searchPages = menuItems
+    .filter((item) => item.ruta && item.tipo === 'enlace')
+    .map((item) => ({ label: item.titulo, path: item.ruta! }));
 
   const filteredPages = searchQuery.trim()
-    ? SEARCH_PAGES.filter((p) => p.label.toLowerCase().includes(searchQuery.toLowerCase()))
-    : SEARCH_PAGES;
+    ? searchPages.filter((p) => p.label.toLowerCase().includes(searchQuery.toLowerCase()))
+    : searchPages;
 
   const navigateSearch = (path: string) => {
     setSearchOpen(false);

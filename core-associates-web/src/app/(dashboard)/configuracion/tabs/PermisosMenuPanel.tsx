@@ -109,7 +109,7 @@ export function PermisosMenuPanel({ rol, allPermisos, onRefresh }: PermisosMenuP
   const rolColor = rol.color || '#6366F1';
 
   /* ── Permiso toggle ── */
-  const isProtectedPermiso = (codigo: string) => rol!.esProtegido && codigo === 'configuracion:ver';
+  const isProtectedPermiso = (codigo: string) => rol!.esProtegido && codigo.startsWith('configuracion:');
 
   const togglePermiso = (codigo: string) => {
     if (isProtectedPermiso(codigo)) return;

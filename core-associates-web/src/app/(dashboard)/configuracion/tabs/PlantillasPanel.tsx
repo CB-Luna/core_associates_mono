@@ -121,6 +121,11 @@ export function PlantillasPanel({ roles, selectedRolId, onSelectRol, onRefresh, 
   };
 
   const handleDelete = async (rol: Rol) => {
+    const userCount = (rol as any)._count?.usuarios ?? 0;
+    if (userCount > 0) {
+      toast('error', 'No se puede eliminar', `El rol "${rol.nombre}" tiene ${userCount} usuario(s) asignado(s). Reasígnalos antes de eliminar.`);
+      return;
+    }
     if (!confirm(`¿Eliminar el rol "${rol.nombre}"? Esta acción no se puede deshacer.`)) return;
     try {
       await apiClient(`/roles/${rol.id}`, { method: 'DELETE' });

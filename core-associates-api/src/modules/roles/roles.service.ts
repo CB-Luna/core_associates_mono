@@ -98,11 +98,21 @@ export class RolesService {
     const rol = await this.prisma.rol.findUnique({ where: { id: rolId } });
     if (!rol) throw new NotFoundException('Rol no encontrado');
 
-    // Protección: rol protegido debe conservar configuracion:ver
-    if (rol.esProtegido && !permisoCodigos.includes('configuracion:ver')) {
-      throw new BadRequestException(
-        'El rol protegido debe conservar el permiso "configuracion:ver" para no perder acceso al panel de configuración',
-      );
+    // Protección: rol protegido debe conservar TODOS los permisos de configuración
+    if (rol.esProtegido) {
+      const allConfigPermisos = await this.prisma.permiso.findMany({
+        where: { codigo: { startsWith: 'configuracion:' } },
+        select: { codigo: true },
+      });
+      const missingConfig = allConfigPermisos
+        .map((p) => p.codigo)
+        .filter((c) => !permisoCodigos.includes(c));
+      if (missingConfig.length > 0) {
+        // Auto-add any missing config permisos instead of rejecting
+        for (const c of missingConfig) {
+          if (!permisoCodigos.includes(c)) permisoCodigos.push(c);
+        }
+      }
     }
 
     // Buscar IDs de permisos por código

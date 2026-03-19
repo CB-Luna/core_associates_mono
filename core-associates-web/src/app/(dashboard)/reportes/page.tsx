@@ -81,25 +81,48 @@ export default function ReportesPage() {
     fetchReporte();
   }, [fetchReporte]);
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
     if (!reporte) return;
-    const rows = reporte.trend.map((t) => `${t.mes},${t.asociados},${t.cupones},${t.casos}`);
-    const csv = 'Mes,Asociados,Cupones,Casos\n' + rows.join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `reporte-${desde}-${hasta}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const XLSX = (await import('xlsx')).default ?? await import('xlsx');
+
+    const wb = XLSX.utils.book_new();
+
+    // Tendencia mensual
+    const trendData = reporte.trend.map((t) => ({
+      Mes: t.mes,
+      Asociados: t.asociados,
+      Cupones: t.cupones,
+      Casos: t.casos,
+    }));
+    const wsTrend = XLSX.utils.json_to_sheet(trendData);
+    wsTrend['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, wsTrend, 'Tendencia');
+
+    // Top Proveedores
+    if (reporte.topProveedores.length > 0) {
+      const provData = reporte.topProveedores.map((p, i) => ({
+        '#': i + 1,
+        Proveedor: p.razonSocial,
+        Tipo: p.tipo,
+        'Cupones Emitidos': p.cuponesEmitidos,
+        'Cupones Canjeados': p.cuponesCanjeados,
+        Promociones: p.promociones,
+      }));
+      const wsProv = XLSX.utils.json_to_sheet(provData);
+      wsProv['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 14 }];
+      XLSX.utils.book_append_sheet(wb, wsProv, 'Top Proveedores');
+    }
+
+    XLSX.writeFile(wb, `reporte-${desde}-${hasta}.xlsx`);
   };
 
   const exportPDF = async () => {
     if (!reporte) return;
-    const { default: jsPDF } = await import('jspdf');
-    await import('jspdf-autotable');
+    try {
+      const { default: jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
 
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 14;
     let y = 18;
@@ -224,6 +247,10 @@ export default function ReportesPage() {
     }
 
     doc.save(`reporte-ejecutivo-${desde}-${hasta}.pdf`);
+    } catch (err: any) {
+      console.error('PDF export error:', err);
+      toast('error', 'Error', 'No se pudo generar el PDF');
+    }
   };
 
   if (loading) {
@@ -264,7 +291,7 @@ export default function ReportesPage() {
               className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
             >
               <Download className="h-4 w-4" />
-              CSV
+              Excel
             </button>
             <button
               onClick={exportPDF}

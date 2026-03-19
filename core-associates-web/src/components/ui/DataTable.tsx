@@ -84,15 +84,9 @@ function generatePageNumbers(current: number, total: number): (number | 'ellipsi
   return pages;
 }
 
-function escapeCsvField(val: unknown): string {
-  if (val === null || val === undefined) return '';
-  const str = String(val);
-  return str.includes(',') || str.includes('"') || str.includes('\n')
-    ? `"${str.replace(/"/g, '""')}"`
-    : str;
-}
+async function exportToXlsx<T>(data: T[], columns: ColumnDef<T, any>[], filename: string) {
+  const XLSX = (await import('xlsx')).default ?? await import('xlsx');
 
-function exportToCsv<T>(data: T[], columns: ColumnDef<T, any>[], filename: string) {
   const exportCols = columns.filter(
     (c) => {
       const id = (c as any).accessorKey || (c as any).id;
@@ -107,26 +101,31 @@ function exportToCsv<T>(data: T[], columns: ColumnDef<T, any>[], filename: strin
 
   const rows = data.map((row) =>
     exportCols.map((col) => {
-      // 1. Custom export function via column meta
       const exportValue = (col as any).meta?.exportValue;
-      if (typeof exportValue === 'function') {
-        return escapeCsvField(exportValue(row));
-      }
-      // 2. Standard accessorKey
+      if (typeof exportValue === 'function') return exportValue(row);
       const key = (col as any).accessorKey;
-      if (key) return escapeCsvField((row as any)[key]);
+      if (key) {
+        const val = (row as any)[key];
+        return val == null ? '' : val;
+      }
       return '';
     })
   );
 
-  const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${filename}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const wsData = [headers, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  // Auto-size columns based on content
+  ws['!cols'] = headers.map((h, i) => {
+    let maxLen = h.length;
+    for (const row of rows) {
+      const cellLen = String(row[i] ?? '').length;
+      if (cellLen > maxLen) maxLen = cellLen;
+    }
+    return { wch: Math.min(maxLen + 4, 50) };
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+  XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
 // ─── Dropdown Component ──────────────────────────────────────────────────────
@@ -390,11 +389,11 @@ export function DataTable<T>({
           {/* Export */}
           {exportable && (
             <button
-              onClick={() => exportToCsv(data, columns, exportFilename)}
+              onClick={() => exportToXlsx(data, columns, exportFilename)}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 text-xs font-medium text-green-700 transition-colors hover:bg-green-100 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400 dark:hover:bg-green-950/50"
             >
               <Download className="h-3.5 w-3.5" />
-              Exportar CSV
+              Exportar Excel
             </button>
           )}
         </div>
