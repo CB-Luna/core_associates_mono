@@ -79,6 +79,18 @@ export class DocumentosService {
     return documento;
   }
 
+  async uploadDocumentForAsociado(
+    asociadoId: string,
+    file: Express.Multer.File,
+    tipo: string,
+  ) {
+    const asociado = await this.prisma.asociado.findUnique({ where: { id: asociadoId } });
+    if (!asociado) {
+      throw new NotFoundException('Asociado no encontrado');
+    }
+    return this.uploadDocument(asociadoId, file, tipo);
+  }
+
   async getMyDocuments(asociadoId: string) {
     return this.prisma.documento.findMany({
       where: { asociadoId },

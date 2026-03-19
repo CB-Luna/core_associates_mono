@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { DocumentosService } from './documentos.service';
+import { DocumentosCronService } from './documentos-cron.service';
 import { DocumentosController } from './documentos.controller';
 import { StorageModule } from '../storage/storage.module';
 import { NotificacionesModule } from '../notificaciones/notificaciones.module';
@@ -16,7 +17,7 @@ import { AiModule } from '../ai/ai.module';
     }),
   ],
   controllers: [DocumentosController],
-  providers: [DocumentosService],
+  providers: [DocumentosService, DocumentosCronService],
   exports: [DocumentosService],
 })
 export class DocumentosModule {}

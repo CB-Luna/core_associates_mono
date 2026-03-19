@@ -1,19 +1,21 @@
 # Pendientes — Core Associates
 
-> **Última actualización**: 19 de marzo de 2026
+> **Última actualización**: 18 de marzo de 2026
 > Documento unificado con TODO lo que falta por implementar. Consolida y reemplaza los documentos fragmentados que ahora viven en `.github/completados/`.
 
 ---
 
 ## Resumen Ejecutivo
 
-Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de negocio:
+Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de negocio.
+
+> ⚠️ **Prioridad actual**: Sección C (Rol de Abogado) — refactoring arquitectónico mayor para desacoplar al abogado del modelo `Proveedor` y convertirlo en un `Usuario` con rol RBAC propio.
 
 | # | Feature | Impacto | Esfuerzo | Alcance |
 |---|---------|---------|----------|---------|
 | **A** | ~~KYC Guard — Restricción por estado~~ | ✅ Completado | — | API + App |
-| **B** | ~~IA Bilateral — B.1/B.2/B.3~~ · B.4/B.5 pendientes | 🟠 Parcial | — | API + App + CRM |
-| **C** | Rol de Abogado/Profesional | 🟡 Medio | Medio | API + CRM |
+| **B** | ~~IA Bilateral — B.1/B.2/B.3/B.4/B.5~~ ✅ Completo | ✅ Completo | — | API + App + CRM |
+| **C** | Rol de Abogado — Refactoring completo | 🔴 Alto | Alto | API + CRM + App |
 | **D** | RBAC v2 — Plantillas de rol | 🟡 Medio | Medio | API + CRM |
 | **E** | Mejoras menores (App + CRM + API) | 🟢 Bajo | Bajo-Medio | Varios |
 
@@ -103,71 +105,408 @@ Crear guard reutilizable que verifica `estado === 'activo'` antes de permitir ac
 
 ### B.4 — CRM: Admin sube documentos por un asociado
 
-Permitir que admin/operador suba documentos en nombre de un asociado desde el CRM.
-
-**Endpoint**: `POST /documentos/upload-para/:asociadoId`
-- Requiere permiso `documentos:subir-por-asociado`
-- Misma lógica que upload normal pero usando `asociadoId` del path en vez del JWT
-- Dispara análisis IA igual que el flujo normal
-
-**Frontend**: Botón "Subir documento" en el modal de detalle del asociado.
-
-**Archivos a crear/modificar:**
-- `documentos.controller.ts` — nuevo endpoint
-- `documentos.service.ts` — método `uploadParaAsociado()`
-- `AsociadoDetailModal.tsx` — sección de upload
+> **Completado** el 18 de marzo de 2026.
+> - Migración: permiso `documentos:cargar` asignado a admin y operador
+> - Endpoint `POST /documentos/upload-para/:asociadoId` con `@Permisos('documentos:cargar')`
+> - Método `uploadDocumentForAsociado()` valida existencia del asociado y reutiliza `uploadDocument()`
+> - CRM: Botón "Subir" en sección Documentos del detalle de asociado con selector de tipo + file input
 
 ### B.5 — Notificaciones: Documentos incompletos
 
-Cron jobs que notifican a asociados que no han completado sus documentos.
-
-**Flujo**:
-| Día | Acción |
-|-----|--------|
-| 3 | Push: "Faltan X documentos para activar tu cuenta" |
-| 7 | Push + Email: "Tu cuenta será suspendida si no completas tus documentos" |
-| 14 | Auto-suspensión: `estado → suspendido` + notificación |
-
-**Dependencias**: Requiere que las notificaciones push funcionen (módulo `notificaciones` actualmente es stub). Implementar FCM real o al menos guardar los recordatorios en BD para que el operador los vea.
-
-**Archivos a crear:**
-- `notificaciones/notificaciones.service.ts` — implementar servicio real
-- `documentos/documentos-cron.service.ts` — cron de verificación (NestJS `@Cron`)
-- `schema.prisma` — tabla `Notificacion` si no existe
+> **Completado** el 18 de marzo de 2026.
+> - Cron service `DocumentosCronService` con `@Cron(EVERY_DAY_AT_9AM)`
+> - Busca asociados (pendiente/activo) registrados hace 3+ días con documentos faltantes
+> - Tipos requeridos: `ine_frente`, `ine_reverso`, `selfie`, `tarjeta_circulacion`
+> - Escalación: 3+ días recordatorio amable, 7+ días recordatorio urgente
+> - Usa `NotificacionesService.sendPush()` (FCM real ya funcional)
 
 ---
 
-## C. Rol de Abogado / Profesional de Atención
+## C. Rol de Abogado — Refactoring Completo
 
-**Problema**: El abogado es un `Proveedor` con `tipo = 'abogado'` en la BD. No tiene acceso al sistema — no ve sus casos, no puede agregar notas, depende 100% del operador.
+### Diagnóstico del problema
 
-**Solución**: Nuevo rol RBAC "Abogado" (o genérico "Profesional") con acceso al CRM limitado a sus casos.
+El abogado está modelado como `Proveedor tipo='abogado'` (una entidad de empresa) en lugar de ser un **Usuario con rol RBAC "abogado"** (una persona). Esto causa:
 
-### C.1 — Backend: Endpoints para profesional
+| Defecto | Consecuencia |
+|---------|-------------|
+| `CasoLegal.abogadoId` → `Proveedor.id` | Se asigna un _despacho_, no un individuo |
+| `RolUsuario` enum no incluye `abogado` | No se puede crear un Usuario con `rol = 'abogado'` |
+| Abogado hereda menú de `proveedor` | Ve cupones/promociones en vez de casos legales |
+| `DispositivoToken` solo tiene `asociadoId` | No se le pueden enviar push al abogado |
+| Sin bandeja de notificaciones persistente | No hay historial de alertas para ningún usuario CRM |
+| Sin acceso a app móvil | Depende 100% del operador para todo |
 
-- `GET /casos-legales/mis-casos-profesional` — Solo los casos donde el profesional es el `abogadoId` asignado
-- `POST /casos-legales/:id/notas` — Agregar nota como profesional (ya existe para operador, necesita reconocer al profesional como autor)
-- Filtro automático: el profesional solo ve/opera sus propios casos
+**Prerrequisito**: El rol "abogado" ya fue creado en la tabla `Rol` vía el configurador RBAC del CRM en producción (IONOS). Falta: migración de schema, endpoints, UI en CRM y App.
 
-**Nota**: El endpoint `GET /casos-legales/mis-casos/:id` ya existe para asociados. Se necesita uno análogo para profesionales.
+---
 
-### C.2 — CRM: Vista de profesional
+### C.0 — Modelo de datos + Migración
 
-- **Dashboard personalizado**: Solo métricas de sus casos (abiertos, cerrados, pendientes)
-- **Página "Mis Casos"**: Lista filtrada con sus casos asignados
-- **Detalle de caso**: Timeline de notas, agregar nota, cambiar estado (limitado: no puede cerrar sin aprobación del operador)
-- **Menú reducido**: Solo Dashboard + Mis Casos (gestionado vía RBAC + menú dinámico)
+**C.0.1 — Enum `RolUsuario`: agregar `abogado`**
 
-### C.3 — Notificación al profesional
+```sql
+ALTER TYPE "RolUsuario" ADD VALUE 'abogado';
+```
 
-- Cuando le asignan un caso: notificación en campana del CRM
-- Cuando el asociado agrega info: notificación
-- Modelo `Notificacion` para CRM (campana en Header ya es placeholder, hacerla funcional)
+Permite crear `Usuario { rol: 'abogado', rolId: <UUID del rol creado en CRM> }`.
+
+**C.0.2 — Refactorizar `CasoLegal`: asignación individual**
+
+Agregar campo `abogadoUsuarioId` que apunte a `Usuario.id` (el individuo), manteniendo `abogadoId` como referencia opcional a la firma (`Proveedor`).
+
+```prisma
+model CasoLegal {
+  // ... campos existentes ...
+  abogadoId         String?  @map("abogado_id") @db.Uuid          // Firma (Proveedor) — legacy
+  abogadoUsuarioId  String?  @map("abogado_usuario_id") @db.Uuid  // Individuo (Usuario) — NUEVO
+  
+  abogado           Proveedor? @relation(fields: [abogadoId], references: [id])
+  abogadoUsuario    Usuario?   @relation("AbogadoCasoLegal", fields: [abogadoUsuarioId], references: [id])
+}
+```
+
+- La asignación ahora va al **individuo** (`abogadoUsuarioId`)
+- Si el Usuario tiene `proveedorId`, se puede derivar la firma automáticamente
+- `abogadoId` (Proveedor) se mantiene por retrocompatibilidad pero se depreca gradualmente
+
+**C.0.3 — `DispositivoToken`: soporte para usuarios CRM**
+
+```prisma
+model DispositivoToken {
+  asociadoId  String?  @map("asociado_id") @db.Uuid  // Hacer nullable
+  usuarioId   String?  @map("usuario_id") @db.Uuid   // NUEVO — para abogados en app
+  // ... resto igual ...
+  
+  asociado    Asociado? @relation(...)
+  usuario     Usuario?  @relation(...)
+}
+```
+
+Constraint: exactamente uno de `asociadoId` o `usuarioId` debe ser no-null. Validar en aplicación.
+
+**C.0.4 — Modelo `NotificacionCRM`: bandeja persistente**
+
+```prisma
+model NotificacionCRM {
+  id            String   @id @default(uuid()) @db.Uuid
+  usuarioId     String   @map("usuario_id") @db.Uuid
+  titulo        String   @db.VarChar(200)
+  mensaje       String
+  tipo          String   @db.VarChar(50)      // 'caso_asignado' | 'nota_nueva' | 'estado_cambio' | 'general'
+  referenciaId  String?  @map("referencia_id") @db.Uuid  // ID del caso, asociado, etc.
+  referenciaTipo String? @map("referencia_tipo") @db.VarChar(50) // 'caso_legal' | 'asociado'
+  leida         Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  @@index([usuarioId, leida])
+  @@index([createdAt])
+  @@map("notificaciones_crm")
+}
+```
+
+Sirve para **todos** los roles CRM (admin, operador, abogado) — la campana del Header pasa de placeholder a funcional.
+
+**C.0.5 — Permisos específicos del abogado (seed/migración)**
+
+Crear permisos en tabla `Permiso` y asignarlos al rol "abogado" vía `RolPermiso`:
+
+| Código permiso | Grupo | Descripción |
+|---|---|---|
+| `casos-legales:ver-propios` | `casos-legales` | Ver solo los casos asignados al abogado |
+| `casos-legales:agregar-notas` | `casos-legales` | Agregar notas a casos propios |
+| `casos-legales:cambiar-estado-limitado` | `casos-legales` | Cambiar a `en_atencion`, `escalado` (no cerrar/resolver sin operador) |
+| `casos-legales:aceptar-rechazar` | `casos-legales` | Aceptar o rechazar una asignación de caso |
+| `casos-legales:ver-disponibles` | `casos-legales` | Ver casos sin abogado asignado para postularse |
+| `notificaciones-crm:ver` | `notificaciones` | Ver sus notificaciones |
+| `notificaciones-crm:marcar-leida` | `notificaciones` | Marcar notificaciones como leídas |
+
+**C.0.6 — Menú del abogado**
+
+Asignar vía `RolModuloMenu` (el configurador ya lo soporta):
+- Dashboard (filtrado)
+- Mis Casos (nuevo módulo de menú)
+- Casos Disponibles (nuevo módulo de menú, opcional)
+- Notificaciones (opcional si se usa solo campana)
 
 **Archivos a crear/modificar:**
-- `casos-legales.controller.ts` — endpoint mis-casos-profesional
-- `casos-legales.service.ts` — queries filtradas por profesional
-- CRM: dashboard parcial + "Mis Casos" para rol abogado
+- `schema.prisma` — enum + 3 modelos modificados + 1 modelo nuevo
+- `prisma/migrations/YYYYMMDD_rol_abogado_refactoring/migration.sql`
+- Seed data para permisos + menú del abogado
+
+---
+
+### C.1 — Backend: Endpoints y Servicios
+
+**C.1.1 — Asignación individual de abogado (refactorizar)**
+
+Actualizar `assignAbogado()` para aceptar un `usuarioId` (individuo) en vez de `proveedorId` (firma):
+
+```
+PUT /casos-legales/:id/asignar-abogado
+Body: { abogadoUsuarioId: string }
+```
+
+- Validar que el Usuario exista, tenga `rol = 'abogado'` y `estado = 'activo'`
+- Setear `abogadoUsuarioId` en el caso (y opcionalmente `abogadoId` = `usuario.proveedorId` si tiene firma)
+- Crear `NotificacionCRM` para el abogado: "Se te asignó el caso {codigo}"
+- Enviar push (si tiene `DispositivoToken`)
+- Registrar en auditoría
+
+**C.1.2 — Endpoints del abogado**
+
+| Método | Ruta | Guard | Descripción |
+|--------|------|-------|-------------|
+| `GET` | `/casos-legales/abogado/mis-casos` | `@Permisos('casos-legales:ver-propios')` | Casos donde `abogadoUsuarioId = currentUser.id` |
+| `GET` | `/casos-legales/abogado/mis-casos/:id` | `@Permisos('casos-legales:ver-propios')` | Detalle de caso propio (con notas + asociado) |
+| `GET` | `/casos-legales/abogado/disponibles` | `@Permisos('casos-legales:ver-disponibles')` | Casos `abierto` sin abogado asignado |
+| `POST` | `/casos-legales/:id/aceptar` | `@Permisos('casos-legales:aceptar-rechazar')` | Abogado acepta asignación |
+| `POST` | `/casos-legales/:id/rechazar` | `@Permisos('casos-legales:aceptar-rechazar')` | Abogado rechaza (con motivo) → vuelve a `abierto` |
+| `POST` | `/casos-legales/:id/postularse` | `@Permisos('casos-legales:ver-disponibles')` | Abogado se ofrece para un caso abierto |
+| `PUT` | `/casos-legales/:id/estado-abogado` | `@Permisos('casos-legales:cambiar-estado-limitado')` | Cambiar a `en_atencion` o `escalado` (no cerrar) |
+| `POST` | `/casos-legales/:id/notas` | (ya existe) | Ampliar para reconocer `autorId` de abogado |
+
+**C.1.3 — Flujo de asignación "Dispatch Híbrido"**
+
+Tres modos de asignación (configurable por caso):
+
+1. **Asignación directa**: Operador elige abogado → abogado recibe push → acepta/rechaza
+2. **Auto-postulación**: Caso queda en "disponibles" → abogado se postula → operador aprueba
+3. **Broadcast**: Operador publica caso a todos los abogados → el primero que acepta lo toma
+
+Meta-estados de asignación en `CasoLegal`:
+
+| Estado caso | `abogadoUsuarioId` | Significado |
+|---|---|---|
+| `abierto` | null | Sin abogado, disponible para asignación |
+| `abierto` | set | Asignado, pendiente de aceptación del abogado |
+| `en_atencion` | set | Abogado aceptó y está atendiendo |
+| `escalado` | set | Abogado escaló al operador |
+| `abierto` (tras rechazo) | null | Abogado rechazó, vuelve al pool |
+
+**C.1.4 — NotificacionesCRM: endpoints**
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/notificaciones-crm` | Bandeja del usuario logueado (paginada, filtro `leida`) |
+| `GET` | `/notificaciones-crm/no-leidas/count` | Contador para badge en campana |
+| `PUT` | `/notificaciones-crm/:id/leer` | Marcar como leída |
+| `PUT` | `/notificaciones-crm/leer-todas` | Marcar todas como leídas |
+
+**C.1.5 — Push a usuarios CRM (ampliar NotificacionesService)**
+
+- `registerTokenUsuario(usuarioId, token, plataforma)` — nuevo endpoint para app del abogado
+- `sendPushUsuario(usuarioId, titulo, mensaje, data)` — busca tokens en `DispositivoToken` por `usuarioId`
+- Siempre crear `NotificacionCRM` al enviar push (persistencia aunque no tenga app)
+
+**C.1.6 — Crear Usuario abogado desde CRM**
+
+Adaptar el flujo actual de creación de usuarios (`configuracion/UsuariosTab`) para soportar `rol = 'abogado'`:
+- Dropdown de rol: carga roles dinámicos desde la tabla `Rol` (no hardcodeado)
+- Si `rol = 'abogado'`: opcionalmente vincular a un `proveedorId` (firma/despacho)
+- No obligar a que exista un `Proveedor` — un abogado independiente no necesita firma
+
+**Archivos a crear/modificar:**
+- `casos-legales.controller.ts` — endpoints C.1.2
+- `casos-legales.service.ts` — métodos del abogado + refactorizar `assignAbogado`
+- `notificaciones-crm.module.ts` — nuevo módulo
+- `notificaciones-crm.controller.ts` — endpoints C.1.4
+- `notificaciones-crm.service.ts` — CRUD + integración con push
+- `notificaciones.service.ts` — ampliar `sendPushUsuario()`
+- DTOs nuevos: `PostularseDto`, `RechazarAsignacionDto`, etc.
+
+---
+
+### C.2 — CRM Web: Vistas para el Abogado
+
+**C.2.1 — Dashboard parcial**
+
+El Dashboard existente, pero mostrando **solo métricas del abogado**:
+- Mis casos activos / resueltos / pendientes de aceptar
+- Últimos casos asignados
+- Sin métricas globales (asociados, cupones, etc.)
+
+Detectar `rol` del usuario desde `useAuthStore()` y filtrar las tarjetas/queries según corresponda.
+
+**C.2.2 — Página "Mis Casos" (`/mis-casos`)**
+
+- Tabla con los casos asginados al abogado (paginada, con búsqueda)
+- Columnas: código, tipo percance, asociado, estado, prioridad, fecha asignación
+- Badge de estado con colores
+- Click → detalle del caso
+
+**C.2.3 — Página "Casos Disponibles" (`/casos-disponibles`)**
+
+- Tabla de casos `abierto` sin `abogadoUsuarioId`
+- Botón "Postularme" por caso
+- Visible solo si el abogado tiene permiso `casos-legales:ver-disponibles`
+
+**C.2.4 — Detalle de caso para abogado (`/mis-casos/:id`)**
+
+- Info del caso + datos del asociado (nombre, teléfono, vehículo)
+- Timeline de notas (existentes + agregar nueva)
+- Botonera: Aceptar / Rechazar (si pendiente), Escalar, cambiar a `en_atencion`
+- NO puede: cerrar, resolver, reasignar, ver datos de otros casos
+
+**C.2.5 — Campana de notificaciones (Header)**
+
+La campana en el Header ya existe como placeholder. Hacerla funcional:
+- Poll `GET /notificaciones-crm/no-leidas/count` cada 30s (o WebSocket futuro)
+- Dropdown con últimas 10 notificaciones
+- Click en notificación → navega al caso referenciado
+- "Marcar todas como leídas"
+
+**C.2.6 — Adaptar UsuariosTab para crear abogados**
+
+- Dropdown de rol: cargar dinámicamente de `GET /roles` (no hardcodeado a admin/operador/proveedor)
+- Campo opcional "Despacho/Firma" (vincula a Proveedor) — solo visible si rol = abogado
+- Un abogado independiente no necesita firma
+
+**Archivos a crear/modificar:**
+- `src/app/(dashboard)/mis-casos/page.tsx` — nuevo
+- `src/app/(dashboard)/mis-casos/[id]/page.tsx` — nuevo
+- `src/app/(dashboard)/casos-disponibles/page.tsx` — nuevo
+- `src/components/layout/Header.tsx` — campana funcional
+- `src/components/notifications/NotificationBell.tsx` — nuevo componente
+- `src/app/(dashboard)/configuracion/tabs/UsuariosTab.tsx` — adaptar dropdown rol
+- `src/app/(dashboard)/dashboard/page.tsx` — filtrar por rol
+- `src/lib/api-types.ts` — interfaces nuevas
+
+---
+
+### C.3 — App Móvil: Shell del Abogado
+
+El abogado necesita acceso desde el celular para recibir push y ver sus casos en campo.
+
+**C.3.1 — Login dual en la app**
+
+La app actual solo tiene login OTP (para asociados). Agregar **login email/password** para profesionales:
+
+- Nueva pantalla `LoginProfesionalScreen` con email + password
+- Reutiliza `POST /auth/login` (mismo endpoint del CRM)
+- JWT devuelve `tipo: 'usuario', rol: 'abogado'`
+- Pantalla de selección: "Soy asociado" (OTP) vs "Soy profesional" (email)
+
+**C.3.2 — Shell profesional (distinto al de asociado)**
+
+GoRouter detecta `tipo` del JWT → redirige a shell correspondiente:
+
+```
+/login-profesional      → LoginProfesionalScreen
+/profesional            → ProfesionalShell (BottomNav diferente)
+  /profesional/home     → ProfesionalHomeScreen (resumen de casos)
+  /profesional/casos    → MisCasosProfScreen (lista de casos asignados)
+  /profesional/perfil   → PerfilProfScreen
+```
+
+Bottom nav: **Inicio** · **Mis Casos** · **Perfil**
+
+**C.3.3 — Pantallas profesional**
+
+| Pantalla | Contenido |
+|----------|-----------|
+| `ProfesionalHomeScreen` | Cards: casos activos, pendientes de aceptar, resueltos este mes. Últimas notificaciones. |
+| `MisCasosProfScreen` | Lista de casos asignados con filtro por estado. Pull-to-refresh. |
+| `CasoDetalleProfScreen` | Info caso + asociado + mapa + timeline notas + agregar nota + botones aceptar/rechazar/escalar |
+| `PerfilProfScreen` | Datos personales, cambiar contraseña, cerrar sesión |
+
+**C.3.4 — Push notifications para abogado**
+
+- Al abrir la app profesional: registrar token FCM con `POST /notificaciones/register-token-usuario`
+- Push al asignar caso, nueva nota del operador/asociado, cambio de estado
+- Tap en push → navega al detalle del caso
+
+**C.3.5 — Repositorios y providers**
+
+```
+features/profesional/
+├── data/
+│   ├── profesional_repository.dart      # Endpoints del abogado
+│   └── models/
+│       ├── caso_profesional.dart        # Modelo simplificado
+│       └── notificacion_crm.dart
+└── presentation/
+    ├── providers/
+    │   ├── profesional_auth_provider.dart  # Login email/password
+    │   ├── mis_casos_prof_provider.dart
+    │   └── notificaciones_prof_provider.dart
+    └── screens/
+        ├── login_profesional_screen.dart
+        ├── profesional_home_screen.dart
+        ├── mis_casos_prof_screen.dart
+        ├── caso_detalle_prof_screen.dart
+        └── perfil_prof_screen.dart
+```
+
+---
+
+### C.4 — Operador: Adaptar flujo de asignación
+
+**C.4.1 — Selector de abogado individual**
+
+El dropdown actual en el CRM muestra **Proveedores tipo=abogado** (despachos/firmas). Cambiarlo a mostrar **Usuarios con rol=abogado**:
+
+- `GET /usuarios?rol=abogado` — lista de abogados individuales
+- Dropdown muestra: "Lic. Roberto Hernández (Despacho Jurídico Lex)" o "Lic. María López (independiente)"
+- Al asignar: `PUT /casos-legales/:id/asignar-abogado { abogadoUsuarioId: '...' }`
+
+**C.4.2 — Vista de estado de asignación**
+
+En la tabla de casos del operador, nueva columna "Asignación" con badges:
+- 🔴 Sin asignar
+- 🟡 Asignado (pendiente aceptación)
+- 🟢 Aceptado (en atención)
+- ⚪ Rechazado (necesita reasignar)
+
+**C.4.3 — Notificaciones al operador**
+
+- Abogado acepta/rechaza → `NotificacionCRM` al operador que asignó
+- Abogado escala caso → notificación al operador
+- Abogado agrega nota → notificación al operador
+
+---
+
+### Orden de implementación (sub-fases)
+
+```
+C.0  Modelo de datos + migración (PRIMERO — bloquea todo lo demás)
+ ├── C.0.1 Enum RolUsuario + abogado
+ ├── C.0.2 CasoLegal.abogadoUsuarioId
+ ├── C.0.3 DispositivoToken.usuarioId
+ ├── C.0.4 NotificacionCRM model
+ ├── C.0.5 Seed permisos + RolPermiso
+ └── C.0.6 Seed menú abogado
+     ↓
+C.1  Backend endpoints + servicios
+ ├── C.1.1 Refactorizar asignar-abogado
+ ├── C.1.2 Endpoints abogado (mis-casos, disponibles, aceptar/rechazar, postularse)
+ ├── C.1.3 Dispatch Híbrido (lógica de estados)
+ ├── C.1.4 NotificacionesCRM endpoints
+ ├── C.1.5 Push a usuarios CRM
+ └── C.1.6 Crear usuario abogado desde CRM
+     ↓
+C.2  CRM Web (paralelo con C.3)
+ ├── C.2.1 Dashboard parcial por rol
+ ├── C.2.2 Mis Casos page
+ ├── C.2.3 Casos Disponibles page
+ ├── C.2.4 Detalle caso (abogado view)
+ ├── C.2.5 Campana notificaciones
+ └── C.2.6 UsuariosTab: crear abogados
+     ↓
+C.3  App Móvil (paralelo con C.2)
+ ├── C.3.1 Login profesional (email/password)
+ ├── C.3.2 Shell profesional (GoRouter)
+ ├── C.3.3 Pantallas profesional
+ ├── C.3.4 Push notifications
+ └── C.3.5 Repos + providers
+     ↓
+C.4  Operador: adaptar asignación
+ ├── C.4.1 Selector abogado individual
+ ├── C.4.2 Vista estado asignación
+ └── C.4.3 Notificaciones cruzadas
+```
 
 ---
 
@@ -243,23 +582,29 @@ Reemplazar las tabs actuales (Roles + Permisos + Menú Dinámico) por:
 ## Orden de Implementación Sugerido
 
 ```
-Fase 1 (Alta prioridad — seguridad y lógica de negocio):
-  ├─ A. KYC Guard (API + App)
+Fase 1 (Completada ✅):
+  ├─ A. KYC Guard (API + App) ✅
+  ├─ B.1 Pre-validación en App ✅
+  ├─ B.2 Auto-aprobación/rechazo ✅
+  └─ B.3 Anti-troll ✅
+
+Fase 2 (Actual — Rol Abogado, máxima prioridad):
+  ├─ C.0 Modelo de datos + migración
+  ├─ C.1 Backend: endpoints abogado + notificaciones CRM
+  ├─ C.2 CRM Web: vistas abogado + campana notificaciones
+  ├─ C.3 App Móvil: shell profesional + push
+  └─ C.4 Operador: adaptar asignación
+
+Fase 3 (Seguridad + Features pendientes):
   ├─ E1.1 SMS real (Twilio)
-  └─ E1.2 Rate limiting (Throttler)
+  ├─ E1.2 Rate limiting (Throttler)
+  ├─ B.4 Admin sube docs por asociado
+  └─ B.5 Notificaciones docs incompletos
 
-Fase 2 (Funcionalidad core — IA):
-  ├─ B.1 Pre-validación en App
-  ├─ B.2 Auto-aprobación/rechazo
-  ├─ B.3 Anti-troll
-  └─ B.4 Admin sube docs
+Fase 4 (RBAC v2 — consolidación técnica):
+  └─ D. Plantillas de rol + eliminar enum legacy
 
-Fase 3 (Roles y permisos):
-  ├─ C. Rol de abogado
-  └─ D. RBAC v2 (Plantillas)
-
-Fase 4 (Mejoras y polish):
-  ├─ B.5 Notificaciones docs incompletos
+Fase 5 (Mejoras y polish):
   ├─ E2.1 Perfil completitud
   ├─ E2.2 Filtro cupones
   └─ Resto de mejoras menores

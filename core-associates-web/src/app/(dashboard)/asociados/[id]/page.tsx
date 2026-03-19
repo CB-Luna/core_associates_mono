@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Car, FileText, Ticket, Eye, CheckCircle, XCircle, MessageSquare, Clock, Send, User, Brain } from 'lucide-react';
+import { ArrowLeft, Car, FileText, Ticket, Eye, CheckCircle, XCircle, MessageSquare, Clock, Send, User, Brain, Upload } from 'lucide-react';
 import { apiClient, apiImageUrl } from '@/lib/api-client';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import type { Asociado, Documento, NotaAsociado } from '@/lib/api-types';
@@ -33,6 +33,10 @@ export default function AsociadoDetailPage() {
   const [nuevaNota, setNuevaNota] = useState('');
   const [enviandoNota, setEnviandoNota] = useState(false);
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadTipo, setUploadTipo] = useState('ine_frente');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     apiClient<Asociado>(`/asociados/${id}`)
@@ -96,6 +100,30 @@ export default function AsociadoDetailPage() {
     await handleEstado('suspendido', suspendMotivo.trim());
     setSuspendDialog(false);
     setSuspendMotivo('');
+  };
+
+  const handleUploadForAsociado = async () => {
+    if (!uploadFile || !asociado) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('tipo', uploadTipo);
+      await apiClient(`/documentos/upload-para/${asociado.id}`, {
+        method: 'POST',
+        body: formData,
+      });
+      // Refrescar datos del asociado
+      const updated = await apiClient<Asociado>(`/asociados/${id}`);
+      setAsociado(updated);
+      setUploadOpen(false);
+      setUploadFile(null);
+      setUploadTipo('ine_frente');
+    } catch {
+      alert('Error al subir documento');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleViewDocument = async (doc: Documento) => {
@@ -301,10 +329,52 @@ export default function AsociadoDetailPage() {
 
         {/* Documents */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
-            <FileText className="h-4 w-4" />
-            Documentos ({asociado.documentos?.length || 0})
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+              <FileText className="h-4 w-4" />
+              Documentos ({asociado.documentos?.length || 0})
+            </h3>
+            {puede('documentos:cargar') && (
+              <button
+                onClick={() => setUploadOpen(!uploadOpen)}
+                className="inline-flex items-center gap-1 rounded-md bg-primary-50 px-2 py-1 text-xs font-medium text-primary-700 hover:bg-primary-100"
+              >
+                <Upload className="h-3 w-3" />
+                Subir
+              </button>
+            )}
+          </div>
+          {/* Upload form */}
+          {uploadOpen && (
+            <div className="mt-3 rounded-lg border border-primary-200 bg-primary-50 p-3 dark:border-primary-700 dark:bg-primary-900/20">
+              <div className="flex flex-col gap-2">
+                <select
+                  value={uploadTipo}
+                  onChange={(e) => setUploadTipo(e.target.value)}
+                  className="rounded-md border border-gray-300 px-2 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                >
+                  <option value="ine_frente">INE Frente</option>
+                  <option value="ine_reverso">INE Reverso</option>
+                  <option value="selfie">Selfie</option>
+                  <option value="tarjeta_circulacion">Tarjeta Circulación</option>
+                  <option value="otro">Otro</option>
+                </select>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  className="text-xs text-gray-600 file:mr-2 file:rounded-md file:border-0 file:bg-primary-100 file:px-2 file:py-1 file:text-xs file:font-medium file:text-primary-700 hover:file:bg-primary-200"
+                />
+                <button
+                  onClick={handleUploadForAsociado}
+                  disabled={!uploadFile || uploading}
+                  className="self-end rounded-md bg-primary-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {uploading ? 'Subiendo...' : 'Subir Documento'}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="mt-3 space-y-2">
             {asociado.documentos?.length ? (
               asociado.documentos.map((d) => (

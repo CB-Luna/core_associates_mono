@@ -80,6 +80,31 @@ export class DocumentosController {
     return this.documentosService.uploadDocument(asociadoId, file, dto.tipo);
   }
 
+  @Post('upload-para/:asociadoId')
+  @UseGuards(PermisosGuard)
+  @Permisos('documentos:cargar')
+  @ApiOperation({ summary: 'Subir documento en nombre de un asociado (admin/operador)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Documento subido y registrado' })
+  @ApiResponse({ status: 400, description: 'Archivo inválido (máx 10MB, JPEG/PNG/WebP/PDF)' })
+  @ApiResponse({ status: 404, description: 'Asociado no encontrado' })
+  @UseInterceptors(FileInterceptor('file'))
+  uploadDocumentForAsociado(
+    @Param('asociadoId') asociadoId: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp)|application\/pdf$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+    @Body() dto: UploadDocumentDto,
+  ) {
+    return this.documentosService.uploadDocumentForAsociado(asociadoId, file, dto.tipo);
+  }
+
   @Get('mis-documentos')
   @ApiOperation({ summary: 'Listar mis documentos' })
   @ApiResponse({ status: 200, description: 'Lista de documentos del asociado' })
