@@ -41,7 +41,7 @@ export default function DashboardLayout({
   // Route guard: redirect proveedor away from restricted routes
   useEffect(() => {
     if (!ready || !user) return;
-    if (user.rol === 'proveedor') {
+    if (user.proveedorId) {
       const allowed = PROVEEDOR_ALLOWED.some((r) => pathname === r || pathname.startsWith(r + '/'));
       if (!allowed) {
         router.replace('/dashboard');

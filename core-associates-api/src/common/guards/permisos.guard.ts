@@ -25,11 +25,6 @@ export class PermisosGuard implements CanActivate {
       throw new ForbiddenException('No autenticado');
     }
 
-    // Admin siempre tiene acceso total
-    if (user.rol === 'admin') {
-      return true;
-    }
-
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: user.id },
       select: {
@@ -42,6 +37,11 @@ export class PermisosGuard implements CanActivate {
     });
 
     const userPermisos = usuario?.rolRef?.permisos.map((rp) => rp.permiso.codigo) ?? [];
+
+    // Super-admin tiene acceso total (D.3 RBAC dinámico)
+    if (userPermisos.includes('sistema:super-admin')) {
+      return true;
+    }
 
     // El usuario necesita al menos uno de los permisos requeridos (OR)
     const hasPermission = requiredPermisos.some((p) => userPermisos.includes(p));

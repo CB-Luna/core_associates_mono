@@ -38,7 +38,7 @@ function toDateInputValue(iso: string): string {
 export function PromocionFormDialog({ open, onClose, onSuccess, promocion }: PromocionFormDialogProps) {
   const isEdit = !!promocion;
   const user = useAuthStore((s) => s.user);
-  const esProveedor = user?.rol === 'proveedor';
+  const esProveedor = !!user?.proveedorId;
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [serverError, setServerError] = useState('');
   const [imagenFile, setImagenFile] = useState<File | null>(null);

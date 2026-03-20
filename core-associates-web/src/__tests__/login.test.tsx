@@ -33,15 +33,16 @@ describe('LoginPage', () => {
     expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeInTheDocument();
   });
 
-  it('should render all three preset user cards', () => {
+  it('should render all four preset user cards', () => {
     render(<LoginPage />);
     const buttons = screen.getAllByRole('button').filter(
-      (btn) => btn.textContent?.includes('AD') || btn.textContent?.includes('OP') || btn.textContent?.includes('PR'),
+      (btn) => btn.textContent?.includes('AD') || btn.textContent?.includes('OP') || btn.textContent?.includes('PR') || btn.textContent?.includes('AB'),
     );
-    expect(buttons).toHaveLength(3);
+    expect(buttons).toHaveLength(4);
     expect(screen.getByText('admin@coreassociates.com')).toBeInTheDocument();
     expect(screen.getByText('operador@coreassociates.com')).toBeInTheDocument();
-    expect(screen.getByText('proveedor@elrapido.com')).toBeInTheDocument();
+    expect(screen.getByText('proveedor2@gmail.com')).toBeInTheDocument();
+    expect(screen.getByText('abogado1@gmail.com')).toBeInTheDocument();
   });
 
   it('should fill form when preset user is clicked', async () => {

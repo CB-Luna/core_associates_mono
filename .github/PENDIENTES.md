@@ -1,26 +1,28 @@
 # Pendientes — Core Associates
 
-> **Última actualización**: 22 de marzo de 2026
+> **Última actualización**: 20 de marzo de 2026
 > Documento unificado con TODO lo que falta por implementar. Consolida y reemplaza los documentos fragmentados que ahora viven en `.github/completados/`.
 
 ---
 
 ## Resumen Ejecutivo
 
-Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de negocio.
+Quedan **features críticas de RBAC dinámico**, mejoras al flujo del abogado, y módulos de vehículos. Ordenadas por impacto de negocio.
 
-> ⚠️ **Prioridad actual**: D.3 (Consolidación RBAC), G.2 (Campos abogado), C.3 (App Móvil shell profesional).
+> ⚠️ **Prioridad actual**: D.3 (RBAC dinámico — bloquea roles nuevos), I (Mejoras flujo abogado CRM), J (Verificación vehicular), C.3 (App Móvil shell profesional).
 
 | # | Feature | Impacto | Esfuerzo | Alcance |
 |---|---------|---------|----------|----------|
 | **A** | ~~KYC Guard — Restricción por estado~~ | ✅ Completado | — | API + App |
 | **B** | ~~IA Bilateral — B.1/B.2/B.3/B.4/B.5~~ ✅ Completo | ✅ Completo | — | API + App + CRM |
 | **C** | ~~Rol de Abogado — C.0/C.1/C.2/C.4~~ ✅ (falta C.3 App) | ✅ API+CRM | Pendiente App | API + CRM + App |
-| **D** | RBAC v2 — Plantillas de rol | ✅ D.1+D.2 | ❌ D.3 Consolidación | API + CRM |
+| **D** | RBAC v2 — Plantillas de rol | ✅ D.1+D.2 | ❌ **D.3 Consolidación CRÍTICA** | API + CRM |
 | **E** | Mejoras menores (App + CRM + API) | ✅ E1.1+E1.2 | Resto pendiente | Varios |
 | **F** | ~~Abogados Management CRM~~ | ✅ Completado | — | CRM |
 | **G** | Experiencia Abogado — Mejoras CRM | ✅ G.1+G.3-G.6 | ❌ G.2 pendiente | API + CRM |
 | **H** | IA — Hardening y guardrails | ✅ H.1-H.4 | ℹ️ H.5 informativo | API + CRM |
+| **I** | **Flujo Abogado — Mejoras CRM (NUEVO)** | ❌ Pendiente | Medio-Alto | API + CRM |
+| **J** | **Verificación Vehicular (NUEVO)** | ❌ Pendiente (preparación) | Medio | API + CRM + App |
 
 ---
 
@@ -535,24 +537,49 @@ C.4  Operador: adaptar asignación
 > - `AsignacionesPanel.tsx` — Asignar usuarios a roles (multi-select)
 > - `RolesTab.tsx`, `RolesAdminTab.tsx`, `PermisosTab.tsx` — Vista legacy + nueva unificada
 
-### D.3 — Fase 7: Consolidación ❌ PENDIENTE
+### D.3 — Fase 7: Consolidación ❌ PENDIENTE — **PRIORIDAD CRÍTICA**
 
-- Eliminar enum `RolUsuario` del schema — **AÚN EXISTE** (`enum RolUsuario { admin operador proveedor abogado }`)
-- Eliminar campo `permisos String[]` de `ModuloMenu` — **AÚN EXISTE** (usado como fallback en `menu.service.ts`)
-- `PermisosGuard` bypass admin: **AÚN USA** `user.rol === 'admin'` (enum hardcodeado, línea 29)
-- `RolesGuard` + `@Roles()` decorator: **DEAD CODE** — `RolesGuard` definido pero no usado en ningún controller
-- `Usuario.rol` (enum) + `Usuario.rolId` (FK a Rol) **coexisten** — sistema dual
-- Seed no crea `RolModuloMenu` entries — se depende de configuración manual vía CRM
+> **Problema en producción** (detectado 20-mar-2026): Los roles nuevos creados en el configurador RBAC **no funcionan correctamente**. Al crear un rol custom (ej. "Supervisor") y asignar un usuario, el Header muestra "Operador" porque el enum `RolUsuario` solo tiene 4 valores. El Dashboard queda vacío porque `usePermisos()` no matchea `esAdmin/esOperador/esProveedor/esAbogado`. Los permisos del rol SÍ se cargan correctamente — el problema es que **todo el frontend depende del enum hardcodeado**.
+
+**Impacto**: Bloquea la creación de roles custom (feature clave del configurador RBAC).
+
+**Problema detallado**:
+
+| Componente afectado | Qué lee | Qué debería leer |
+|---|---|---|
+| **Header.tsx** `rolLabels` | `user.rol` (enum) → lookup en mapa estático de 4 entradas | Nombre del `Rol` dinámico desde la tabla Rol (vía `rolId`) |
+| **permisos.ts** `usePermisos()` | `user.rol === 'abogado'` etc. → booleans hardcodeados | `user.permisos[]` para todo + nombre de rol para display |
+| **dashboard/page.tsx** | `esAbogado` / `esProveedor` → dashboard específico | **Permisos granulares** por widget (ej. `dashboard:metricas-generales`, `dashboard:metricas-abogado`) |
+| **auth.service.ts** `createUser()` | `validEnumValues = ['admin','operador','proveedor','abogado']` → si no matchea, usa fallback | Eliminar enum, asignar solo `rolId` (FK a tabla Rol) |
+| **PermisosGuard** bypass admin | `user.rol === 'admin'` | `user.permisos.includes(...)` o flag `esAdmin` derivado del Rol |
+
+**Solución completa** (múltiples sub-tareas):
+
+- **D.3.1** — Endpoint `/auth/login` y `/auth/otp/verify`: incluir en la respuesta `rolNombre` (label del Rol dinámico) además de `rol` (enum)
+- **D.3.2** — `auth-store.ts`: almacenar `rolNombre` y `rolId`
+- **D.3.3** — `Header.tsx`: mostrar `user.rolNombre` en vez de lookup estático
+- **D.3.4** — `usePermisos()`: eliminar booleans por enum, derivar capacidades de `user.permisos[]`
+- **D.3.5** — `dashboard/page.tsx`: seleccionar dashboard por **permisos** (no por rol enum)
+  - Crear permisos: `dashboard:metricas-generales`, `dashboard:metricas-casos`, `dashboard:metricas-cupones`, `dashboard:metricas-abogado`, `dashboard:metricas-proveedor`, `dashboard:graficos`
+  - Dashboard compuesto: muestra cada sección si el rol tiene el permiso correspondiente
+- **D.3.6** — Backend: eliminar enum `RolUsuario`, campo `Usuario.rol` → `String` derivado de `Rol.nombre` (o mejor: eliminar y usar solo `rolId`)
+- **D.3.7** — `PermisosGuard`: determinar admin vía flag `Rol.esProtegido` + nombre `'admin'` en tabla Rol, no via enum
+- **D.3.8** — Eliminar campo `permisos String[]` de `ModuloMenu` (legacy fallback)
+- **D.3.9** — Seed: crear `RolModuloMenu` entries para roles por defecto (admin, operador, proveedor, abogado)
 
 ### Bugs a resolver (previos al rediseño)
 
 | # | Bug | Detalle | Estado |
 |---|-----|---------|--------|
 | B1 | ~~Rol sin ícono/color en BD~~ | ~~RolesTab hardcodea colores por nombre~~ | ✅ UsuariosTab ahora usa `rol.icono`/`rol.color` dinámicos desde DB vía `getIcon()` |
-| B2 | Dropdown de rol hardcodeado en UsuariosTab | No carga roles dinámicos | Pendiente |
+| B2 | Dropdown de rol hardcodeado en UsuariosTab | No carga roles dinámicos | Pendiente (D.3) |
 | B3 | ~~Menú no reconoce roles nuevos~~ | ~~`permisos String[]` no tiene FK~~ | ✅ Sidebar `filterByRole()` eliminado — se confía en RolModuloMenu del API |
 | B4 | Sistema dual enum + FK en Usuario | `rol` enum + `rolId` UUID coexisten | Pendiente (D.3) |
 | B5 | PermisosGuard bypass admin usa enum | Si se elimina enum, se rompe | Pendiente (D.3) |
+| B6 | **Header muestra nombre de enum, no nombre de rol dinámico** | `rolLabels` hardcodeado → roles nuevos aparecen como "Operador" | Pendiente (D.3.3) |
+| B7 | **Dashboard vacío para roles custom** | No matchea `esAbogado`/`esProveedor` → no renderiza nada | Pendiente (D.3.5) |
+| B8 | **Falta eye icon en contraseña de crear usuario** | Login lo tiene, UsuariosTab no | Pendiente (E3.5) |
+| B9 | **Mapa SOS clickeable sin control de permiso** | Abogado puede navegar a detalle de caso y asignar/modificar | Pendiente (I.1) |
 
 ---
 
@@ -584,6 +611,7 @@ C.4  Operador: adaptar asignación
 | E3.2 | **Dark mode en mapas** — Leaflet tiles no respetan dark mode | Bajo | Baja | ❌ Pendiente |
 | E3.3 | **WebSockets** — dashboard y mapa SOS sin actualizaciones en tiempo real | Alto | Baja | ❌ Pendiente |
 | E3.4 | **Migrar a React Query** — data fetching manual con useEffect+useState | Medio | Baja | ❌ Pendiente |
+| E3.5 | **Eye icon en password de crear usuario** — Toggle visibilidad en UsuariosTab y NuevoAbogadoDialog | Bajo | Media | ❌ Pendiente |
 
 ---
 
@@ -690,15 +718,35 @@ Fase 3 (Completada ✅):
   ├─ B.5 Notificaciones docs incompletos ✅
   └─ D.1 + D.2 RBAC v2 Backend + Frontend ✅
 
-Fase 4 (Pendiente — Consolidación + App):
-  ├─ C.3 App Móvil: shell profesional + push
-  └─ D.3 Consolidación RBAC (eliminar enum legacy)
+Fase 4 — RBAC Dinámico (SIGUIENTE PRIORIDAD):
+  ├─ D.3 Consolidación RBAC (eliminar dependencia de enum)
+  │   ├─ D.3.1 Login response incluye rolNombre
+  │   ├─ D.3.2 auth-store almacena rolNombre
+  │   ├─ D.3.3 Header muestra rolNombre dinámico
+  │   ├─ D.3.4 usePermisos() sin booleans hardcodeados
+  │   ├─ D.3.5 Dashboard por permisos granulares (no por rol)
+  │   ├─ D.3.6 Eliminar enum RolUsuario → solo rolId
+  │   ├─ D.3.7 PermisosGuard sin bypass hardcodeado
+  │   ├─ D.3.8 Eliminar permisos String[] de ModuloMenu
+  │   └─ D.3.9 Seed RolModuloMenu entries
+  └─ E3.5 Eye icon en password crear usuario (rápido)
 
-Fase 5 (Parcial ✅ — Mejoras y polish):
-  ├─ E1.3 Cifrar API keys IA ✅ (H.1)
-  ├─ E1.4 Ocultar providers ✅ (H.3)
-  ├─ E2.1 Perfil completitud ✅
+Fase 5 — Flujo Abogado Completo:
+  ├─ I.1 Mapa SOS: control de permisos
+  ├─ I.2 Mis Casos: info completa asociado + mapa
+  ├─ I.3 Casos Disponibles: info asociado
+  ├─ I.4 Documentos del caso: subida + solicitud
+  ├─ I.5 Eye icon contraseña
+  └─ G.2 Más campos abogado (direccion, telefono, cedula)
+
+Fase 6 — App Móvil + Verificación:
+  ├─ C.3 App Móvil: shell profesional + push
+  ├─ J.1 Estado verificación por vehículo (preparación)
+  └─ J.2 UX progresivo de verificación vehicular
+
+Fase 7 (Polish):
   ├─ E2.2 Filtro cupones (completar TabBar) ❌
+  ├─ J.3 Relaciones vehículo-operaciones (futuro)
   └─ Resto de mejoras menores (E2.3, E2.4, E3.1-E3.4) ❌
 ```
 
@@ -776,6 +824,183 @@ Actualmente **NO existe** un endpoint de chat/conversacional. La IA se usa **sol
 
 ---
 
+## I. Flujo Abogado — Mejoras CRM (NUEVO — 20-mar-2026)
+
+Hallazgos de pruebas en producción. El rol abogado tiene las pantallas base pero le faltan herramientas operativas para dar seguimiento real a los casos.
+
+### I.1 — Mapa SOS: Control de permisos en interacción ❌ PENDIENTE
+
+**Problema**: Al hacer clic en un marcador del Mapa SOS, cualquier rol puede ver el panel lateral y navegar a "Ver detalle completo" del caso. Un abogado podría ver el detalle y modificar casos que no son suyos (asignar, cambiar estado, etc.).
+
+**Solución**:
+- **Permiso nuevo**: `mapa-sos:ver-detalle-caso` — controla si el clic en marcador permite navegar al detalle
+- **Permiso nuevo**: `mapa-sos:interactuar` — controla si los marcadores del mapa son clickeables (para roles que solo necesitan ver el mapa de forma pasiva)
+- `mapa-sos/page.tsx`: verificar `puede('mapa-sos:ver-detalle-caso')` antes de mostrar el botón "Ver detalle completo"
+- Si el abogado no tiene el permiso, el panel lateral muestra info resumida pero **sin** link al detalle ni capacidad de asignar
+- Alternativamente: si es abogado y el caso es suyo → permitir, si no es suyo → solo ver
+
+**Archivos**: `mapa-sos/page.tsx`, migración permisos, seed
+
+**Esfuerzo**: Bajo | **Prioridad**: Alta
+
+### I.2 — Mis Casos: Info completa del asociado + mapa ❌ PENDIENTE
+
+**Problema**: La tabla de "Mis Casos" del abogado solo muestra el nombre del asociado. Para dar seguimiento real, el abogado necesita **datos de contacto y ubicación del incidente**.
+
+**Solución — Detalle de caso para abogado** (`/mis-casos/[id]`):
+
+Agregar/mejorar las siguientes secciones:
+
+| Sección | Datos | Estado actual |
+|---------|-------|---------------|
+| **Asociado** | Nombre completo, teléfono, email, foto de perfil (avatar) | Solo nombre + teléfono (parcial) |
+| **Mapa del incidente** | Mapa embebido con marcador en coordenadas GPS del caso | ✅ Ya existe en detalle |
+| **Vehículo involucrado** | Marca, modelo, año, placas, foto, si es principal | ✅ Ya existe parcial |
+| **Documentos del caso** | Archivos adjuntos subidos por asociado/operador | ❌ No existe |
+| **Botón "Contactar"** | Abrir enlace tel:+52... o mailto: para contactar rápido | ❌ No existe |
+| **Solicitar documentos** | Botón para pedir al asociado que suba algo (ej. acta, parte de hechos) | ❌ No existe |
+
+**Para la tabla** `/mis-casos`:
+- Agregar columna con ícono de teléfono clickeable (tel:)
+- Agregar botón/icono de mapa que abra un mini-modal con el marcador de ubicación
+
+**Archivos**: `mis-casos/page.tsx`, `mis-casos/[id]/page.tsx`, API: incluir más datos del asociado en response
+
+**Esfuerzo**: Medio | **Prioridad**: Alta
+
+### I.3 — Casos Disponibles: Info del asociado visible ❌ PENDIENTE
+
+**Problema**: La tabla de "Casos Disponibles" no muestra datos del asociado (solo descripción y ubicación textual). Para que el abogado decida si postularse, necesita contexto mínimo.
+
+**Solución**:
+- Agregar columna "Asociado" (nombre + avatar miniatura)
+- Agregar botón mapa que abre mini-modal con ubicación del incidente
+- No mostrar teléfono/email (se revela solo **después de aceptar** el caso, por privacidad)
+
+**Archivos**: `casos-disponibles/page.tsx`
+
+**Esfuerzo**: Bajo | **Prioridad**: Media
+
+### I.4 — Documentos del caso: subida y solicitud ❌ PENDIENTE
+
+**Problema**: No existe un mecanismo para que el abogado **suba documentos al caso** (actas, dictámenes, fotos de evidencia) ni para **solicitar documentos al asociado** (que el asociado reciba una notificación pidiéndole que suba algo específico).
+
+**Solución**:
+
+**I.4.1 — Documentos adjuntos al caso (subida directa)**
+- Nuevo modelo `DocumentoCaso` vinculado a `CasoLegal`:
+  ```prisma
+  model DocumentoCaso {
+    id          String   @id @default(uuid()) @db.Uuid
+    casoId      String   @map("caso_id") @db.Uuid
+    nombre      String   @db.VarChar(200)
+    tipo        String   @db.VarChar(50)  // 'acta', 'dictamen', 'foto_evidencia', 'parte_hechos', 'otro'
+    url         String
+    subidoPorId String   @map("subido_por_id") @db.Uuid
+    subidoPorTipo String @map("subido_por_tipo") @db.VarChar(20) // 'usuario' | 'asociado'
+    createdAt   DateTime @default(now()) @map("created_at")
+    
+    caso        CasoLegal @relation(fields: [casoId], references: [id], onDelete: Cascade)
+    @@map("documentos_caso")
+  }
+  ```
+- Endpoint: `POST /casos-legales/:id/documentos` — sube archivo a MinIO bucket `core-associates-legal`
+- Endpoint: `GET /casos-legales/:id/documentos` — lista documentos del caso
+- UI en CRM: sección "Documentos del caso" en detalle con botón "Subir documento" + lista de existentes
+- El abogado y el operador pueden subir; el asociado sube desde la app
+
+**I.4.2 — Solicitar documentos al asociado**
+- Nuevo modelo `SolicitudDocumento`:
+  ```prisma
+  model SolicitudDocumento {
+    id           String   @id @default(uuid()) @db.Uuid
+    casoId       String   @map("caso_id") @db.Uuid
+    asociadoId   String   @map("asociado_id") @db.Uuid
+    tipo         String   @db.VarChar(50)   // tipo de doc solicitado
+    descripcion  String?                     // descripción libre de qué se necesita
+    estado       String   @default("pendiente") @db.VarChar(20) // pendiente | entregado | vencido
+    solicitadoPorId String @map("solicitado_por_id") @db.Uuid
+    documentoCasoId String? @map("documento_caso_id") @db.Uuid // referencia al doc entregado
+    createdAt    DateTime @default(now()) @map("created_at")
+    
+    caso         CasoLegal @relation(fields: [casoId], references: [id])
+    @@map("solicitudes_documento")
+  }
+  ```
+- Endpoint: `POST /casos-legales/:id/solicitar-documento` — crea solicitud + envía push al asociado
+- App Flutter: pantalla de "Documentos solicitados" donde el asociado ve qué le piden y sube directamente
+- Al subir, la solicitud se marca como `entregado` y se vincula al `DocumentoCaso`
+
+**Archivos**: `schema.prisma`, migración, `casos-legales.service.ts`, `casos-legales.controller.ts`, CRM `mis-casos/[id]/page.tsx`, App Flutter feature nueva
+
+**Esfuerzo**: Alto | **Prioridad**: Media-Alta
+
+### I.5 — Toggle de visibilidad de contraseña en crear usuario ❌ PENDIENTE
+
+**Problema**: El formulario de crear usuario en UsuariosTab no tiene el icono de ojito (Eye/EyeOff) para mostrar/ocultar la contraseña. El login sí lo tiene.
+
+**Solución**: Agregar toggle Eye/EyeOff idéntico al del login en el campo password de UsuariosTab (y en NuevoAbogadoDialog.tsx si aplica).
+
+**Archivos**: `UsuariosTab.tsx`, `NuevoAbogadoDialog.tsx`
+
+**Esfuerzo**: Bajo | **Prioridad**: Baja (UX)
+
+---
+
+## J. Verificación Vehicular — Tarjeta de Circulación por Vehículo (NUEVO — 20-mar-2026)
+
+> **Contexto estratégico**: La app permite registrar múltiples vehículos con uno como "principal". El KYC actual pide tarjeta de circulación como documento de asociado (tipo `tarjeta_circulacion`), pero no la vincula a un vehículo específico. El análisis indica que la tarjeta de circulación es un **documento del vehículo** (prueba de pertenencia legal + identificación en SOS + anti-fraude), no del usuario.
+>
+> **Nota**: El cliente NO ha dado detalle funcional exacto sobre vehículos aún. Estas tareas son **preparatorias** — implementar progresivamente cuando haya claridad del negocio.
+
+### J.1 — Estado de verificación por vehículo ❌ PENDIENTE (preparación)
+
+**Problema actual**: No hay forma de saber si un vehículo está "verificado" (con tarjeta de circulación) o no. Todos los vehículos se tratan igual.
+
+**Solución — Modelo de datos**:
+```prisma
+model Vehiculo {
+  // ... campos existentes ...
+  verificado          Boolean  @default(false)
+  documentoTarjetaUrl String?  @map("documento_tarjeta_url")
+  fechaVerificacion   DateTime? @map("fecha_verificacion")
+}
+```
+
+- Al subir tarjeta de circulación, vincularla al vehículo (no solo al asociado)
+- IA pre-valida y extrae placas → cross-reference con las placas registradas del vehículo
+- Badge visual en CRM y App: 🔒 "No verificado" / ✅ "Verificado"
+
+### J.2 — Flujo UX progresivo ❌ PENDIENTE (preparación)
+
+**Paso 1** (registro KYC): Asociado sube 1 vehículo (principal) + tarjeta de circulación = obligatorio.
+
+**Paso 2** (post-aprobación): Puede agregar más vehículos. Cada uno se crea como "no verificado". UI muestra banner: "⚠️ Este vehículo no está verificado. Sube la tarjeta de circulación para habilitarlo."
+
+**Paso 3** (activación): Para usar un vehículo en SOS o cupones, requiere estar verificado. Si selecciona vehículo no verificado para SOS → diálogo "Este vehículo no está verificado. Para tu protección legal, sube la tarjeta de circulación. ¿Continuar de todos modos?"
+
+### J.3 — Relaciones vehículo-operaciones ❌ PENDIENTE (futuro)
+
+Vincular vehículos a operaciones para analytics y trazabilidad:
+- `CasoLegal.vehiculoId` — ¿con cuál vehículo ocurrió el incidente?
+- `Cupon.vehiculoId` — ¿para cuál vehículo se usó el beneficio?
+- Historial de incidentes por vehículo (scoring futuro)
+- Dashboard: "Vehículos más problemáticos", "Zonas por tipo de vehículo"
+
+### J.4 — Análisis de impacto (para decisión futura)
+
+| Aspecto | Valor |
+|---------|-------|
+| **Validación legal (KYC)** | La tarjeta vincula al usuario con un vehículo real → conductor verificable |
+| **SOS con contexto** | Abogado recibe placas verificadas + identificación inmediata → reduce tiempo de respuesta |
+| **Historial por vehículo** | Scoring de riesgo, análisis por unidad operativa |
+| **Beneficios específicos** | Descuentos por tipo de vehículo (sedán, moto, taxi), promos por marca/modelo |
+| **Anti-fraude** | Sin verificación, alguien podría registrar vehículos fake para generar cupones múltiples |
+
+**Recomendación**: Implementar J.1 como migración preparatoria (agregar campos al modelo) y J.2 como UX. J.3 espera claridad del cliente.
+
+---
+
 ## Referencia — Documentos originales (en `completados/`)
 
 Estos documentos fueron consolidados aquí y movidos a `.github/completados/`:
@@ -793,17 +1018,29 @@ Estos documentos fueron consolidados aquí y movidos a `.github/completados/`:
 
 ---
 
-## Estado del Sistema (21-mar-2026)
+## Estado del Sistema (20-mar-2026)
 
 | Componente | Progreso | Notas |
 |------------|----------|-------|
-| **API** | ~99% | Twilio SMS ✅, Rate limiting ✅, RBAC v2 backend ✅, Dashboard abogado ✅, Flujo aceptar/rechazar casos ✅, Notificaciones abogado ✅, IA auto-análisis ✅, Permiso `asociados:ver_detalle` ✅, Cifrado API keys (H.1) ✅, promptSistema (H.2) ✅, Seed IA (H.4) ✅, Crear abogado con especialidad ✅. Falta: D.3 consolidación RBAC |
-| **CRM Web** | ~99% | 18+ rutas. RBAC v2 tabs ✅, Dashboard por rol ✅, Sidebar respeta RolModuloMenu ✅, Icons/color dinámicos ✅, Doc icons por tipo ✅, ConfAITab (solo Anthropic) ✅, AIAnalysisPanel ✅, Mis-Casos abogado ✅, Abogados page + modal crear (G.1) ✅. Falta: G.2 campos abogado, responsive tabs |
-| **App Flutter** | ~93% | 139 tests. IA pre-validación ✅, DocumentProgress con crédito parcial (E2.1) ✅. Falta: C.3 shell profesional, E2.2 filtro cupones, mapa proveedores |
-| **Infra** | ✅ | Docker + Nginx + SSL + deploy script funcionando |
-| **IA** | ~98% | Análisis documentos ✅, Auto-decide ✅, Anti-troll ✅, CRM config ✅, Cifrado keys (H.1) ✅, promptSistema (H.2) ✅, Solo Anthropic (H.3) ✅, Seed config (H.4) ✅. Pendiente: H.5 (chat futuro, informativo) |
+| **API** | ~97% | Todo funcional. Falta: D.3 consolidación RBAC (eliminar enum), I.4 documentos caso, J.1 verificación vehicular |
+| **CRM Web** | ~95% | 18+ rutas. Falta: D.3 RBAC dinámico (Header, Dashboard, usePermisos), I.1-I.5 flujo abogado completo, E3.5 eye icon |
+| **App Flutter** | ~93% | 139 tests. Falta: C.3 shell profesional, E2.2 filtro cupones, J.2 UX verificación vehicular |
+| **Infra** | ✅ | Docker + Nginx + SSL + deploy script funcionando. Desplegado commit `0dc108d` |
+| **IA** | ~98% | Documentos ✅, Auto-decide ✅, Anti-troll ✅, Cifrado ✅. Pendiente: H.5 (chat futuro, informativo) |
 
-**Desplegado en**: `https://core-asoc.cbluna-dev.com`
+**Desplegado en**: `https://core-asoc.cbluna-dev.com` (commit `0dc108d` — 20-mar-2026)
+
+### Problemas detectados en producción (20-mar-2026)
+
+| # | Problema | Causa raíz | Severidad | Tarea |
+|---|----------|-----------|-----------|-------|
+| P1 | Roles nuevos creados en configurador no funcionan — Header muestra "Operador" | Todo depende del enum `RolUsuario` (4 valores fijos). Roles custom no encajan. | **Crítica** | D.3 |
+| P2 | Dashboard vacío para roles custom | `usePermisos()` usa booleans hardcodeados (`esAbogado`, etc.). Rol custom no matchea ninguno. | **Crítica** | D.3.5 |
+| P3 | No hay eye icon en password al crear usuario | Inconsistencia UX — login sí tiene, crear usuario no | **Baja** | E3.5 |
+| P4 | Mapa SOS clickeable sin restricción de permisos | Abogado puede ver detalle de caso ajeno y potencialmente modificar | **Alta** | I.1 |
+| P5 | Mis Casos: falta info completa del asociado | Abogado no ve teléfono, email, foto, ni mapa del incidente | **Alta** | I.2 |
+| P6 | Casos Disponibles: no muestra datos del asociado ni mapa | Abogado no puede evaluar si postularse sin contexto | **Media** | I.3 |
+| P7 | No hay mecanismo de documentos adjuntos al caso | Abogado no puede subir ni solicitar documentos al asociado | **Media-Alta** | I.4 |
 
 ### Cambios implementados (22-mar-2026)
 

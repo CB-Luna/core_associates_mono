@@ -17,8 +17,9 @@ export interface User {
   id: string;
   email: string;
   nombre: string;
-  rol: 'admin' | 'operador' | 'proveedor' | 'abogado';
+  rol: string;
   rolId?: string;
+  rolNombre?: string;
   permisos?: string[];
   proveedorId?: string;
   avatarUrl?: string;

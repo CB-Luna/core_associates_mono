@@ -189,7 +189,7 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
             <UserAvatar user={user} />
             <div className="hidden text-left md:block">
               <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.nombre || 'Usuario'}</p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">{rolLabels[user?.rol || ''] || user?.rol}</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">{user?.rolNombre || rolLabels[user?.rol || ''] || user?.rol}</p>
             </div>
           </button>
 

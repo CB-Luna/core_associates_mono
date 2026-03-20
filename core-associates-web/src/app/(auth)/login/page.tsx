@@ -23,6 +23,7 @@ interface LoginResponse {
     nombre: string;
     rol: string;
     rolId?: string;
+    rolNombre?: string;
     permisos?: string[];
     proveedorId?: string;
   };

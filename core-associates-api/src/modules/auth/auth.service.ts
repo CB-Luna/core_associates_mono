@@ -157,6 +157,7 @@ export class AuthService {
         nombre: usuario.nombre,
         rol: usuario.rol,
         rolId: usuario.rolId,
+        rolNombre: usuario.rolRef?.nombre ?? usuario.rol,
         permisos,
         ...(usuario.proveedorId && { proveedorId: usuario.proveedorId }),
         ...(usuario.avatarUrl && { avatarUrl: usuario.avatarUrl }),

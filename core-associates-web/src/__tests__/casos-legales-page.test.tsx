@@ -104,7 +104,7 @@ describe('CasosLegalesPage', () => {
     render(<CasosLegalesPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Exportar CSV')).toBeInTheDocument();
+      expect(screen.getByText('Exportar Excel')).toBeInTheDocument();
     });
   });
 
