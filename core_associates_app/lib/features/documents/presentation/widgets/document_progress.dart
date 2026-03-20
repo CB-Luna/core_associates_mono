@@ -54,8 +54,10 @@ class DocumentProgress extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: requiredCount > 0
-                  ? ((approved + enRevision * 0.5) / requiredCount)
-                      .clamp(0.0, 1.0)
+                  ? ((approved + enRevision * 0.5) / requiredCount).clamp(
+                      0.0,
+                      1.0,
+                    )
                   : 0,
               minHeight: 8,
               backgroundColor: Colors.grey.shade200,
