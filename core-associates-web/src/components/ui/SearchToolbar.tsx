@@ -10,6 +10,7 @@ interface SearchToolbarProps {
   filterValue?: string;
   onFilterChange?: (value: string) => void;
   actionLabel?: string;
+  actionIcon?: React.ReactNode;
   onAction?: () => void;
 }
 
@@ -20,6 +21,7 @@ export function SearchToolbar({
   filterValue,
   onFilterChange,
   actionLabel,
+  actionIcon,
   onAction,
 }: SearchToolbarProps) {
   const [search, setSearch] = useState('');
@@ -65,8 +67,9 @@ export function SearchToolbar({
       {actionLabel && onAction && (
         <button
           onClick={onAction}
-          className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
         >
+          {actionIcon}
           {actionLabel}
         </button>
       )}
