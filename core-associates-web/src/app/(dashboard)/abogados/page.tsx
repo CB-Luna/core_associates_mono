@@ -11,7 +11,8 @@ import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge, estadoProveedorVariant } from '@/components/ui/Badge';
 import { formatFechaLegible } from '@/lib/utils';
-import { Eye, Mail, Briefcase, Scale, Clock } from 'lucide-react';
+import { Eye, Mail, Briefcase, Scale, Clock, Plus } from 'lucide-react';
+import { NuevoAbogadoDialog } from './NuevoAbogadoDialog';
 
 function AbogadoAvatar({ abogado }: { abogado: AbogadoCRM }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export default function AbogadosPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [estadoFilter, setEstadoFilter] = useState('');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Stats
   const [stats, setStats] = useState({ total: 0, activos: 0, conCasosActivos: 0 });
@@ -221,6 +223,9 @@ export default function AbogadosPage() {
             setEstadoFilter(v);
             setPage(1);
           }}
+          actionLabel="Nuevo Abogado"
+          actionIcon={<Plus className="h-4 w-4" />}
+          onAction={() => setShowCreateDialog(true)}
         />
       </div>
 
@@ -277,6 +282,13 @@ export default function AbogadosPage() {
           }}
         />
       </div>
+
+      {showCreateDialog && (
+        <NuevoAbogadoDialog
+          onClose={() => setShowCreateDialog(false)}
+          onSaved={() => { fetchData(); }}
+        />
+      )}
     </div>
   );
 }

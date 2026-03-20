@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermisosGuard } from '../../common/guards/permisos.guard';
 import { Permisos } from '../../common/decorators/permisos.decorator';
 import { CreateAiConfigDto, UpdateAiConfigDto } from './dto/ai-config.dto';
+import { encryptApiKey, isEncrypted } from '../../common/utils/crypto.util';
 
 @ApiTags('AI Config')
 @ApiBearerAuth()
@@ -32,7 +33,7 @@ export class AiConfigController {
     // Mask API keys for security
     return configs.map((c) => ({
       ...c,
-      apiKey: c.apiKey ? '••••' + c.apiKey.slice(-8) : null,
+      apiKey: c.apiKey ? (isEncrypted(c.apiKey) ? '🔒 ••••(cifrada)' : '••••' + c.apiKey.slice(-8)) : null,
     }));
   }
 
@@ -44,7 +45,7 @@ export class AiConfigController {
     });
     return {
       ...config,
-      apiKey: config.apiKey ? '••••' + config.apiKey.slice(-8) : null,
+      apiKey: config.apiKey ? (isEncrypted(config.apiKey) ? '🔒 ••••(cifrada)' : '••••' + config.apiKey.slice(-8)) : null,
     };
   }
 
@@ -57,7 +58,7 @@ export class AiConfigController {
         nombre: dto.nombre,
         provider: dto.provider,
         modelo: dto.modelo,
-        apiKey: dto.apiKey || null,
+        apiKey: dto.apiKey ? encryptApiKey(dto.apiKey) : null,
         promptSistema: dto.promptSistema || null,
         temperatura: dto.temperatura ?? 0.3,
         maxTokens: dto.maxTokens ?? 4096,
@@ -72,7 +73,7 @@ export class AiConfigController {
     if (dto.nombre !== undefined) data.nombre = dto.nombre;
     if (dto.provider !== undefined) data.provider = dto.provider;
     if (dto.modelo !== undefined) data.modelo = dto.modelo;
-    if (dto.apiKey !== undefined) data.apiKey = dto.apiKey;
+    if (dto.apiKey !== undefined) data.apiKey = dto.apiKey ? encryptApiKey(dto.apiKey) : dto.apiKey;
     if (dto.promptSistema !== undefined) data.promptSistema = dto.promptSistema;
     if (dto.temperatura !== undefined) data.temperatura = dto.temperatura;
     if (dto.maxTokens !== undefined) data.maxTokens = dto.maxTokens;

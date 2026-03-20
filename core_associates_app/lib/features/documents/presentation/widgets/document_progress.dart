@@ -49,11 +49,14 @@ class DocumentProgress extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Progress bar
+          // Progress bar — aprobados cuentan 100%, pendientes 50%
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
-              value: requiredCount > 0 ? approved / requiredCount : 0,
+              value: requiredCount > 0
+                  ? ((approved + enRevision * 0.5) / requiredCount)
+                      .clamp(0.0, 1.0)
+                  : 0,
               minHeight: 8,
               backgroundColor: Colors.grey.shade200,
               valueColor: AlwaysStoppedAnimation<Color>(

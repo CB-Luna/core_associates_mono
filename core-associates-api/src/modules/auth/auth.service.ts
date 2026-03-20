@@ -317,6 +317,7 @@ export class AuthService {
     rol: string;
     rolId?: string;
     proveedorId?: string;
+    especialidad?: string;
   }) {
     const existing = await this.prisma.usuario.findUnique({
       where: { email: data.email },
@@ -351,6 +352,7 @@ export class AuthService {
         ...(rolRecord && { rolId: rolRecord.id }),
         ...(rolRecord?.temaIdPorDefecto && { temaId: rolRecord.temaIdPorDefecto }),
         ...(data.proveedorId && { proveedorId: data.proveedorId }),
+        ...(data.especialidad && { especialidad: data.especialidad }),
       },
       select: {
         id: true,

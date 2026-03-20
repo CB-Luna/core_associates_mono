@@ -387,6 +387,28 @@ async function main() {
     }
   }
   console.log('✓ Asignaciones Rol ↔ Menú creadas');
+
+  // ── CONFIGURACIÓN IA ──
+  await prisma.configuracionIA.upsert({
+    where: { clave: 'document_analyzer' },
+    update: {},
+    create: {
+      clave: 'document_analyzer',
+      nombre: 'Analizador de Documentos KYC',
+      provider: 'anthropic',
+      modelo: 'claude-sonnet-4-5-20250929',
+      promptSistema: 'Eres un asistente de verificación documental para una asociación civil de conductores en CDMX. Analiza documentos de identidad y vehículos con precisión. Responde siempre en formato JSON estructurado.',
+      temperatura: 0.2,
+      maxTokens: 4096,
+      activo: true,
+      umbralAutoAprobacion: 0.90,
+      umbralAutoRechazo: 0.40,
+      maxRechazosPreval: 5,
+      horasBloqueoPreval: 24,
+    },
+  });
+  console.log('✓ ConfiguracionIA (document_analyzer) creada');
+
   console.log('\n=== SEED DEMO COMPLETADO ===');
   console.log('Resumen:');
   console.log('  - 3 usuarios (admin, operador, proveedor)');

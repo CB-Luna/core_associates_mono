@@ -1,6 +1,6 @@
 # Pendientes — Core Associates
 
-> **Última actualización**: 21 de marzo de 2026
+> **Última actualización**: 22 de marzo de 2026
 > Documento unificado con TODO lo que falta por implementar. Consolida y reemplaza los documentos fragmentados que ahora viven en `.github/completados/`.
 
 ---
@@ -9,7 +9,7 @@
 
 Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de negocio.
 
-> ⚠️ **Prioridad actual**: G.4/G.5 (Flujo abogado en CRM), C.3 (App Móvil — Shell del Abogado) y D.3 (Consolidación RBAC).
+> ⚠️ **Prioridad actual**: D.3 (Consolidación RBAC), G.2 (Campos abogado), C.3 (App Móvil shell profesional).
 
 | # | Feature | Impacto | Esfuerzo | Alcance |
 |---|---------|---------|----------|----------|
@@ -19,7 +19,8 @@ Quedan **3 features grandes** y varias mejoras menores. Ordenadas por impacto de
 | **D** | RBAC v2 — Plantillas de rol | ✅ D.1+D.2 | ❌ D.3 Consolidación | API + CRM |
 | **E** | Mejoras menores (App + CRM + API) | ✅ E1.1+E1.2 | Resto pendiente | Varios |
 | **F** | ~~Abogados Management CRM~~ | ✅ Completado | — | CRM |
-| **G** | Experiencia Abogado — Mejoras CRM | Pendiente | G.1-G.6 | API + CRM |
+| **G** | Experiencia Abogado — Mejoras CRM | ✅ G.1+G.3-G.6 | ❌ G.2 pendiente | API + CRM |
+| **H** | IA — Hardening y guardrails | ✅ H.1-H.4 | ℹ️ H.5 informativo | API + CRM |
 
 ---
 
@@ -518,27 +519,30 @@ C.4  Operador: adaptar asignación
 
 **Contexto**: RBAC v1 está completado (Fases 1-4). La v2 unifica Rol + Menú + Permisos bajo el concepto de "Plantilla".
 
-### D.1 — Fase 5: Backend
+### ~~D.1 — Fase 5: Backend~~ ✅
 
-- Enriquecer modelo `Rol` con campos `icono`, `color`, `esPorDefecto`
-- Nueva tabla `RolModuloMenu` (M:N entre Rol y ModuloMenu con campo `orden`)
-- Endpoints: `GET/PUT /roles/:id/menu-items`, `POST /roles/asignar-usuarios`
-- Actualizar `GET /menu` para usar `RolModuloMenu` en vez de `permisos String[]`
+> **Auditado 21-mar-2026** — TODO COMPLETADO.
+> - Modelo `Rol` tiene `icono`, `color`, `esPorDefecto`, `esProtegido`, `temaIdPorDefecto` en schema.prisma
+> - Tabla `RolModuloMenu` (M:N con `orden`) existe y funciona
+> - Endpoints implementados: `GET/PUT /roles/:id/menu-items`, `PUT /roles/:id/permisos`, `POST /roles/:id/asignar-usuarios`, CRUD completo
+> - `GET /menu` usa `RolModuloMenu` con fallback a `permisos String[]` (compatibilidad)
 
-### D.2 — Fase 6: Frontend (3 tabs)
+### ~~D.2 — Fase 6: Frontend (3 tabs)~~ ✅
 
-Reemplazar las tabs actuales (Roles + Permisos + Menú Dinámico) por:
-1. **Plantillas**: CRUD de roles con ícono picker + color picker
-2. **Permisos & Menú**: Configurar permisos (checkboxes) + items de menú (2 columnas drag) para un rol seleccionado
-3. **Asignaciones**: Ver/asignar usuarios a cada rol (multi-select)
+> **Auditado 21-mar-2026** — TODO COMPLETADO. Existen 6 tabs en `/configuracion`:
+> - `PlantillasPanel.tsx` — CRUD de roles con ícono picker + color picker
+> - `PermisosMenuPanel.tsx` — Checkboxes de permisos + items de menú
+> - `AsignacionesPanel.tsx` — Asignar usuarios a roles (multi-select)
+> - `RolesTab.tsx`, `RolesAdminTab.tsx`, `PermisosTab.tsx` — Vista legacy + nueva unificada
 
-### D.3 — Fase 7: Consolidación
+### D.3 — Fase 7: Consolidación ❌ PENDIENTE
 
-- Eliminar enum `RolUsuario` del schema (todo usa `rolId` FK)
-- Eliminar campo `permisos String[]` de `ModuloMenu` (todo usa `RolModuloMenu`)
-- Actualizar `PermisosGuard` bypass admin: usar nombre de rol dinámico, no enum
-- Limpiar dead code: `roles.guard.ts`, `roles.decorator.ts`
-- Actualizar seed con roles enriquecidos + `RolModuloMenu`
+- Eliminar enum `RolUsuario` del schema — **AÚN EXISTE** (`enum RolUsuario { admin operador proveedor abogado }`)
+- Eliminar campo `permisos String[]` de `ModuloMenu` — **AÚN EXISTE** (usado como fallback en `menu.service.ts`)
+- `PermisosGuard` bypass admin: **AÚN USA** `user.rol === 'admin'` (enum hardcodeado, línea 29)
+- `RolesGuard` + `@Roles()` decorator: **DEAD CODE** — `RolesGuard` definido pero no usado en ningún controller
+- `Usuario.rol` (enum) + `Usuario.rolId` (FK a Rol) **coexisten** — sistema dual
+- Seed no crea `RolModuloMenu` entries — se depende de configuración manual vía CRM
 
 ### Bugs a resolver (previos al rediseño)
 
@@ -556,30 +560,30 @@ Reemplazar las tabs actuales (Roles + Permisos + Menú Dinámico) por:
 
 ### E.1 — API
 
-| # | Mejora | Esfuerzo | Prioridad |
-|---|--------|----------|-----------|
-| E1.1 | **SMS real vía Twilio** — reemplazar bypass OTP (`000000`) | Bajo | Alta |
-| E1.2 | **Rate limiting** — `@nestjs/throttler`: OTP 3/5min, Login 5/15min, General 100/min | Bajo | Alta |
-| E1.3 | **Cifrar API keys de IA** — actualmente en texto plano en BD | Bajo | Media |
-| E1.4 | **Ocultar providers no soportados** — Frontend muestra OpenAI/Google pero backend solo soporta Anthropic | Bajo | Baja |
+| # | Mejora | Esfuerzo | Prioridad | Estado |
+|---|--------|----------|-----------|--------|
+| E1.1 | **SMS real vía Twilio** — ✅ `SmsService` con Twilio ya implementado + fallback a console log. **Bypass OTP `000000` se conserva intencionalmente** (números demo + entorno dev) hasta compra del proyecto | Bajo | — | ✅ Implementado (bypass intencional) |
+| E1.2 | **Rate limiting** — `@nestjs/throttler`: global 100/min + endpoints auth 5/min | Bajo | — | ✅ Implementado |
+| E1.3 | **Cifrar API keys de IA** — AES-256-GCM con `AI_ENCRYPTION_KEY` env var. Backward-compatible. | Bajo | Media | ✅ Implementado (H.1) |
+| E1.4 | **Ocultar providers no soportados** — Solo Anthropic visible en ConfAITab | Bajo | Baja | ✅ Implementado (H.3) |
 
 ### E.2 — App Flutter
 
-| # | Mejora | Esfuerzo | Prioridad |
-|---|--------|----------|-----------|
-| E2.1 | **Perfil completitud** — barra de progreso en perfil (datos + docs + vehículo = 100%) | Bajo | Media |
-| E2.2 | **Filtro en Mis Cupones** — tabs Activos / Canjeados / Vencidos + mini estadística "$X ahorrado" | Bajo | Media |
-| E2.3 | **Mapa de proveedores** — toggle lista↔mapa en Promociones con marcadores por tipo | Medio | Baja |
-| E2.4 | **Rediseño visual** — sistema de diseño expandido (paleta, gradientes, tipografía Inter, shimmer loaders) | Alto | Baja |
+| # | Mejora | Esfuerzo | Prioridad | Estado |
+|---|--------|----------|-----------|--------|
+| E2.1 | **Perfil completitud** — `DocumentProgress` widget da crédito parcial (50%) a docs pendientes de revisión + 100% a aprobados | Bajo | Media | ✅ Implementado |
+| E2.2 | **Filtro en Mis Cupones** — tabs Activos / Canjeados / Vencidos + mini estadística "$X ahorrado" | Bajo | Media | ❌ Pendiente |
+| E2.3 | **Mapa de proveedores** — toggle lista↔mapa en Promociones con marcadores por tipo | Medio | Baja | ❌ Pendiente |
+| E2.4 | **Rediseño visual** — sistema de diseño expandido (paleta, gradientes, tipografía Inter, shimmer loaders) | Alto | Baja | ❌ Pendiente |
 
 ### E.3 — CRM Web
 
-| # | Mejora | Esfuerzo | Prioridad |
-|---|--------|----------|-----------|
-| E3.1 | **Responsive tabs pendientes** — UsuariosTab, RolesTab, MenuDinamicoTab sin cardRenderer mobile | Bajo | Baja |
-| E3.2 | **Dark mode en mapas** — Leaflet tiles no respetan dark mode | Bajo | Baja |
-| E3.3 | **WebSockets** — dashboard y mapa SOS sin actualizaciones en tiempo real | Alto | Baja |
-| E3.4 | **Migrar a React Query** — data fetching manual con useEffect+useState | Medio | Baja |
+| # | Mejora | Esfuerzo | Prioridad | Estado |
+|---|--------|----------|-----------|--------|
+| E3.1 | **Responsive tabs pendientes** — UsuariosTab, RolesTab, MenuDinamicoTab sin cardRenderer mobile | Bajo | Baja | ❌ Pendiente |
+| E3.2 | **Dark mode en mapas** — Leaflet tiles no respetan dark mode | Bajo | Baja | ❌ Pendiente |
+| E3.3 | **WebSockets** — dashboard y mapa SOS sin actualizaciones en tiempo real | Alto | Baja | ❌ Pendiente |
+| E3.4 | **Migrar a React Query** — data fetching manual con useEffect+useState | Medio | Baja | ❌ Pendiente |
 
 ---
 
@@ -587,17 +591,17 @@ Reemplazar las tabs actuales (Roles + Permisos + Menú Dinámico) por:
 
 Features solicitadas para completar la experiencia del rol abogado en el CRM y preparar su extensión a la app móvil.
 
-### G.1 — Crear abogados desde Abogados page (modal)
+### ~~G.1 — Crear abogados desde Abogados page (modal)~~ ✅
 
-Similar al modal de creación de proveedores en `/proveedores`, agregar botón "Nuevo Abogado" en `/abogados` que abra modal con:
-- Campos: nombre, email, contraseña, especialidad, dirección, teléfono
-- Auto-asigna `rolId` del rol "abogado"
-- POST a `/auth/users` con rol abogado
-- Refresh de la tabla tras crear
+> **Implementado** el 22 de marzo de 2026.
+> - `NuevoAbogadoDialog.tsx` — modal con nombre, email, especialidad (dropdown 7 opciones), contraseña
+> - Fetch dinámico de roles (`GET /roles`) para obtener `rolId` del rol abogado
+> - POST a `POST /auth/register-admin` con `{ nombre, email, password, rolId, especialidad }`
+> - `CreateUsuarioDto` actualizado para aceptar campo `especialidad`
+> - `auth.service.ts` `createUser()` pasa `especialidad` a Prisma
+> - Botón "Nuevo Abogado" en toolbar de `/abogados`, refresh automático tras crear
 
-**Esfuerzo**: Bajo | **Prioridad**: Alta
-
-### G.2 — Más campos para abogado
+### G.2 — Más campos para abogado ❌ PENDIENTE
 
 Ampliar el modelo de abogado con campos adicionales:
 - `direccion` — dirección de contacto
@@ -605,44 +609,43 @@ Ampliar el modelo de abogado con campos adicionales:
 - `cedula` — cédula profesional
 - Requiere migración Prisma + actualizar DTOs + formularios CRM
 
+> **Auditoría**: El modelo `Usuario` solo tiene `especialidad` para diferenciar abogados. No hay campos `direccion`, `telefono`, `cedula` en el schema.
+
 **Esfuerzo**: Bajo-Medio | **Prioridad**: Media
 
-### G.3 — Dashboard con widgets controlados por rol
+### ~~G.3 — Dashboard con widgets controlados por rol~~ ✅
 
-En vez de 3 componentes distintos (`DashboardAdmin`, `DashboardProveedor`, `DashboardAbogado`), un solo componente `Dashboard` con widgets configurables por rol:
-- Cada widget tiene permisos asociados (ej: widget "Asociados" requiere `asociados:ver`)
-- Layout responsive tipo grid
-- Widgets arrastrables (drag & drop) — opcional, fase posterior
+> **Auditado 21-mar-2026** — COMPLETADO.
+> - Dashboard detecta `esAbogado` y carga `DashboardAbogado` con endpoint `/reportes/dashboard-abogado`
+> - También diferencia `esProveedor` → `DashboardProveedor` y admin/operador → `DashboardAdmin`
+> - Cada rol ve su propio dashboard con métricas relevantes
 
-**Esfuerzo**: Alto | **Prioridad**: Baja (funcional actual es suficiente)
+### ~~G.4 — Flujo de aceptación de casos para abogado~~ ✅
 
-### G.4 — Flujo de aceptación de casos para abogado
+> **Auditado 21-mar-2026** — COMPLETADO.
+> - Endpoints: `POST /casos-legales/:id/aceptar` (cambia a `en_atencion`), `POST /:id/rechazar` (limpia `abogadoUsuarioId`), `POST /:id/postularse` (nota de postulación)
+> - Permisos: `casos-legales:aceptar-rechazar`
+> - Notificaciones a operadores al aceptar/rechazar/postularse
+> - Nota automática con motivo de rechazo
 
-Cuando un abogado ve "Casos Disponibles", poder:
-- Ver resumen del caso sin revelar información sensible
-- Botón "Tomar Caso" → `PUT /casos-legales/:id/tomar-caso`
-- El caso cambia `abogadoUsuarioId` al usuario y estado a `en_atencion`
-- Notificación al operador de que el caso fue tomado
+### ~~G.5 — Pantallas de seguimiento de caso (abogado)~~ ✅
 
-**Esfuerzo**: Medio | **Prioridad**: Alta
+> **Auditado 21-mar-2026** — COMPLETADO.
+> - Página `/mis-casos/[id]` con header (código, tipo, fecha apertura, badge estado)
+> - Botones de acción: Aceptar/Rechazar (caso abierto), Escalar (caso en_atencion)
+> - Timeline de notas con formulario "Agregar nota" (POST a `/casos-legales/:id/notas`)
+> - Mapa del caso con coordenadas GPS
+> - `CambiarEstadoAbogadoDto` limita estados a `en_atencion | escalado`
+> - Subir documentos al caso: **NO implementado** (pendiente menor)
 
-### G.5 — Pantallas de seguimiento de caso (abogado)
+### ~~G.6 — Notificaciones CRM para abogado~~ ✅
 
-Vista de caso del abogado con:
-- Timeline de notas (ya existe endpoint `abogado/mis-casos/:id`)
-- Agregar notas al caso
-- Cambiar estado del caso (resolver, escalar)
-- Subir documentos al caso
-- Ver datos del asociado/vehículo implicado
-
-**Esfuerzo**: Medio | **Prioridad**: Alta
-
-### G.6 — Notificaciones CRM para abogado
-
-El sistema ya tiene `notificaciones_crm` pero falta:
-- Trigger: al asignar caso a abogado, crear notificación
-- Trigger: al recibir nota nueva en caso asignado
-- Trigger: caso escalado/resuelto por operador
+> **Auditado 21-mar-2026** — COMPLETADO.
+> - Trigger: al asignar caso a abogado → `notificarOperadores()` notifica admin+operadores
+> - Trigger: aceptar caso → notifica operadores "El abogado aceptó el caso"
+> - Trigger: rechazar caso → notifica operadores con motivo
+> - Trigger: escalar caso → notifica operadores "El abogado escaló el caso"
+> - Servicio `NotificacionesCrmService` con findAll, countNoLeidas, marcarLeida, marcarTodasLeidas
 - Mostrar badge contador en campana del header
 
 **Esfuerzo**: Medio | **Prioridad**: Media
@@ -691,12 +694,85 @@ Fase 4 (Pendiente — Consolidación + App):
   ├─ C.3 App Móvil: shell profesional + push
   └─ D.3 Consolidación RBAC (eliminar enum legacy)
 
-Fase 5 (Pendiente — Mejoras y polish):
-  ├─ E1.3 Cifrar API keys IA
-  ├─ E2.1 Perfil completitud
-  ├─ E2.2 Filtro cupones (completar TabBar)
-  └─ Resto de mejoras menores (E1.4, E2.3, E2.4, E3.1-E3.4)
+Fase 5 (Parcial ✅ — Mejoras y polish):
+  ├─ E1.3 Cifrar API keys IA ✅ (H.1)
+  ├─ E1.4 Ocultar providers ✅ (H.3)
+  ├─ E2.1 Perfil completitud ✅
+  ├─ E2.2 Filtro cupones (completar TabBar) ❌
+  └─ Resto de mejoras menores (E2.3, E2.4, E3.1-E3.4) ❌
 ```
+
+---
+
+## H. IA — Hardening y Guardrails (NUEVA — 21-mar-2026)
+
+Auditoría del módulo de IA reveló que la funcionalidad base está **completamente implementada y funcional**, pero faltan hardening y guardrails de seguridad.
+
+### Estado actual de la IA ✅
+
+| Componente | Estado |
+|---|---|
+| **Trigger automático** | ✅ Al subir documento (`POST /documentos`) se dispara `analyzeDocument()` fire-and-forget |
+| **Análisis con Claude Vision** | ✅ `ai.service.ts` → POST a `api.anthropic.com` con imagen base64 + prompt específico |
+| **Prompts por tipo** | ✅ `ine-prompt.ts` (frente + reverso), `vehicle-prompt.ts`, `selfie-prompt.ts`, `pre-validacion-prompt.ts` |
+| **Auto-aprobación/rechazo** | ✅ `autoDecideDocumento()` con umbrales configurables (default: ≥90% aprueba, <40% rechaza) |
+| **Anti-troll** | ✅ Límite de rechazos pre-validación + bloqueo temporal (configurable) |
+| **CRM: Panel de análisis** | ✅ `AIAnalysisPanel.tsx` visible en detalle de asociado, modal de asociado, y lista de documentos |
+| **CRM: Config de IA** | ✅ `ConfAITab.tsx` — CRUD configs, sliders de umbrales, API key, modelo, temperatura |
+| **API Key** | ⚠️ Prioridad: BD (`ConfiguracionIA.apiKey`) → fallback env var `ANTHROPIC_API_KEY` |
+| **Obtención de API key** | ⚠️ Si no hay registro en `ConfiguracionIA` NI env var → error silencioso, IA no funciona |
+
+### Dónde es visible la IA en el CRM
+
+1. **Configuración → pestaña IA**: Gestión completa de API keys, modelos, umbrales
+2. **Detalle de Asociado** (`/asociados/[id]`): Panel `AIAnalysisPanel` junto a cada documento
+3. **Modal de Asociado** (`AsociadoDetailModal`): Panel AI en sección documentos
+4. **Lista de Documentos** (`/documentos`): Panel AI por cada documento expandido
+5. Botones "Analizar con IA" y "Re-analizar" disparan análisis manual desde CRM
+
+### ~~H.1 — Cifrar API keys en BD~~ ✅
+
+> **Implementado** el 22 de marzo de 2026.
+> - `common/utils/crypto.util.ts` — AES-256-GCM encrypt/decrypt con `AI_ENCRYPTION_KEY` env var
+> - Formato: `enc:iv_hex:tag_hex:ciphertext_hex` con detección automática via prefijo `enc:`
+> - `ai-config.controller.ts`: cifra en create/update, máscara `🔒 ••••(cifrada)` en GET
+> - `ai.service.ts`: descifra en `getApiKey()` al leer de BD
+> - Backward-compatible: sin env var o keys sin prefijo `enc:` siguen funcionando en texto plano
+> - **Requiere**: agregar `AI_ENCRYPTION_KEY` al `.env` de producción para activar cifrado
+
+### ~~H.2 — Inyectar `promptSistema` en llamadas~~ ✅
+
+> **Implementado** el 22 de marzo de 2026.
+> - `getConfig()` ahora retorna `promptSistema: dbConfig?.promptSistema || null`
+> - Body de la petición a Anthropic incluye `system: config.promptSistema` (condicional)
+> - El prompt del CRM ahora sí se inyecta en el análisis de documentos
+
+### ~~H.3 — Ocultar providers no soportados~~ ✅
+
+> **Implementado** el 22 de marzo de 2026.
+> - `AI_PROVIDERS` en `ConfAITab.tsx` reducido a solo `anthropic`
+> - OpenAI y Google removidos del dropdown hasta que se implemente multi-provider
+
+### ~~H.4 — Seed de `ConfiguracionIA`~~ ✅
+
+> **Implementado** el 22 de marzo de 2026.
+> - `seed-demo.ts` incluye `prisma.configuracionIA.upsert()` para clave `document_analyzer`
+> - Provider `anthropic`, modelo `claude-sonnet-4-5-20250929`, umbrales default (0.90/0.40)
+> - maxRechazos 5, horasBloqueo 24, promptSistema descriptivo
+> - Sin API key en seed (se configura vía CRM o env var)
+
+### H.5 — Content filtering / guardrails para chat futuro ℹ️ INFORMATIVO
+
+Actualmente **NO existe** un endpoint de chat/conversacional. La IA se usa **solo para análisis de documentos** (Claude Vision). Los prompts son cerrados y específicos ("analiza esta INE y devuelve JSON").
+
+**Para un chat futuro** (si se implementa):
+- Necesitará system prompt con restricciones de tema ("Solo contestas sobre trámites de la asociación")
+- Input sanitization contra prompt injection
+- Output validation contra respuestas off-topic
+- Rate limiting por usuario
+- Logging de conversaciones para auditoría
+
+**Estado**: No aplica aún — no hay chat. Cuando se implemente, agregar guardrails desde el inicio.
 
 ---
 
@@ -721,12 +797,24 @@ Estos documentos fueron consolidados aquí y movidos a `.github/completados/`:
 
 | Componente | Progreso | Notas |
 |------------|----------|-------|
-| **API** | ~99% | Twilio SMS ✅, Rate limiting ✅, RBAC v2 backend ✅, Dashboard abogado ✅, Permiso `asociados:ver_detalle` ✅. Falta: cifrar API keys, D.3 consolidación |
-| **CRM Web** | ~98% | 18+ rutas. RBAC v2 tabs ✅, Dashboard por rol ✅, Sidebar respeta RolModuloMenu ✅, Icons/color dinámicos en UsuariosTab ✅, Doc icons por tipo en asociados ✅. Falta: D.3, crear abogados modal, responsive tabs menores |
-| **App Flutter** | ~92% | 139 tests. Falta: C.3 shell profesional, perfil completitud, mapa proveedores |
+| **API** | ~99% | Twilio SMS ✅, Rate limiting ✅, RBAC v2 backend ✅, Dashboard abogado ✅, Flujo aceptar/rechazar casos ✅, Notificaciones abogado ✅, IA auto-análisis ✅, Permiso `asociados:ver_detalle` ✅, Cifrado API keys (H.1) ✅, promptSistema (H.2) ✅, Seed IA (H.4) ✅, Crear abogado con especialidad ✅. Falta: D.3 consolidación RBAC |
+| **CRM Web** | ~99% | 18+ rutas. RBAC v2 tabs ✅, Dashboard por rol ✅, Sidebar respeta RolModuloMenu ✅, Icons/color dinámicos ✅, Doc icons por tipo ✅, ConfAITab (solo Anthropic) ✅, AIAnalysisPanel ✅, Mis-Casos abogado ✅, Abogados page + modal crear (G.1) ✅. Falta: G.2 campos abogado, responsive tabs |
+| **App Flutter** | ~93% | 139 tests. IA pre-validación ✅, DocumentProgress con crédito parcial (E2.1) ✅. Falta: C.3 shell profesional, E2.2 filtro cupones, mapa proveedores |
 | **Infra** | ✅ | Docker + Nginx + SSL + deploy script funcionando |
+| **IA** | ~98% | Análisis documentos ✅, Auto-decide ✅, Anti-troll ✅, CRM config ✅, Cifrado keys (H.1) ✅, promptSistema (H.2) ✅, Solo Anthropic (H.3) ✅, Seed config (H.4) ✅. Pendiente: H.5 (chat futuro, informativo) |
 
 **Desplegado en**: `https://core-asoc.cbluna-dev.com`
+
+### Cambios implementados (22-mar-2026)
+
+| Tarea | Descripción | Archivos |
+|-------|-------------|----------|
+| H.1 | Cifrado AES-256-GCM de API keys IA | `crypto.util.ts` (nuevo), `ai-config.controller.ts`, `ai.service.ts` |
+| H.2 | Inyectar `promptSistema` en Anthropic API | `ai.service.ts` |
+| H.3 | Solo Anthropic en dropdown providers | `ConfAITab.tsx` |
+| H.4 | Seed ConfiguracionIA `document_analyzer` | `seed-demo.ts` |
+| G.1 | Modal crear abogado + backend especialidad | `NuevoAbogadoDialog.tsx` (nuevo), `abogados/page.tsx`, `create-usuario.dto.ts`, `auth.service.ts` |
+| E2.1 | Barra progreso docs con crédito parcial | `document_progress.dart` |
 
 ### Bugs corregidos (21-mar-2026)
 

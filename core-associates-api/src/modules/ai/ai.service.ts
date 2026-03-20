@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { decryptApiKey } from '../../common/utils/crypto.util';
 
 interface AnthropicMessage {
   role: 'user' | 'assistant';
@@ -30,7 +31,7 @@ export class AiService {
       where: { clave: configKey },
     }).catch(() => null);
 
-    if (dbConfig?.apiKey) return dbConfig.apiKey;
+    if (dbConfig?.apiKey) return decryptApiKey(dbConfig.apiKey);
 
     const envKey = this.configService.get<string>('ANTHROPIC_API_KEY');
     if (!envKey) throw new Error('ANTHROPIC_API_KEY no configurada');
@@ -49,6 +50,7 @@ export class AiService {
       model: dbConfig?.modelo || 'claude-sonnet-4-5-20250929',
       temperature: dbConfig?.temperatura ?? 0.2,
       maxTokens: dbConfig?.maxTokens ?? 4096,
+      promptSistema: dbConfig?.promptSistema || null,
     };
   }
 
@@ -93,12 +95,16 @@ export class AiService {
       },
     ];
 
-    const body = {
+    const body: Record<string, any> = {
       model: config.model,
       max_tokens: config.maxTokens,
       temperature: config.temperature,
       messages,
     };
+
+    if (config.promptSistema) {
+      body.system = config.promptSistema;
+    }
 
     this.logger.log(`Sending image to Claude (${config.model})...`);
 

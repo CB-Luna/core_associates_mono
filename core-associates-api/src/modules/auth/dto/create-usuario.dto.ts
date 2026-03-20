@@ -31,4 +31,9 @@ export class CreateUsuarioDto {
   @IsOptional()
   @IsUUID()
   proveedorId?: string;
+
+  @ApiPropertyOptional({ description: 'Especialidad del abogado (solo aplica para rol abogado)' })
+  @IsOptional()
+  @IsString()
+  especialidad?: string;
 }
