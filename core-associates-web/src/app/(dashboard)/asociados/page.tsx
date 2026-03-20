@@ -12,7 +12,8 @@ import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
 import { formatFechaLegible } from '@/lib/utils';
 import { AsociadoDetailModal } from '@/components/shared/AsociadoDetailModal';
-import { Eye, Phone, Calendar, Car, FileCheck2, FileX2, FileClock, FileQuestion } from 'lucide-react';
+import { Eye, Phone, Calendar, Car, CreditCard, ScanLine, Camera, FileText } from 'lucide-react';
+import { usePermisos } from '@/lib/permisos';
 
 function AsociadoPhoto({ asociado }: { asociado: Asociado }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -47,8 +48,23 @@ const estadoOptions = [
   { label: 'Rechazado', value: 'rechazado' },
 ];
 
+const DOC_TYPE_ICONS: Record<string, React.ReactNode> = {
+  ine_frente: <CreditCard className="h-4 w-4" />,
+  ine_reverso: <ScanLine className="h-4 w-4" />,
+  selfie: <Camera className="h-4 w-4" />,
+  tarjeta_circulacion: <Car className="h-4 w-4" />,
+};
+
+const DOC_ESTADO_CLASSES: Record<string, string> = {
+  aprobado: 'text-green-500 bg-green-50 ring-1 ring-green-200',
+  pendiente: 'text-amber-500 bg-amber-50 ring-1 ring-amber-200',
+  rechazado: 'text-red-500 bg-red-50 ring-1 ring-red-200',
+};
+const DOC_DEFAULT_CLASS = 'text-gray-300 bg-gray-50 ring-1 ring-gray-200';
+
 export default function AsociadosPage() {
   const { toast } = useToast();
+  const { puede } = usePermisos();
   const router = useRouter();
   const [data, setData] = useState<Asociado[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,23 +179,23 @@ export default function AsociadosPage() {
       cell: ({ row }) => {
         const docs = row.original.documentos || [];
         const tipos: { key: string; label: string }[] = [
-          { key: 'ine_frente', label: 'INE-F' },
-          { key: 'ine_reverso', label: 'INE-R' },
+          { key: 'ine_frente', label: 'INE Frente' },
+          { key: 'ine_reverso', label: 'INE Reverso' },
           { key: 'selfie', label: 'Selfie' },
-          { key: 'tarjeta_circulacion', label: 'T.Circ' },
+          { key: 'tarjeta_circulacion', label: 'T. Circulación' },
         ];
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {tipos.map(({ key, label }) => {
               const doc = docs.find((d: any) => d.tipo === key);
               const estado = doc?.estado;
-              let Icon = FileQuestion;
-              let color = 'text-gray-300';
-              let title = `${label}: Sin enviar`;
-              if (estado === 'aprobado') { Icon = FileCheck2; color = 'text-green-500'; title = `${label}: Aprobado`; }
-              else if (estado === 'pendiente') { Icon = FileClock; color = 'text-amber-500'; title = `${label}: Pendiente`; }
-              else if (estado === 'rechazado') { Icon = FileX2; color = 'text-red-500'; title = `${label}: Rechazado`; }
-              return <span key={key} title={title}><Icon className={`h-4 w-4 ${color}`} /></span>;
+              const title = `${label}: ${estado || 'Sin enviar'}`;
+              const cls = estado ? DOC_ESTADO_CLASSES[estado] || DOC_DEFAULT_CLASS : DOC_DEFAULT_CLASS;
+              return (
+                <span key={key} title={title} className={`inline-flex h-6 w-6 items-center justify-center rounded-md ${cls}`}>
+                  {DOC_TYPE_ICONS[key] ?? <FileText className="h-4 w-4" />}
+                </span>
+              );
             })}
           </div>
         );
@@ -225,17 +241,20 @@ export default function AsociadosPage() {
     {
       id: 'actions',
       header: 'Acciones',
-      cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1">
-          <button
-            onClick={(e) => { e.stopPropagation(); setDetailId(row.original.id); }}
-            title="Ver detalle"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-primary-200 text-primary-500 transition-colors hover:bg-primary-50 hover:text-primary-700 dark:border-primary-800 dark:hover:bg-primary-950/30"
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        if (!puede('asociados:ver_detalle') && !puede('asociados:ver')) return null;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); setDetailId(row.original.id); }}
+              title="Ver detalle"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-primary-200 text-primary-500 transition-colors hover:bg-primary-50 hover:text-primary-700 dark:border-primary-800 dark:hover:bg-primary-950/30"
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -304,11 +323,12 @@ export default function AsociadosPage() {
                       {(['ine_frente','ine_reverso','selfie','tarjeta_circulacion'] as const).map(key => {
                         const doc = a.documentos?.find(d => d.tipo === key);
                         const estado = doc?.estado;
-                        let Icon = FileQuestion; let color = 'text-gray-300';
-                        if (estado === 'aprobado') { Icon = FileCheck2; color = 'text-green-500'; }
-                        else if (estado === 'pendiente') { Icon = FileClock; color = 'text-amber-500'; }
-                        else if (estado === 'rechazado') { Icon = FileX2; color = 'text-red-500'; }
-                        return <Icon key={key} className={`h-3.5 w-3.5 ${color}`} />;
+                        const cls = estado ? DOC_ESTADO_CLASSES[estado] || DOC_DEFAULT_CLASS : DOC_DEFAULT_CLASS;
+                        return (
+                          <span key={key} className={`inline-flex h-5 w-5 items-center justify-center rounded ${cls}`}>
+                            {DOC_TYPE_ICONS[key] ?? <FileText className="h-3 w-3" />}
+                          </span>
+                        );
                       })}
                       {(a._count?.vehiculos ?? 0) > 0 && (
                         <span className="ml-2 inline-flex items-center gap-0.5 text-[11px] text-primary-500">
@@ -316,7 +336,9 @@ export default function AsociadosPage() {
                         </span>
                       )}
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); setDetailId(a.id); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary-200 text-primary-500 hover:bg-primary-50"><Eye className="h-3.5 w-3.5" /></button>
+                    {(puede('asociados:ver_detalle') || puede('asociados:ver')) && (
+                      <button onClick={(e) => { e.stopPropagation(); setDetailId(a.id); }} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary-200 text-primary-500 hover:bg-primary-50"><Eye className="h-3.5 w-3.5" /></button>
+                    )}
                   </div>
                 </div>
               </div>

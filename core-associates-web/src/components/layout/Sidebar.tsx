@@ -5,21 +5,15 @@ import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { useMenuStore } from '@/stores/menu-store';
 import { useAuthStore } from '@/stores/auth-store';
-import type { MenuItem } from '@/lib/api-types';
 import { getIcon } from '@/lib/icon-map';
 import { X } from 'lucide-react';
-
-function filterByRole(items: MenuItem[], rol: string): MenuItem[] {
-  return items.filter(
-    (item) => item.permisos.length === 0 || item.permisos.includes(rol),
-  );
-}
 
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const { items, loading, fetchMenu } = useMenuStore();
   const user = useAuthStore((s) => s.user);
-  const visibleItems = user ? filterByRole(items, user.rol) : items;
+  // El API ya filtra items por rol (vía RolModuloMenu). No re-filtrar client-side.
+  const visibleItems = items;
 
   useEffect(() => {
     fetchMenu();

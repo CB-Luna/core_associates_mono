@@ -542,13 +542,13 @@ Reemplazar las tabs actuales (Roles + Permisos + Menú Dinámico) por:
 
 ### Bugs a resolver (previos al rediseño)
 
-| # | Bug | Detalle |
-|---|-----|---------|
-| B1 | Rol sin ícono/color en BD | RolesTab hardcodea colores por nombre |
-| B2 | Dropdown de rol hardcodeado en UsuariosTab | No carga roles dinámicos |
-| B3 | Menú no reconoce roles nuevos | `permisos String[]` no tiene FK |
-| B4 | Sistema dual enum + FK en Usuario | `rol` enum + `rolId` UUID coexisten |
-| B5 | PermisosGuard bypass admin usa enum | Si se elimina enum, se rompe |
+| # | Bug | Detalle | Estado |
+|---|-----|---------|--------|
+| B1 | ~~Rol sin ícono/color en BD~~ | ~~RolesTab hardcodea colores por nombre~~ | ✅ UsuariosTab ahora usa `rol.icono`/`rol.color` dinámicos desde DB vía `getIcon()` |
+| B2 | Dropdown de rol hardcodeado en UsuariosTab | No carga roles dinámicos | Pendiente |
+| B3 | ~~Menú no reconoce roles nuevos~~ | ~~`permisos String[]` no tiene FK~~ | ✅ Sidebar `filterByRole()` eliminado — se confía en RolModuloMenu del API |
+| B4 | Sistema dual enum + FK en Usuario | `rol` enum + `rolId` UUID coexisten | Pendiente (D.3) |
+| B5 | PermisosGuard bypass admin usa enum | Si se elimina enum, se rompe | Pendiente (D.3) |
 
 ---
 
@@ -721,8 +721,8 @@ Estos documentos fueron consolidados aquí y movidos a `.github/completados/`:
 
 | Componente | Progreso | Notas |
 |------------|----------|-------|
-| **API** | ~99% | Twilio SMS ✅, Rate limiting ✅, RBAC v2 backend ✅, Dashboard abogado ✅. Falta: cifrar API keys, D.3 consolidación |
-| **CRM Web** | ~97% | 18+ rutas. RBAC v2 tabs ✅, Dashboard por rol (admin/proveedor/abogado) ✅. Falta: D.3, crear abogados modal, responsive tabs menores |
+| **API** | ~99% | Twilio SMS ✅, Rate limiting ✅, RBAC v2 backend ✅, Dashboard abogado ✅, Permiso `asociados:ver_detalle` ✅. Falta: cifrar API keys, D.3 consolidación |
+| **CRM Web** | ~98% | 18+ rutas. RBAC v2 tabs ✅, Dashboard por rol ✅, Sidebar respeta RolModuloMenu ✅, Icons/color dinámicos en UsuariosTab ✅, Doc icons por tipo en asociados ✅. Falta: D.3, crear abogados modal, responsive tabs menores |
 | **App Flutter** | ~92% | 139 tests. Falta: C.3 shell profesional, perfil completitud, mapa proveedores |
 | **Infra** | ✅ | Docker + Nginx + SSL + deploy script funcionando |
 
@@ -737,3 +737,7 @@ Estos documentos fueron consolidados aquí y movidos a `.github/completados/`:
 | Dashboard abogado mostraba "Error cargando métricas" | No existía endpoint `/reportes/dashboard-abogado` y el abogado no tiene permiso `reportes:ver` para el dashboard general | Creado endpoint `dashboard-abogado` con métricas de casos + trend mensual |
 | Badge color de abogado igual a operador en Usuarios tab | `UsuariosTab.tsx` solo manejaba `admin`/`operador`/`default` | Agregado variant `'secondary'` (púrpura) para abogado |
 | Sin color de abogado en Permisos tab | `ROLE_COLORS` en `PermisosTab.tsx` no tenía entrada para abogado | Agregado `abogado: 'bg-purple-100 text-purple-700'` |
+| Iconos de documentos idénticos en tabla asociados | Columna Documentos usaba iconos por estado (FileCheck2/FileClock/FileX2) — mismo icono para los 4 tipos | Creado `DOC_TYPE_ICONS` con iconos por tipo (CreditCard, ScanLine, Camera, Car) + `DOC_ESTADO_CLASSES` con colores de fondo |
+| Sidebar filtraba menú con sistema legacy | `filterByRole()` re-filtraba items client-side por `permisos.includes(rol)`, sobreescribiendo RolModuloMenu | Eliminado `filterByRole()` — Sidebar confía en items filtrados por API vía RolModuloMenu |
+| Iconos/color de rol no sincronizaban en Usuarios tab | `ROL_ICONS` hardcodeado — no usaba `Rol.icono`/`Rol.color` de la BD | Reemplazado por `getIcon(rolRecord.icono)` + inline style con `rolRecord.color` |
+| Sin permiso granular para ver detalle de asociado | `asociados:ver` controlaba lista y detalle juntos, sin opción de separar | Nuevo permiso `asociados:ver_detalle` (migración `20260321100000`) + check `usePermisos()` en botón ojo |

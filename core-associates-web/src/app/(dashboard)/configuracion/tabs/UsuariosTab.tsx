@@ -12,14 +12,8 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { type UsuarioCRM, type Proveedor, type Rol } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
-import { Pencil, KeyRound, Power, Camera, Trash2, Palette, Lock, Check, Globe, ShieldCheck, UserCog, Building2, Scale } from 'lucide-react';
-
-const ROL_ICONS: Record<string, React.ReactNode> = {
-  admin: <ShieldCheck className="h-3 w-3" />,
-  operador: <UserCog className="h-3 w-3" />,
-  proveedor: <Building2 className="h-3 w-3" />,
-  abogado: <Scale className="h-3 w-3" />,
-};
+import { Pencil, KeyRound, Power, Camera, Trash2, Palette, Lock, Check, Globe } from 'lucide-react';
+import { getIcon } from '@/lib/icon-map';
 import { type Tema } from '@/lib/api-types';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -301,9 +295,25 @@ export function UsuariosTab() {
         const user = row.original;
         const rolRecord = roles.find(r => r.id === user.rolId);
         const displayName = rolRecord ? rolRecord.nombre.charAt(0).toUpperCase() + rolRecord.nombre.slice(1) : user.rol;
-        const variant = user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : user.rol === 'abogado' ? 'secondary' : 'default';
+        // Color dinámico: si el rol tiene color hex, crear estilo inline; sino, mapeo por defecto
+        const rolColor = rolRecord?.color;
+        const fallbackVariant = user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : user.rol === 'abogado' ? 'secondary' : 'default';
+        // Icono dinámico del rol
+        const RolIcon = rolRecord?.icono ? getIcon(rolRecord.icono) : null;
+        const iconNode = RolIcon ? <RolIcon className="h-3 w-3" /> : undefined;
+        if (rolColor) {
+          return (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1"
+              style={{ backgroundColor: `${rolColor}15`, color: rolColor, borderColor: `${rolColor}40` }}
+            >
+              {iconNode ?? <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />}
+              {displayName}
+            </span>
+          );
+        }
         return (
-          <Badge variant={variant} icon={ROL_ICONS[user.rol]}>
+          <Badge variant={fallbackVariant} icon={iconNode}>
             {displayName}
           </Badge>
         );
@@ -749,9 +759,23 @@ export function UsuariosTab() {
             </div>
             <div className="mt-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Badge variant={user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : user.rol === 'abogado' ? 'secondary' : 'default'} icon={ROL_ICONS[user.rol]}>
-                  {user.rol}
-                </Badge>
+                {(() => {
+                  const rolRecord = roles.find(r => r.id === user.rolId);
+                  const displayName = rolRecord ? rolRecord.nombre.charAt(0).toUpperCase() + rolRecord.nombre.slice(1) : user.rol;
+                  const rolColor = rolRecord?.color;
+                  const RolIcon = rolRecord?.icono ? getIcon(rolRecord.icono) : null;
+                  const iconNode = RolIcon ? <RolIcon className="h-3 w-3" /> : undefined;
+                  if (rolColor) {
+                    return (
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1" style={{ backgroundColor: `${rolColor}15`, color: rolColor, borderColor: `${rolColor}40` }}>
+                        {iconNode ?? <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />}
+                        {displayName}
+                      </span>
+                    );
+                  }
+                  const fallbackVariant = user.rol === 'admin' ? 'danger' : user.rol === 'operador' ? 'info' : user.rol === 'abogado' ? 'secondary' : 'default';
+                  return <Badge variant={fallbackVariant} icon={iconNode}>{displayName}</Badge>;
+                })()}
                 {/* Theme indicator in mobile */}
                 {(() => {
                   if (!user.temaId) {
