@@ -383,6 +383,7 @@ model CasoLegal {
   abogado           Proveedor?       @relation(fields: [abogadoId], references: [id])
   abogadoUsuario    Usuario?         @relation("AbogadoCasoLegal", fields: [abogadoUsuarioId], references: [id])
   notas             NotaCaso[]
+  documentos        DocumentoCaso[]
 
   @@index([estado])
   @@index([abogadoUsuarioId])
@@ -402,6 +403,25 @@ model NotaCaso {
   autor     Usuario   @relation(fields: [autorId], references: [id])
 
   @@map("notas_caso")
+}
+
+model DocumentoCaso {
+  id           String   @id @default(uuid()) @db.Uuid
+  casoId       String   @map("caso_id") @db.Uuid
+  nombre       String   @db.VarChar(255)
+  s3Bucket     String   @map("s3_bucket") @db.VarChar(100)
+  s3Key        String   @map("s3_key") @db.VarChar(500)
+  contentType  String   @map("content_type") @db.VarChar(50)
+  fileSize     Int      @map("file_size")
+  subidoPorId  String   @map("subido_por_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relaciones
+  caso         CasoLegal @relation(fields: [casoId], references: [id], onDelete: Cascade)
+  subidoPor    Usuario   @relation("SubidorDocumentoCaso", fields: [subidoPorId], references: [id])
+
+  @@index([casoId])
+  @@map("documentos_caso")
 }
 
 model Usuario {
@@ -428,6 +448,7 @@ model Usuario {
   asociadosAprobados   Asociado[]  @relation("AprobadorAsociado")
   documentosRevisados  Documento[] @relation("RevisadorDocumento")
   notasCaso            NotaCaso[]
+  documentosCasoSubidos DocumentoCaso[] @relation("SubidorDocumentoCaso")
   notasAsociado        NotaAsociado[]
   auditorias           Auditoria[]
   casosComoAbogado     CasoLegal[] @relation("AbogadoCasoLegal")

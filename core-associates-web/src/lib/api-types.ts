@@ -186,6 +186,20 @@ export interface NotaCaso {
   };
 }
 
+// DocumentoCaso
+export interface DocumentoCaso {
+  id: string;
+  casoId: string;
+  nombre: string;
+  contentType: string;
+  fileSize: number;
+  createdAt: string;
+  subidoPor?: {
+    nombre: string;
+    rol: string;
+  };
+}
+
 // CasoLegal
 export interface CasoLegal {
   id: string;
@@ -225,6 +239,7 @@ export interface CasoLegal {
     email: string;
   };
   notas?: NotaCaso[];
+  documentos?: DocumentoCaso[];
   _count?: {
     notas: number;
   };

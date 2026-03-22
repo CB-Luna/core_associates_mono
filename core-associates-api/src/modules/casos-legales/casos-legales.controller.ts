@@ -1,5 +1,10 @@
-import { Controller, Post, Get, Put, Param, Query, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller, Post, Get, Put, Delete, Param, Query, Body,
+  UseGuards, UseInterceptors, UploadedFile, ParseFilePipe,
+  MaxFileSizeValidator, FileTypeValidator,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { CasosLegalesService } from './casos-legales.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermisosGuard } from '../../common/guards/permisos.guard';
@@ -178,6 +183,67 @@ export class CasosLegalesController {
     @Body() dto: CreateNotaCasoDto,
   ) {
     return this.casosLegalesService.addNote(casoId, autorId, dto.contenido, dto.esPrivada);
+  }
+
+  // ── Documentos del caso ──
+
+  @Post(':id/documentos')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver', 'casos-legales:ver-propios')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Subir documento al caso' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Documento subido' })
+  @ApiResponse({ status: 404, description: 'Caso no encontrado' })
+  uploadDocumento(
+    @Param('id') casoId: string,
+    @CurrentUser('id') userId: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp)|application\/pdf$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.casosLegalesService.uploadDocumentoCaso(casoId, userId, file);
+  }
+
+  @Get(':id/documentos')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver', 'casos-legales:ver-propios')
+  @ApiOperation({ summary: 'Listar documentos del caso' })
+  @ApiResponse({ status: 200, description: 'Lista de documentos' })
+  getDocumentos(@Param('id') casoId: string) {
+    return this.casosLegalesService.getDocumentosCaso(casoId);
+  }
+
+  @Get(':id/documentos/:docId/url')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver', 'casos-legales:ver-propios')
+  @ApiOperation({ summary: 'Obtener URL firmada de documento' })
+  @ApiResponse({ status: 200, description: 'URL presignada' })
+  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
+  getDocumentoUrl(
+    @Param('id') casoId: string,
+    @Param('docId') docId: string,
+  ) {
+    return this.casosLegalesService.getDocumentoCasoPresignedUrl(casoId, docId);
+  }
+
+  @Delete(':id/documentos/:docId')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver', 'casos-legales:ver-propios')
+  @ApiOperation({ summary: 'Eliminar documento del caso' })
+  @ApiResponse({ status: 200, description: 'Documento eliminado' })
+  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
+  deleteDocumento(
+    @Param('id') casoId: string,
+    @Param('docId') docId: string,
+  ) {
+    return this.casosLegalesService.deleteDocumentoCaso(casoId, docId);
   }
 
   // ── Acciones del Abogado sobre :id ──

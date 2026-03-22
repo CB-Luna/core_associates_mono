@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send, Car, Maximize2, Minimize2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send, Car, Maximize2, Minimize2, Paperclip, Upload, Trash2, FileText, Download } from 'lucide-react';
 import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
-import type { CasoLegal, NotaCaso, UsuarioCRM } from '@/lib/api-types';
+import type { CasoLegal, NotaCaso, UsuarioCRM, DocumentoCaso } from '@/lib/api-types';
 import { Badge } from '@/components/ui/Badge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
@@ -81,6 +81,11 @@ export default function CasoLegalDetailPage() {
   // Asociado photo
   const [asociadoFotoUrl, setAsociadoFotoUrl] = useState<string | null>(null);
 
+  // Documentos
+  const [documentos, setDocumentos] = useState<DocumentoCaso[]>([]);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+
   const fetchCaso = useCallback(async () => {
     try {
       const data = await apiClient<CasoLegal>(`/casos-legales/${id}`);
@@ -112,6 +117,61 @@ export default function CasoLegalDetailPage() {
       return () => { cancelled = true; };
     }
   }, [caso?.asociado, caso?.asociadoId]);
+
+  // Fetch documentos
+  const fetchDocumentos = useCallback(async () => {
+    if (!id) return;
+    try {
+      const docs = await apiClient<DocumentoCaso[]>(`/casos-legales/${id}/documentos`);
+      setDocumentos(docs);
+    } catch { /* ignore */ }
+  }, [id]);
+
+  useEffect(() => { fetchDocumentos(); }, [fetchDocumentos]);
+
+  const handleUploadDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !caso) return;
+    setUploadingDoc(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const doc = await apiClient<DocumentoCaso>(`/casos-legales/${caso.id}/documentos`, {
+        method: 'POST',
+        body: form,
+      });
+      setDocumentos((prev) => [doc, ...prev]);
+      toast('success', 'Documento subido', file.name);
+    } catch (err: any) {
+      toast('error', 'Error al subir', err.message);
+    } finally {
+      setUploadingDoc(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDownloadDoc = async (doc: DocumentoCaso) => {
+    try {
+      const { url } = await apiClient<{ url: string }>(`/casos-legales/${caso!.id}/documentos/${doc.id}/url`);
+      window.open(url, '_blank');
+    } catch {
+      toast('error', 'Error al obtener enlace');
+    }
+  };
+
+  const handleDeleteDoc = async (docId: string) => {
+    if (!caso) return;
+    setDeletingDocId(docId);
+    try {
+      await apiClient(`/casos-legales/${caso.id}/documentos/${docId}`, { method: 'DELETE' });
+      setDocumentos((prev) => prev.filter((d) => d.id !== docId));
+      toast('success', 'Documento eliminado');
+    } catch {
+      toast('error', 'Error al eliminar');
+    } finally {
+      setDeletingDocId(null);
+    }
+  };
 
   const handleAsignarAbogado = async () => {
     if (!selectedAbogado || !caso) return;
@@ -328,6 +388,50 @@ export default function CasoLegalDetailPage() {
                     zoom={15}
                     height={mapExpanded ? '420px' : '220px'}
                   />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Documentos */}
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Paperclip className="h-4 w-4 text-amber-500" />
+                Documentos del caso
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{documentos.length}</span>
+              </h3>
+              <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-primary-700 ${uploadingDoc ? 'opacity-50 pointer-events-none' : ''}`}>
+                <Upload className="h-3.5 w-3.5" />
+                {uploadingDoc ? 'Subiendo...' : 'Subir archivo'}
+                <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handleUploadDoc} disabled={uploadingDoc} />
+              </label>
+            </div>
+            <div className="px-5 py-4">
+              {documentos.length > 0 ? (
+                <div className="space-y-2">
+                  {documentos.map((doc) => (
+                    <div key={doc.id} className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/50 p-3">
+                      <FileText className="h-5 w-5 shrink-0 text-gray-400" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-gray-800">{doc.nombre}</p>
+                        <p className="text-xs text-gray-400">
+                          {(doc.fileSize / 1024).toFixed(0)} KB · {doc.subidoPor?.nombre || 'Sistema'} · {formatFechaConHora(doc.createdAt)}
+                        </p>
+                      </div>
+                      <button onClick={() => handleDownloadDoc(doc)} className="rounded p-1 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600" title="Descargar">
+                        <Download className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => handleDeleteDoc(doc.id)} disabled={deletingDocId === doc.id} className="rounded p-1 text-gray-400 transition hover:bg-red-100 hover:text-red-500 disabled:opacity-50" title="Eliminar">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/50 py-6">
+                  <Paperclip className="h-8 w-8 text-gray-300" />
+                  <p className="text-xs text-gray-400">Sin documentos — sube el primero arriba</p>
                 </div>
               )}
             </div>

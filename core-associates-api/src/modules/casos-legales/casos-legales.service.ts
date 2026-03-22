@@ -2,8 +2,11 @@ import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenEx
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificacionesCrmService } from '../notificaciones-crm/notificaciones-crm.service';
+import { StorageService } from '../storage/storage.service';
 import { CreateCasoLegalDto } from './dto/create-caso-legal.dto';
 import { TipoPercance } from '@prisma/client';
+
+const BUCKET_LEGAL = 'core-associates-legal';
 
 @Injectable()
 export class CasosLegalesService {
@@ -12,6 +15,7 @@ export class CasosLegalesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificacionesCrm: NotificacionesCrmService,
+    private readonly storage: StorageService,
   ) {}
 
   async createCaso(asociadoId: string, dto: CreateCasoLegalDto) {
@@ -414,6 +418,66 @@ export class CasosLegalesService {
     }
 
     return updated;
+  }
+
+  // ── Documentos del caso ──
+
+  async uploadDocumentoCaso(
+    casoId: string,
+    subidoPorId: string,
+    file: Express.Multer.File,
+  ) {
+    const caso = await this.prisma.casoLegal.findUnique({ where: { id: casoId } });
+    if (!caso) throw new NotFoundException('Caso no encontrado');
+
+    const ext = file.originalname.split('.').pop() || 'bin';
+    const s3Key = `${casoId}/${Date.now()}.${ext}`;
+
+    await this.storage.uploadFile(BUCKET_LEGAL, s3Key, file.buffer, file.mimetype);
+
+    return this.prisma.documentoCaso.create({
+      data: {
+        casoId,
+        nombre: file.originalname,
+        s3Bucket: BUCKET_LEGAL,
+        s3Key,
+        contentType: file.mimetype,
+        fileSize: file.size,
+        subidoPorId,
+      },
+      include: { subidoPor: { select: { nombre: true, rol: true } } },
+    });
+  }
+
+  async getDocumentosCaso(casoId: string) {
+    const caso = await this.prisma.casoLegal.findUnique({ where: { id: casoId } });
+    if (!caso) throw new NotFoundException('Caso no encontrado');
+
+    return this.prisma.documentoCaso.findMany({
+      where: { casoId },
+      orderBy: { createdAt: 'desc' },
+      include: { subidoPor: { select: { nombre: true, rol: true } } },
+    });
+  }
+
+  async getDocumentoCasoPresignedUrl(casoId: string, docId: string) {
+    const doc = await this.prisma.documentoCaso.findFirst({
+      where: { id: docId, casoId },
+    });
+    if (!doc) throw new NotFoundException('Documento no encontrado');
+    const url = await this.storage.getPresignedUrl(doc.s3Bucket, doc.s3Key, 900);
+    return { url };
+  }
+
+  async deleteDocumentoCaso(casoId: string, docId: string) {
+    const doc = await this.prisma.documentoCaso.findFirst({
+      where: { id: docId, casoId },
+    });
+    if (!doc) throw new NotFoundException('Documento no encontrado');
+
+    await this.storage.deleteFile(doc.s3Bucket, doc.s3Key);
+    await this.prisma.documentoCaso.delete({ where: { id: docId } });
+    return { message: 'Documento eliminado' };
   }
 
   private async notificarOperadores(titulo: string, mensaje: string, tipo: string, referenciaId: string) {
