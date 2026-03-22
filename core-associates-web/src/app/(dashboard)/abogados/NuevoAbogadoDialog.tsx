@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Eye, EyeOff } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 
 const ESPECIALIDADES = [
@@ -34,6 +34,8 @@ export function NuevoAbogadoDialog({ onClose, onSaved }: NuevoAbogadoDialogProps
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [abogadoRolId, setAbogadoRolId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -146,25 +148,35 @@ export function NuevoAbogadoDialog({ onClose, onSaved }: NuevoAbogadoDialogProps
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Contraseña *</label>
-            <input
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-              placeholder="Mín. 8 caracteres"
-            />
+            <div className="relative mt-1">
+              <input
+                name="password"
+                type={showPwd ? 'text' : 'password'}
+                value={form.password}
+                onChange={handleChange}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm shadow-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                placeholder="Mín. 8 caracteres"
+              />
+              <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirmar contraseña *</label>
-            <input
-              name="confirmPassword"
-              type="password"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-            />
+            <div className="relative mt-1">
+              <input
+                name="confirmPassword"
+                type={showConfirm ? 'text' : 'password'}
+                value={form.confirmPassword}
+                onChange={handleChange}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm shadow-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              />
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           {error && (

@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import { useToast } from '@/components/ui/Toast';
+import { usePermisos } from '@/lib/permisos';
+import { useAuthStore } from '@/stores/auth-store';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
@@ -52,6 +54,8 @@ const prioridadOptions = [
 export default function MapaSosPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { esAbogado } = usePermisos();
+  const userId = useAuthStore((s) => s.user?.id);
   const [casos, setCasos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [estadoFilter, setEstadoFilter] = useState('');
@@ -321,13 +325,17 @@ export default function MapaSosPage() {
 
               {/* Panel footer */}
               <div className="border-t border-gray-200 bg-gray-50 px-5 py-3">
-                <button
-                  onClick={() => router.push(`/casos-legales/${selectedCaso.id}`)}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Ver detalle completo
-                </button>
+                {esAbogado && selectedCaso.abogadoUsuario?.id !== userId ? (
+                  <p className="text-center text-xs text-gray-400">Solo puedes ver el detalle de tus casos asignados</p>
+                ) : (
+                  <button
+                    onClick={() => router.push(`/casos-legales/${selectedCaso.id}`)}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Ver detalle completo
+                  </button>
+                )}
               </div>
             </div>
           )}

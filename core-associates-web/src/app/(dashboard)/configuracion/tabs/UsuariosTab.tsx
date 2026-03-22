@@ -12,7 +12,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { type UsuarioCRM, type Proveedor, type Rol } from '@/lib/api-types';
 import { type PaginatedResponse } from '@/lib/api-client';
-import { Pencil, KeyRound, Power, Camera, Trash2, Palette, Lock, Check, Globe } from 'lucide-react';
+import { Pencil, KeyRound, Power, Camera, Trash2, Palette, Lock, Check, Globe, Eye, EyeOff } from 'lucide-react';
 import { getIcon } from '@/lib/icon-map';
 import { type Tema } from '@/lib/api-types';
 import { useAuthStore } from '@/stores/auth-store';
@@ -98,6 +98,10 @@ export function UsuariosTab() {
   const [temas, setTemas] = useState<Tema[]>([]);
   const [temaUserId, setTemaUserId] = useState<string | null>(null);
   const [roles, setRoles] = useState<Rol[]>([]);
+  const [showCreatePwd, setShowCreatePwd] = useState(false);
+  const [showCreateConfirm, setShowCreateConfirm] = useState(false);
+  const [showResetPwd, setShowResetPwd] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleAvatarUpload = async (userId: string, file: File) => {
     setUploadingAvatar(true);
@@ -559,12 +563,22 @@ export function UsuariosTab() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Contraseña</label>
-              <input type="password" {...createForm.register('password')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              <div className="relative mt-1">
+                <input type={showCreatePwd ? 'text' : 'password'} {...createForm.register('password')} className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                <button type="button" onClick={() => setShowCreatePwd(!showCreatePwd)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                  {showCreatePwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {createForm.formState.errors.password && <p className="mt-1 text-xs text-red-600">{createForm.formState.errors.password.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Confirmar contraseña</label>
-              <input type="password" {...createForm.register('confirmPassword')} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              <div className="relative mt-1">
+                <input type={showCreateConfirm ? 'text' : 'password'} {...createForm.register('confirmPassword')} className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                <button type="button" onClick={() => setShowCreateConfirm(!showCreateConfirm)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                  {showCreateConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {createForm.formState.errors.confirmPassword && <p className="mt-1 text-xs text-red-600">{createForm.formState.errors.confirmPassword.message}</p>}
             </div>
             <div>
@@ -700,12 +714,22 @@ export function UsuariosTab() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">Nueva contraseña</label>
-              <input type="password" {...resetForm.register('password')} placeholder="Mín. 8 caracteres" className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500" />
+              <div className="relative mt-1">
+                <input type={showResetPwd ? 'text' : 'password'} {...resetForm.register('password')} placeholder="Mín. 8 caracteres" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500" />
+                <button type="button" onClick={() => setShowResetPwd(!showResetPwd)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                  {showResetPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {resetForm.formState.errors.password && <p className="mt-1 text-xs text-red-600">{resetForm.formState.errors.password.message}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Confirmar contraseña</label>
-              <input type="password" {...resetForm.register('confirmPassword')} placeholder="Repite la contraseña" className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500" />
+              <div className="relative mt-1">
+                <input type={showResetConfirm ? 'text' : 'password'} {...resetForm.register('confirmPassword')} placeholder="Repite la contraseña" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500" />
+                <button type="button" onClick={() => setShowResetConfirm(!showResetConfirm)} className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                  {showResetConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               {resetForm.formState.errors.confirmPassword && <p className="mt-1 text-xs text-red-600">{resetForm.formState.errors.confirmPassword.message}</p>}
             </div>
           </div>

@@ -105,6 +105,7 @@ export class CasosLegalesService {
             },
           },
           abogado: { select: { razonSocial: true } },
+          abogadoUsuario: { select: { id: true, nombre: true } },
           _count: { select: { notas: true } },
         },
       }),
