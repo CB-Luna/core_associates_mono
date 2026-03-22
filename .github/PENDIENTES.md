@@ -1,22 +1,22 @@
 # Pendientes — Core Associates
 
-> **Última actualización**: 22 de marzo de 2026 (post I.4.1)
+> **Última actualización**: 22 de marzo de 2026 (post D.3.8/D.3.9/G.2)
 > Documento con lo que falta por implementar. Solo tareas pendientes — lo completado se registra en `.github/completados/`.
 
 ---
 
 ## Resumen Ejecutivo
 
-D.3 RBAC dinámico (core) está completado. Quedan mejoras al flujo del abogado, limpieza RBAC, y módulos de vehículos.
+D.3 RBAC dinámico (core) está completado. D.3.8/D.3.9 limpieza hecha. G.2 campos abogado listos. Quedan mejoras al flujo del abogado y módulos de vehículos.
 
-> ⚠️ **Prioridad actual**: I (Mejoras flujo abogado CRM), E3.5 (eye icon UX), D.3 limpieza (enum + ModuloMenu), C.3 (App Móvil shell profesional), J (Verificación vehicular).
+> ⚠️ **Prioridad actual**: I.4.2 (solicitar docs al asociado), C.3 (App Móvil shell profesional), J (Verificación vehicular).
 
 | # | Feature | Impacto | Esfuerzo | Alcance |
 |---|---------|---------|----------|----------|
 | **C.3** | App Móvil: shell profesional (abogado) | ❌ Pendiente | Alto | App |
-| **D.3** | RBAC limpieza — eliminar enum + ModuloMenu legacy | ❌ D.3.6/D.3.8/D.3.9 | Medio | API + CRM |
+| **D.3** | RBAC limpieza — eliminar enum legacy | ❌ D.3.6 pendiente (deferred) | Bajo | API + CRM |
 | **E** | Mejoras menores (App + CRM) | ❗ E3.5 hecho, resto pendiente | Varios | App + CRM |
-| **G.2** | Más campos abogado (dirección, teléfono, cédula) | ❌ Pendiente | Bajo-Medio | API + CRM |
+| **G.2** | Más campos abogado (dirección, teléfono, cédula) | ✅ Completado | — | API + CRM |
 | **I** | Flujo Abogado — Mejoras CRM | ❗ I.1-I.4.1 hechos, I.4.2 pendiente | Medio-Alto | API + CRM |
 | **J** | Verificación Vehicular | ❌ Pendiente (preparación) | Medio | API + CRM + App |
 
@@ -104,23 +104,19 @@ features/profesional/
 - **Riesgo**: la App Flutter lee `user.rol` del JWT para algunas decisiones. Requiere coordinar con C.3.
 - **Decisión**: posponer hasta C.3 para no romper la app actual
 
-### D.3.8 — Eliminar campo `permisos String[]` de `ModuloMenu` ❌ PENDIENTE
+### D.3.8 — Eliminar campo `permisos String[]` de `ModuloMenu` ✅ COMPLETADO (commit `6b12272`)
 
-- `ModuloMenu` tiene `permisos String[]` (legacy de RBAC v1) que ya no se usa — el menú ahora se controla por `RolModuloMenu`
-- Eliminar el campo requiere migración + verificar que ningún endpoint/vista lo lea
-- Bajo riesgo pero requiere verificación
+Migración `20260323000000_drop_modulos_menu_permisos`. Campo eliminado de schema, service, DTOs, seed, CRM (`MenuDinamicoTab`). Solo queda `RolModuloMenu` como sistema de control de menú.
 
-### D.3.9 — Seed `RolModuloMenu` entries ❌ PENDIENTE
+### D.3.9 — Seed `RolModuloMenu` entries ✅ COMPLETADO (commit `6b12272`)
 
-- Los roles por defecto (admin, operador, proveedor, abogado) necesitan entries en `RolModuloMenu` en el seed
-- Actualmente se crean manualmente desde el configurador RBAC del CRM
-- Agregar al seed para que `prisma:seed` deje todo configurado automáticamente
+Seed incluye asignaciones para abogado: `dashboard`, `casos-legales`, `mapa-sos`. Admin/operador/proveedor ya tenían sus entries.
 
 ### Bugs pendientes de D.3
 
 | # | Bug | Detalle | Tarea |
 |---|-----|---------|-------|
-| B2 | Dropdown de rol hardcodeado en UsuariosTab | No carga roles dinámicos desde API | D.3 limpieza |
+| B2 | ~~Dropdown de rol hardcodeado en UsuariosTab~~ | ✅ Ya usa `apiClient<Rol[]>('/roles')` dinámico | Resuelto |
 | B4 | Sistema dual enum + FK en Usuario | `rol` enum + `rolId` UUID coexisten | D.3.6 |
 
 **Esfuerzo**: Medio | **Prioridad**: Media (sin bloqueo funcional — los roles custom YA funcionan)
@@ -149,17 +145,15 @@ features/profesional/
 
 ---
 
-## G.2 — Más campos para abogado ❌ PENDIENTE
+## G.2 — Más campos para abogado ✅ COMPLETADO (commit `6b12272`)
 
-Ampliar el modelo de abogado con campos adicionales:
-- `direccion` — dirección de contacto
-- `telefono` — teléfono directo
-- `cedula` — cédula profesional
-- Requiere migración Prisma + actualizar DTOs + formularios CRM
+Migración `20260323000001_add_abogado_extra_fields`: campos `cedula_profesional`, `telefono`, `direccion` en `usuarios`.
+- Schema: `cedulaProfesional`, `telefono`, `direccion` (nullable)
+- DTOs: create + update con validaciones opcionales
+- Service: incluidos en createUser, updateUser, queries abogado list/detail
+- CRM: `NuevoAbogadoDialog` con 3 campos nuevos, `[id]/page.tsx` con sección "Datos profesionales" editable
 
-> **Auditoría**: El modelo `Usuario` solo tiene `especialidad` para diferenciar abogados. No hay campos `direccion`, `telefono`, `cedula` en el schema.
-
-**Esfuerzo**: Bajo-Medio | **Prioridad**: Media
+**Archivos**: schema.prisma, migración, DTOs, auth.service.ts, api-types.ts, NuevoAbogadoDialog.tsx, abogados/[id]/page.tsx
 
 ---
 
@@ -250,13 +244,17 @@ Fase 4 (Completada parcialmente ✅):
   ├─ D.3.1-D.3.5, D.3.7 ✅ (commit 11c0c99)
   └─ D.3.6/D.3.8/D.3.9 deferred
 
-Fase 5 — SIGUIENTE PRIORIDAD:
-  ├─ E3.5 / I.5 Eye icon en password (rápido)
-  ├─ I.1 Mapa SOS: control de permisos (alta prioridad)
-  ├─ I.2 Mis Casos: info completa asociado + mapa
-  ├─ I.3 Casos Disponibles: info asociado
-  ├─ I.4 Documentos del caso: subida + solicitud
-  └─ G.2 Más campos abogado (dirección, teléfono, cédula)
+Fase 5 (Completada parcialmente ✅):
+  ├─ E3.5 / I.5 Eye icon ✅
+  ├─ I.1-I.4.1 Flujo abogado CRM ✅
+  ├─ D.3.8/D.3.9 RBAC limpieza ✅ (commit 6b12272)
+  └─ G.2 Campos abogado ✅ (commit 6b12272)
+
+Fase 6 — SIGUIENTE PRIORIDAD:
+  ├─ I.4.2 Solicitar documentos al asociado (App Flutter)
+  ├─ C.3 App Móvil: shell profesional abogado
+  ├─ J.1 Verificación vehicular (preparación)
+  └─ D.3.6 Eliminar enum RolUsuario (deferred → coordinar con C.3)
 
 Fase 6 — App Móvil + Verificación:
   ├─ C.3 App Móvil: shell profesional + push
