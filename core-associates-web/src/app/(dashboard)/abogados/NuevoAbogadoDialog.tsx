@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Loader2, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Loader2, Eye, EyeOff, Camera } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 
 const ESPECIALIDADES = [
@@ -40,6 +40,20 @@ export function NuevoAbogadoDialog({ onClose, onSaved }: NuevoAbogadoDialogProps
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [abogadoRolId, setAbogadoRolId] = useState<string | null>(null);
+
+  // Avatar
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     apiClient<Rol[]>('/roles')
@@ -88,10 +102,20 @@ export function NuevoAbogadoDialog({ onClose, onSaved }: NuevoAbogadoDialogProps
       if (form.telefono.trim()) body.telefono = form.telefono.trim();
       if (form.direccion.trim()) body.direccion = form.direccion.trim();
 
-      await apiClient('/auth/register-admin', {
+      const nuevoUsuario = await apiClient<{ id: string }>('/auth/register-admin', {
         method: 'POST',
         body: JSON.stringify(body),
       });
+
+      // Subir avatar si se seleccionó uno
+      if (avatarFile && nuevoUsuario.id) {
+        const formData = new FormData();
+        formData.append('file', avatarFile);
+        await apiClient(`/auth/users/${nuevoUsuario.id}/avatar`, {
+          method: 'POST',
+          body: formData,
+        }).catch(() => {/* No bloquear si falla el avatar */});
+      }
 
       onSaved();
       onClose();
@@ -114,6 +138,35 @@ export function NuevoAbogadoDialog({ onClose, onSaved }: NuevoAbogadoDialogProps
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Avatar */}
+          <div className="flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              className="group relative h-20 w-20 overflow-hidden rounded-full border-2 border-dashed border-violet-300 bg-gray-50 transition hover:border-violet-500 hover:bg-violet-50"
+            >
+              {avatarPreview ? (
+                <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-1 text-gray-400 group-hover:text-violet-500">
+                  <Camera className="h-6 w-6" />
+                  <span className="text-[10px]">Foto</span>
+                </div>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/30 opacity-0 transition group-hover:opacity-100">
+                <Camera className="h-5 w-5 text-white" />
+              </div>
+            </button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              className="hidden"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleAvatarChange}
+            />
+            <p className="text-xs text-gray-400">Foto de perfil (opcional)</p>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nombre completo *</label>
             <input

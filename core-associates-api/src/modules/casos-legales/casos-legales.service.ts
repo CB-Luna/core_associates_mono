@@ -131,11 +131,12 @@ export class CasosLegalesService {
             idUnico: true, nombre: true, apellidoPat: true, telefono: true,
             fotoUrl: true, _count: { select: { documentos: true } },
             vehiculos: {
-              select: { id: true, marca: true, modelo: true, anio: true, color: true, placas: true, esPrincipal: true },
+              select: { id: true, marca: true, modelo: true, anio: true, color: true, placas: true, esPrincipal: true, fotoUrl: true },
             },
           },
         },
         abogado: { select: { razonSocial: true, telefono: true } },
+        abogadoUsuario: { select: { id: true, nombre: true, email: true } },
         notas: {
           orderBy: { createdAt: 'desc' },
           include: { autor: { select: { nombre: true, rol: true } } },
@@ -183,6 +184,7 @@ export class CasosLegalesService {
         abogadoUsuarioId,
         abogadoId: usuario.proveedorId || undefined,
         fechaAsignacion: new Date(),
+        estado: 'en_atencion',
       },
       include: {
         abogadoUsuario: { select: { nombre: true } },
@@ -467,6 +469,15 @@ export class CasosLegalesService {
     if (!doc) throw new NotFoundException('Documento no encontrado');
     const url = await this.storage.getPresignedUrl(doc.s3Bucket, doc.s3Key, 900);
     return { url };
+  }
+
+  async downloadDocumentoCaso(casoId: string, docId: string): Promise<{ buffer: Buffer; contentType: string; nombre: string }> {
+    const doc = await this.prisma.documentoCaso.findFirst({
+      where: { id: docId, casoId },
+    });
+    if (!doc) throw new NotFoundException('Documento no encontrado');
+    const buffer = await this.storage.getFile(doc.s3Bucket, doc.s3Key);
+    return { buffer, contentType: doc.contentType, nombre: doc.nombre };
   }
 
   async deleteDocumentoCaso(casoId: string, docId: string) {

@@ -11,7 +11,7 @@ import { SearchToolbar } from '@/components/ui/SearchToolbar';
 import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge, estadoProveedorVariant } from '@/components/ui/Badge';
 import { formatFechaLegible } from '@/lib/utils';
-import { Eye, Mail, Briefcase, Scale, Clock, Plus } from 'lucide-react';
+import { Eye, Mail, Briefcase, Scale, Clock, Plus, Gavel, Car, Building2, HardHat, Heart, TrendingUp } from 'lucide-react';
 import { NuevoAbogadoDialog } from './NuevoAbogadoDialog';
 
 function AbogadoAvatar({ abogado }: { abogado: AbogadoCRM }) {
@@ -50,6 +50,16 @@ const especialidadLabels: Record<string, string> = {
   administrativo: 'Administrativo',
   transito: 'Tránsito',
   familiar: 'Familiar',
+};
+
+const especialidadIconos: Record<string, React.ReactNode> = {
+  penal: <Gavel className="h-3 w-3" />,
+  civil: <Scale className="h-3 w-3" />,
+  mercantil: <TrendingUp className="h-3 w-3" />,
+  laboral: <HardHat className="h-3 w-3" />,
+  administrativo: <Building2 className="h-3 w-3" />,
+  transito: <Car className="h-3 w-3" />,
+  familiar: <Heart className="h-3 w-3" />,
 };
 
 export default function AbogadosPage() {
@@ -130,7 +140,7 @@ export default function AbogadosPage() {
         if (!val) return <span className="text-xs text-gray-300">Sin asignar</span>;
         return (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-700">
-            <Briefcase className="h-3 w-3" />
+            {especialidadIconos[val] ?? <Briefcase className="h-3 w-3" />}
             {especialidadLabels[val] || val}
           </span>
         );
@@ -259,7 +269,7 @@ export default function AbogadosPage() {
                   <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
                     {a.especialidad && (
                       <span className="inline-flex items-center gap-1">
-                        <Briefcase className="h-3 w-3" />
+                        {especialidadIconos[a.especialidad] ?? <Briefcase className="h-3 w-3" />}
                         {especialidadLabels[a.especialidad] || a.especialidad}
                       </span>
                     )}

@@ -1,8 +1,9 @@
 import {
   Controller, Post, Get, Put, Delete, Param, Query, Body,
   UseGuards, UseInterceptors, UploadedFile, ParseFilePipe,
-  MaxFileSizeValidator, FileTypeValidator,
+  MaxFileSizeValidator, FileTypeValidator, StreamableFile, Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { CasosLegalesService } from './casos-legales.service';
@@ -202,7 +203,7 @@ export class CasosLegalesController {
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }),
-          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp)|application\/pdf$/ }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp)|application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|text\/plain$/ }),
         ],
       }),
     )
@@ -231,6 +232,25 @@ export class CasosLegalesController {
     @Param('docId') docId: string,
   ) {
     return this.casosLegalesService.getDocumentoCasoPresignedUrl(casoId, docId);
+  }
+
+  @Get(':id/documentos/:docId/download')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver', 'casos-legales:ver-propios')
+  @ApiOperation({ summary: 'Descargar documento del caso (proxy streaming)' })
+  @ApiResponse({ status: 200, description: 'Archivo' })
+  @ApiResponse({ status: 404, description: 'Documento no encontrado' })
+  async downloadDocumento(
+    @Param('id') casoId: string,
+    @Param('docId') docId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { buffer, contentType, nombre } = await this.casosLegalesService.downloadDocumentoCaso(casoId, docId);
+    const encoded = encodeURIComponent(nombre);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encoded}`);
+    res.setHeader('Content-Length', buffer.length);
+    return new StreamableFile(buffer);
   }
 
   @Delete(':id/documentos/:docId')

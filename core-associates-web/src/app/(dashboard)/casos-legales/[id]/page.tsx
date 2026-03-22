@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send, Car, Maximize2, Minimize2, Paperclip, Upload, Trash2, FileText, Download } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, User, Gavel, MessageSquare, Send, Car, Maximize2, Minimize2, Paperclip, Upload, Trash2, FileText, Download, CheckCircle2, Clock, Archive, AlertCircle, Ban, Scale } from 'lucide-react';
 import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import type { CasoLegal, NotaCaso, UsuarioCRM, DocumentoCaso } from '@/lib/api-types';
@@ -152,10 +152,14 @@ export default function CasoLegalDetailPage() {
 
   const handleDownloadDoc = async (doc: DocumentoCaso) => {
     try {
-      const { url } = await apiClient<{ url: string }>(`/casos-legales/${caso!.id}/documentos/${doc.id}/url`);
-      window.open(url, '_blank');
+      const url = await apiImageUrl(`/casos-legales/${caso!.id}/documentos/${doc.id}/download`);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.nombre;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch {
-      toast('error', 'Error al obtener enlace');
+      toast('error', 'Error al descargar documento');
     }
   };
 
@@ -335,9 +339,86 @@ export default function CasoLegalDetailPage() {
         </div>
       )}
 
+      {/* Barra de progreso del caso */}
+      {(() => {
+        const PASOS = [
+          { key: 'abierto', label: 'Abierto', Icon: AlertCircle },
+          { key: 'en_atencion', label: 'En atención', Icon: Clock },
+          { key: 'resuelto', label: 'Resuelto', Icon: CheckCircle2 },
+          { key: 'cerrado', label: 'Cerrado', Icon: Archive },
+        ] as const;
+
+        const estado = caso.estado;
+        const esCancelado = estado === 'cancelado';
+        const esEscalado = estado === 'escalado';
+        const pasoActualIdx = esCancelado ? -1
+          : esEscalado ? 1.5
+          : PASOS.findIndex((p) => p.key === estado);
+
+        return (
+          <div className="rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Progreso del caso</span>
+              {esCancelado && (
+                <span className="flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
+                  <Ban className="h-3 w-3" /> Cancelado
+                </span>
+              )}
+              {esEscalado && (
+                <span className="flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700">
+                  <Scale className="h-3 w-3" /> Escalado a instancias superiores
+                </span>
+              )}
+            </div>
+            <div className="mt-3 flex items-center">
+              {PASOS.map((paso, idx) => {
+                const isCompleted = !esCancelado && (idx < pasoActualIdx || (esEscalado && idx <= 1));
+                const isCurrent = !esCancelado && (
+                  (!esEscalado && idx === pasoActualIdx) ||
+                  (esEscalado && idx === 1)
+                );
+                const isLast = idx === PASOS.length - 1;
+                const { Icon } = paso;
+                return (
+                  <div key={paso.key} className={`flex ${isLast ? 'flex-none' : 'flex-1'} items-center`}>
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-colors ${
+                        esCancelado
+                          ? 'border-gray-200 bg-gray-50 text-gray-300'
+                          : isCompleted
+                          ? 'border-green-400 bg-green-50 text-green-600'
+                          : isCurrent
+                          ? 'border-primary-500 bg-primary-50 text-primary-600 ring-2 ring-primary-100'
+                          : 'border-gray-200 bg-white text-gray-300'
+                      }`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <span className={`whitespace-nowrap text-[11px] font-medium ${
+                        esCancelado ? 'text-gray-300'
+                        : isCompleted ? 'text-green-600'
+                        : isCurrent ? 'text-primary-700'
+                        : 'text-gray-400'
+                      }`}>
+                        {paso.label}
+                      </span>
+                    </div>
+                    {!isLast && (
+                      <div className={`mx-2 mb-5 h-0.5 flex-1 rounded-full transition-colors ${
+                        esCancelado ? 'bg-gray-100'
+                        : isCompleted ? 'bg-green-300'
+                        : 'bg-gray-200'
+                      }`} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Main grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left column - Info */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">        {/* Left column - Info */}
         <div className="space-y-6 lg:col-span-2">
           {/* Description */}
           {caso.descripcion && (
@@ -404,7 +485,7 @@ export default function CasoLegalDetailPage() {
               <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-primary-700 ${uploadingDoc ? 'opacity-50 pointer-events-none' : ''}`}>
                 <Upload className="h-3.5 w-3.5" />
                 {uploadingDoc ? 'Subiendo...' : 'Subir archivo'}
-                <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handleUploadDoc} disabled={uploadingDoc} />
+                <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.doc,.txt" onChange={handleUploadDoc} disabled={uploadingDoc} />
               </label>
             </div>
             <div className="px-5 py-4">

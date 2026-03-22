@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Calendar, User, MessageSquare, Send, CheckCircle, XCircle, AlertTriangle, Phone, Mail, Paperclip, Upload, Trash2, FileText, Download } from 'lucide-react';
-import { apiClient } from '@/lib/api-client';
+import { ArrowLeft, MapPin, Calendar, User, MessageSquare, Send, CheckCircle, XCircle, AlertTriangle, Phone, Mail, Paperclip, Upload, Trash2, FileText, Download, Car } from 'lucide-react';
+import { apiClient, apiImageUrl } from '@/lib/api-client';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import type { CasoLegal, NotaCaso, DocumentoCaso } from '@/lib/api-types';
 import { Badge } from '@/components/ui/Badge';
@@ -46,6 +46,9 @@ export default function MiCasoAbogadoDetailPage() {
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
 
+  // Foto asociado
+  const [asociadoFotoUrl, setAsociadoFotoUrl] = useState<string | null>(null);
+
   const fetchCaso = useCallback(async () => {
     try {
       const data = await apiClient<CasoLegal>(`/casos-legales/abogado/mis-casos/${id}`);
@@ -70,6 +73,16 @@ export default function MiCasoAbogadoDetailPage() {
 
   useEffect(() => { fetchDocumentos(); }, [fetchDocumentos]);
 
+  // Cargar foto del asociado
+  useEffect(() => {
+    if (!caso?.asociado?.id) return;
+    let cancelled = false;
+    apiImageUrl(`/asociados/${caso.asociado.id}/foto`)
+      .then((url) => { if (!cancelled) setAsociadoFotoUrl(url); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [caso?.asociado?.id]);
+
   const handleUploadDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !caso) return;
@@ -93,10 +106,14 @@ export default function MiCasoAbogadoDetailPage() {
 
   const handleDownloadDoc = async (doc: DocumentoCaso) => {
     try {
-      const { url } = await apiClient<{ url: string }>(`/casos-legales/${caso!.id}/documentos/${doc.id}/url`);
-      window.open(url, '_blank');
+      const url = await apiImageUrl(`/casos-legales/${caso!.id}/documentos/${doc.id}/download`);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.nombre;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch {
-      toast('error', 'Error al obtener enlace');
+      toast('error', 'Error al descargar documento');
     }
   };
 
@@ -300,7 +317,7 @@ export default function MiCasoAbogadoDetailPage() {
               <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-primary-700 ${uploadingDoc ? 'opacity-50 pointer-events-none' : ''}`}>
                 <Upload className="h-3.5 w-3.5" />
                 {uploadingDoc ? 'Subiendo...' : 'Subir'}
-                <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handleUploadDoc} disabled={uploadingDoc} />
+                <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp,application/pdf,.docx,.doc,.txt" onChange={handleUploadDoc} disabled={uploadingDoc} />
               </label>
             </div>
             <div className="mt-3">
@@ -340,22 +357,56 @@ export default function MiCasoAbogadoDetailPage() {
           {caso.asociado && (
             <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                <User className="h-5 w-5 text-gray-400" /> Asociado
+                <User className="h-5 w-5 text-blue-400" /> Asociado
               </h2>
-              <div className="mt-3 space-y-2 text-sm">
-                <p className="font-medium text-gray-800 dark:text-gray-200">
-                  {caso.asociado.nombre} {caso.asociado.apellidoPat}{caso.asociado.apellidoMat ? ` ${caso.asociado.apellidoMat}` : ''}
-                </p>
-                {caso.asociado.telefono && (
-                  <p className="text-gray-500">{caso.asociado.telefono}</p>
+              <div className="mt-3 flex items-center gap-3">
+                {asociadoFotoUrl ? (
+                  <img
+                    src={asociadoFotoUrl}
+                    alt={caso.asociado.nombre}
+                    className="h-14 w-14 rounded-full object-cover ring-2 ring-blue-100 shadow-sm shrink-0"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-sm font-bold text-white ring-2 ring-blue-100 shadow-sm">
+                    {caso.asociado.nombre?.[0]}{caso.asociado.apellidoPat?.[0]}
+                  </div>
                 )}
-                {caso.asociado.email && (
-                  <p className="text-gray-500">{caso.asociado.email}</p>
-                )}
-                {caso.asociado.vehiculos && caso.asociado.vehiculos.length > 0 && (
-                  <p className="text-gray-500">{caso.asociado.vehiculos[0].marca} {caso.asociado.vehiculos[0].modelo} ({caso.asociado.vehiculos[0].placas})</p>
-                )}
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">
+                    {caso.asociado.nombre} {caso.asociado.apellidoPat}{caso.asociado.apellidoMat ? ` ${caso.asociado.apellidoMat}` : ''}
+                  </p>
+                  {caso.asociado.telefono && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{caso.asociado.telefono}</p>
+                  )}
+                  {caso.asociado.email && (
+                    <p className="text-sm text-gray-400">{caso.asociado.email}</p>
+                  )}
+                </div>
               </div>
+              {/* Vehículos */}
+              {caso.asociado.vehiculos && caso.asociado.vehiculos.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                    <Car className="h-3 w-3" /> Vehículos
+                  </p>
+                  {caso.asociado.vehiculos.map((v) => (
+                    <div key={v.id} className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/60 p-2.5 dark:border-gray-700 dark:bg-gray-900/50">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-100 text-primary-600">
+                        <Car className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                          {v.marca} {v.modelo} {v.anio}
+                        </p>
+                        <p className="text-xs text-gray-500">{v.placas}{v.color ? ` · ${v.color}` : ''}</p>
+                      </div>
+                      {v.esPrincipal && (
+                        <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">Principal</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               {/* Botones de contacto */}
               <div className="mt-4 flex gap-2">
                 {caso.asociado.telefono && (
@@ -369,7 +420,7 @@ export default function MiCasoAbogadoDetailPage() {
                 {caso.asociado.email && (
                   <a
                     href={`mailto:${caso.asociado.email}`}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300"
                   >
                     <Mail className="h-3.5 w-3.5" /> Email
                   </a>
