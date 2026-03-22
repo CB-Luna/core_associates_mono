@@ -235,7 +235,8 @@ export class CasosLegalesService {
         include: {
           asociado: {
             select: {
-              id: true, idUnico: true, nombre: true, apellidoPat: true, telefono: true, fotoUrl: true,
+              id: true, idUnico: true, nombre: true, apellidoPat: true, apellidoMat: true,
+              telefono: true, email: true, fotoUrl: true,
             },
           },
           _count: { select: { notas: true } },
@@ -256,7 +257,8 @@ export class CasosLegalesService {
       include: {
         asociado: {
           select: {
-            idUnico: true, nombre: true, apellidoPat: true, telefono: true, fotoUrl: true,
+            id: true, idUnico: true, nombre: true, apellidoPat: true, apellidoMat: true,
+            telefono: true, email: true, fotoUrl: true,
             vehiculos: {
               select: { id: true, marca: true, modelo: true, anio: true, color: true, placas: true, esPrincipal: true },
             },
@@ -286,7 +288,7 @@ export class CasosLegalesService {
         orderBy: { fechaApertura: 'desc' },
         include: {
           asociado: {
-            select: { idUnico: true, nombre: true, apellidoPat: true },
+            select: { idUnico: true, nombre: true, apellidoPat: true, fotoUrl: true },
           },
         },
       }),

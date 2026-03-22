@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Calendar, User, MessageSquare, Send, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, User, MessageSquare, Send, CheckCircle, XCircle, AlertTriangle, Phone, Mail } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import type { CasoLegal, NotaCaso } from '@/lib/api-types';
@@ -240,10 +240,36 @@ export default function MiCasoAbogadoDetailPage() {
                 <User className="h-5 w-5 text-gray-400" /> Asociado
               </h2>
               <div className="mt-3 space-y-2 text-sm">
-                <p className="font-medium text-gray-800 dark:text-gray-200">{caso.asociado.nombre} {caso.asociado.apellidoPat}</p>
-                <p className="text-gray-500">{caso.asociado.telefono}</p>
+                <p className="font-medium text-gray-800 dark:text-gray-200">
+                  {caso.asociado.nombre} {caso.asociado.apellidoPat}{caso.asociado.apellidoMat ? ` ${caso.asociado.apellidoMat}` : ''}
+                </p>
+                {caso.asociado.telefono && (
+                  <p className="text-gray-500">{caso.asociado.telefono}</p>
+                )}
+                {caso.asociado.email && (
+                  <p className="text-gray-500">{caso.asociado.email}</p>
+                )}
                 {caso.asociado.vehiculos && caso.asociado.vehiculos.length > 0 && (
                   <p className="text-gray-500">{caso.asociado.vehiculos[0].marca} {caso.asociado.vehiculos[0].modelo} ({caso.asociado.vehiculos[0].placas})</p>
+                )}
+              </div>
+              {/* Botones de contacto */}
+              <div className="mt-4 flex gap-2">
+                {caso.asociado.telefono && (
+                  <a
+                    href={`tel:${caso.asociado.telefono}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-green-700"
+                  >
+                    <Phone className="h-3.5 w-3.5" /> Llamar
+                  </a>
+                )}
+                {caso.asociado.email && (
+                  <a
+                    href={`mailto:${caso.asociado.email}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                  >
+                    <Mail className="h-3.5 w-3.5" /> Email
+                  </a>
                 )}
               </div>
             </div>

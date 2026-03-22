@@ -204,10 +204,13 @@ export interface CasoLegal {
   abogadoId: string | null;
   abogadoUsuarioId: string | null;
   asociado?: {
+    id?: string;
     idUnico: string;
     nombre: string;
     apellidoPat: string;
+    apellidoMat?: string | null;
     telefono: string;
+    email?: string | null;
     fotoUrl?: string | null;
     _count?: { documentos: number };
     vehiculos?: Vehiculo[];

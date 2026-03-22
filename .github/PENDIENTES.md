@@ -167,20 +167,9 @@ Ampliar el modelo de abogado con campos adicionales:
 
 Hallazgos de pruebas en producción. El rol abogado tiene las pantallas base pero le faltan herramientas operativas para dar seguimiento real a los casos.
 
-### I.1 — Mapa SOS: Control de permisos en interacción ❌ PENDIENTE
+### I.1 — Mapa SOS: Control de permisos en interacción ✅ COMPLETADO (commit `9153ffe`)
 
-**Problema**: Al hacer clic en un marcador del Mapa SOS, cualquier rol puede ver el panel lateral y navegar a "Ver detalle completo" del caso. Un abogado podría ver el detalle y modificar casos que no son suyos.
-
-**Solución**:
-- **Permiso nuevo**: `mapa-sos:ver-detalle-caso` — controla si el clic en marcador permite navegar al detalle
-- **Permiso nuevo**: `mapa-sos:interactuar` — controla si los marcadores son clickeables
-- `mapa-sos/page.tsx`: verificar `puede('mapa-sos:ver-detalle-caso')` antes de mostrar "Ver detalle completo"
-- Si el abogado no tiene el permiso, panel lateral muestra info resumida sin link al detalle
-- Alternativamente: si es abogado y el caso es suyo → permitir, si no es suyo → solo ver
-
-**Archivos**: `mapa-sos/page.tsx`, migración permisos, seed
-
-**Esfuerzo**: Bajo | **Prioridad**: Alta
+Abogado solo puede ver "Ver detalle completo" para sus casos asignados. API incluye `abogadoUsuario` en respuesta de `findAll`.
 
 ### I.2 — Mis Casos: Info completa del asociado + mapa ❌ PENDIENTE
 
@@ -237,11 +226,9 @@ Hallazgos de pruebas en producción. El rol abogado tiene las pantallas base per
 
 **Esfuerzo**: Alto | **Prioridad**: Media-Alta
 
-### I.5 / E3.5 — Eye icon en password de crear usuario ❌ PENDIENTE
+### I.5 / E3.5 — Eye icon en password de crear usuario ✅ COMPLETADO (commit `9153ffe`)
 
-Toggle Eye/EyeOff en campos de contraseña de `UsuariosTab.tsx` y `NuevoAbogadoDialog.tsx` (el login ya lo tiene).
-
-**Esfuerzo**: Bajo | **Prioridad**: Media (UX)
+Toggle Eye/EyeOff implementado en UsuariosTab.tsx (crear + reset) y NuevoAbogadoDialog.tsx.
 
 ---
 
@@ -327,19 +314,17 @@ Fase 8 (Polish):
 | Componente | Progreso | Notas |
 |------------|----------|-------|
 | **API** | ~97% | Todo funcional. Pendiente: D.3 limpieza (enum), I.4 documentos caso, J.1 verificación vehicular |
-| **CRM Web** | ~96% | 18+ rutas. Pendiente: I.1-I.5 flujo abogado completo, E3.5 eye icon |
+| **CRM Web** | ~97% | 18+ rutas. Pendiente: I.2-I.4 flujo abogado (casos/documentos) |
 | **App Flutter** | ~93% | 139 tests. Pendiente: C.3 shell profesional, E2.2 filtro cupones, J.2 UX verificación |
-| **Infra** | ✅ | Docker + Nginx + SSL + deploy script. Commit `11c0c99` en producción |
+| **Infra** | ✅ | Docker + Nginx + SSL + deploy script. Commit `9153ffe` en producción |
 | **IA** | ~98% | Documentos ✅, Auto-decide ✅, Anti-troll ✅, Cifrado ✅ |
 
-**Desplegado en**: `https://core-asoc.cbluna-dev.com` (commit `11c0c99` — 22-mar-2026)
+**Desplegado en**: `https://core-asoc.cbluna-dev.com` (commit `9153ffe` — 22-mar-2026)
 
 ### Problemas pendientes en producción
 
 | # | Problema | Severidad | Tarea |
 |---|----------|-----------|-------|
-| P3 | No hay eye icon en password al crear usuario | Baja | E3.5 |
-| P4 | Mapa SOS clickeable sin restricción de permisos | Alta | I.1 |
 | P5 | Mis Casos: falta info completa del asociado | Alta | I.2 |
 | P6 | Casos Disponibles: no muestra datos del asociado | Media | I.3 |
 | P7 | No hay mecanismo de documentos adjuntos al caso | Media-Alta | I.4 |
