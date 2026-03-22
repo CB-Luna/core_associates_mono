@@ -1,6 +1,6 @@
 # Pendientes — Core Associates
 
-> **Última actualización**: 22 de marzo de 2026
+> **Última actualización**: 22 de marzo de 2026 (post I.2 + I.3)
 > Documento con lo que falta por implementar. Solo tareas pendientes — lo completado se registra en `.github/completados/`.
 
 ---
@@ -15,9 +15,9 @@ D.3 RBAC dinámico (core) está completado. Quedan mejoras al flujo del abogado,
 |---|---------|---------|----------|----------|
 | **C.3** | App Móvil: shell profesional (abogado) | ❌ Pendiente | Alto | App |
 | **D.3** | RBAC limpieza — eliminar enum + ModuloMenu legacy | ❌ D.3.6/D.3.8/D.3.9 | Medio | API + CRM |
-| **E** | Mejoras menores (App + CRM) | ❌ E2.2-E2.4, E3.1-E3.5 | Varios | App + CRM |
+| **E** | Mejoras menores (App + CRM) | ❗ E3.5 hecho, resto pendiente | Varios | App + CRM |
 | **G.2** | Más campos abogado (dirección, teléfono, cédula) | ❌ Pendiente | Bajo-Medio | API + CRM |
-| **I** | Flujo Abogado — Mejoras CRM | ❌ Pendiente | Medio-Alto | API + CRM |
+| **I** | Flujo Abogado — Mejoras CRM | ❗ I.1-I.3 hechos, I.4 pendiente | Medio-Alto | API + CRM |
 | **J** | Verificación Vehicular | ❌ Pendiente (preparación) | Medio | API + CRM + App |
 
 ---
@@ -171,41 +171,13 @@ Hallazgos de pruebas en producción. El rol abogado tiene las pantallas base per
 
 Abogado solo puede ver "Ver detalle completo" para sus casos asignados. API incluye `abogadoUsuario` en respuesta de `findAll`.
 
-### I.2 — Mis Casos: Info completa del asociado + mapa ❌ PENDIENTE
+### I.2 — Mis Casos: Info completa del asociado + mapa ✅ COMPLETADO (commit `0d1b003`)
 
-**Problema**: La tabla de "Mis Casos" del abogado solo muestra el nombre del asociado. Necesita datos de contacto y ubicación del incidente.
+API expandido con email, apellidoMat en select del asociado. Tabla mis-casos: columna teléfono clickeable (tel:) + botón mapa mini-modal. Detalle: nombre completo, email, botones Llamar/Email.
 
-**Solución — Detalle de caso** (`/mis-casos/[id]`):
+### I.3 — Casos Disponibles: Info del asociado visible ✅ COMPLETADO (commit `0d1b003`)
 
-| Sección | Datos | Estado actual |
-|---------|-------|---------------|
-| **Asociado** | Nombre completo, teléfono, email, avatar | Solo nombre + teléfono (parcial) |
-| **Mapa del incidente** | Mapa embebido con marcador GPS | ✅ Ya existe |
-| **Vehículo involucrado** | Marca, modelo, año, placas, foto | ✅ Ya existe parcial |
-| **Documentos del caso** | Archivos adjuntos | ❌ No existe |
-| **Botón "Contactar"** | tel:+52... o mailto: | ❌ No existe |
-| **Solicitar documentos** | Pedir al asociado que suba algo | ❌ No existe |
-
-**Para la tabla** `/mis-casos`:
-- Columna con ícono de teléfono clickeable (tel:)
-- Botón/icono de mapa mini-modal con ubicación
-
-**Archivos**: `mis-casos/page.tsx`, `mis-casos/[id]/page.tsx`, API response expandido
-
-**Esfuerzo**: Medio | **Prioridad**: Alta
-
-### I.3 — Casos Disponibles: Info del asociado visible ❌ PENDIENTE
-
-**Problema**: Tabla de "Casos Disponibles" no muestra datos del asociado. El abogado necesita contexto mínimo para decidir si postularse.
-
-**Solución**:
-- Columna "Asociado" (nombre + avatar miniatura)
-- Botón mapa mini-modal con ubicación del incidente
-- No mostrar teléfono/email (se revela solo después de aceptar, por privacidad)
-
-**Archivos**: `casos-disponibles/page.tsx`
-
-**Esfuerzo**: Bajo | **Prioridad**: Media
+Columna "Asociado" con avatar + nombre. Botón mapa mini-modal con ubicación del incidente. fotoUrl incluido en API.
 
 ### I.4 — Documentos del caso: subida y solicitud ❌ PENDIENTE
 
@@ -316,10 +288,10 @@ Fase 8 (Polish):
 | **API** | ~97% | Todo funcional. Pendiente: D.3 limpieza (enum), I.4 documentos caso, J.1 verificación vehicular |
 | **CRM Web** | ~97% | 18+ rutas. Pendiente: I.2-I.4 flujo abogado (casos/documentos) |
 | **App Flutter** | ~93% | 139 tests. Pendiente: C.3 shell profesional, E2.2 filtro cupones, J.2 UX verificación |
-| **Infra** | ✅ | Docker + Nginx + SSL + deploy script. Commit `9153ffe` en producción |
+| **Infra** | ✅ | Docker + Nginx + SSL + deploy script. Commit `0d1b003` en producción |
 | **IA** | ~98% | Documentos ✅, Auto-decide ✅, Anti-troll ✅, Cifrado ✅ |
 
-**Desplegado en**: `https://core-asoc.cbluna-dev.com` (commit `9153ffe` — 22-mar-2026)
+**Desplegado en**: `https://core-asoc.cbluna-dev.com` (commit `0d1b003` — 22-mar-2026)
 
 ### Problemas pendientes en producción
 
