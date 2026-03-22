@@ -1,6 +1,6 @@
 # Pendientes — Core Associates
 
-> **Última actualización**: 22 de marzo de 2026 (post I.2 + I.3)
+> **Última actualización**: 22 de marzo de 2026 (post I.4.1)
 > Documento con lo que falta por implementar. Solo tareas pendientes — lo completado se registra en `.github/completados/`.
 
 ---
@@ -17,7 +17,7 @@ D.3 RBAC dinámico (core) está completado. Quedan mejoras al flujo del abogado,
 | **D.3** | RBAC limpieza — eliminar enum + ModuloMenu legacy | ❌ D.3.6/D.3.8/D.3.9 | Medio | API + CRM |
 | **E** | Mejoras menores (App + CRM) | ❗ E3.5 hecho, resto pendiente | Varios | App + CRM |
 | **G.2** | Más campos abogado (dirección, teléfono, cédula) | ❌ Pendiente | Bajo-Medio | API + CRM |
-| **I** | Flujo Abogado — Mejoras CRM | ❗ I.1-I.3 hechos, I.4 pendiente | Medio-Alto | API + CRM |
+| **I** | Flujo Abogado — Mejoras CRM | ❗ I.1-I.4.1 hechos, I.4.2 pendiente | Medio-Alto | API + CRM |
 | **J** | Verificación Vehicular | ❌ Pendiente (preparación) | Medio | API + CRM + App |
 
 ---
@@ -179,22 +179,24 @@ API expandido con email, apellidoMat en select del asociado. Tabla mis-casos: co
 
 Columna "Asociado" con avatar + nombre. Botón mapa mini-modal con ubicación del incidente. fotoUrl incluido en API.
 
-### I.4 — Documentos del caso: subida y solicitud ❌ PENDIENTE
+### I.4 — Documentos del caso: subida y solicitud ❗ PARCIAL
 
 **Problema**: No existe mecanismo para que el abogado suba documentos al caso ni para solicitar documentos al asociado.
 
-**I.4.1 — Documentos adjuntos (subida directa)**
-- Modelo `DocumentoCaso` vinculado a `CasoLegal`
-- Endpoint: `POST /casos-legales/:id/documentos` — MinIO bucket `core-associates-legal`
-- Endpoint: `GET /casos-legales/:id/documentos` — lista
-- UI CRM: sección "Documentos del caso" en detalle
+**I.4.1 — Documentos adjuntos (subida directa)** ✅ COMPLETADO (commit `992fc19`)
+- Modelo `DocumentoCaso` (tabla `documentos_caso`) con migración Prisma
+- API: `POST/GET/DELETE /casos-legales/:id/documentos` con FileInterceptor (10MB, jpeg/png/webp/pdf)
+- StorageService → MinIO bucket `core-associates-legal`
+- CRM admin: sección "Documentos del caso" en detalle `casos-legales/[id]`
+- CRM abogado: sección "Documentos" en detalle `mis-casos/[id]`
+- Permisos: `casos-legales:ver` + `casos-legales:ver-propios`
 
-**I.4.2 — Solicitar documentos al asociado**
+**I.4.2 — Solicitar documentos al asociado** ❌ PENDIENTE (fase App Flutter)
 - Modelo `SolicitudDocumento` con estado pendiente/entregado/vencido
 - Endpoint: `POST /casos-legales/:id/solicitar-documento` + push al asociado
 - App Flutter: pantalla "Documentos solicitados"
 
-**Archivos**: `schema.prisma`, migración, `casos-legales.service.ts`, `casos-legales.controller.ts`, CRM, App Flutter
+**Archivos**: `schema.prisma`, migración `20260322121648`, `casos-legales.service.ts`, `casos-legales.controller.ts`, `casos-legales.module.ts`, CRM admin + abogado, `api-types.ts`. Fase App Flutter pendiente.
 
 **Esfuerzo**: Alto | **Prioridad**: Media-Alta
 
