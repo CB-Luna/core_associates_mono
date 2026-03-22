@@ -1,13 +1,14 @@
 # Pendientes — Core Associates
 
-> **Última actualización**: 22 de marzo de 2026 (post D.3.8/D.3.9/G.2)
+> **Última actualización**: 22 de marzo de 2026 (post D.3.8/D.3.9/G.2 → commit `23ecdf8`)
 > Documento con lo que falta por implementar. Solo tareas pendientes — lo completado se registra en `.github/completados/`.
 
 ---
 
 ## Resumen Ejecutivo
 
-D.3 RBAC dinámico (core) está completado. D.3.8/D.3.9 limpieza hecha. G.2 campos abogado listos. Quedan mejoras al flujo del abogado y módulos de vehículos.
+D.3 RBAC dinámico (core) está completado. D.3.8/D.3.9 limpieza hecha. G.2 campos abogado listos.
+Commit `23ecdf8` cerró bugs de producción detectados en sesión de pruebas: descarga de documentos funcionando (endpoint streaming), `abogadoUsuario` visible en detalle de caso, auto-aceptar al asignar abogado. Además: iconos de especialidad en abogados, avatar en `NuevoAbogadoDialog`, sección asociado con avatar y todos los vehículos en `mis-casos`, barra de progreso visual en detalle de caso admin, soporte docx/txt en carga de documentos.
 
 > ⚠️ **Prioridad actual**: I.4.2 (solicitar docs al asociado), C.3 (App Móvil shell profesional), J (Verificación vehicular).
 
@@ -177,13 +178,23 @@ Columna "Asociado" con avatar + nombre. Botón mapa mini-modal con ubicación de
 
 **Problema**: No existe mecanismo para que el abogado suba documentos al caso ni para solicitar documentos al asociado.
 
-**I.4.1 — Documentos adjuntos (subida directa)** ✅ COMPLETADO (commit `992fc19`)
+**I.4.1 — Documentos adjuntos (subida directa)** ✅ COMPLETADO (commits `992fc19`, `23ecdf8`)
 - Modelo `DocumentoCaso` (tabla `documentos_caso`) con migración Prisma
-- API: `POST/GET/DELETE /casos-legales/:id/documentos` con FileInterceptor (10MB, jpeg/png/webp/pdf)
+- API: `POST/GET/DELETE /casos-legales/:id/documentos` con FileInterceptor (10MB, jpeg/png/webp/pdf/docx/txt)
+- API: `GET /casos-legales/:id/documentos/:docId/download` — endpoint streaming (Buffer → `StreamableFile`) para evitar URLs internas de MinIO
 - StorageService → MinIO bucket `core-associates-legal`
 - CRM admin: sección "Documentos del caso" en detalle `casos-legales/[id]`
 - CRM abogado: sección "Documentos" en detalle `mis-casos/[id]`
+- Descarga: ambas páginas usan `apiImageUrl(…/download)` → blob URL → `a.download = doc.nombre`
 - Permisos: `casos-legales:ver` + `casos-legales:ver-propios`
+
+**Otras correcciones y mejoras (commit `23ecdf8`)**
+- Bug: `findOne` ahora incluye `abogadoUsuario` en el select → abogado asignado visible en detalle admin
+- Bug: `assignAbogado` cambia automáticamente `estado → en_atencion` → desaparece el confuso botón "Aceptar caso"
+- Feat: Iconos por especialidad en tabla de abogados (`Gavel`, `Car`, `HardHat`, etc.)
+- Feat: `NuevoAbogadoDialog` con upload de avatar circular → `POST /auth/users/:id/avatar`
+- Feat: Detalle `mis-casos/[id]` muestra avatar del asociado + todos sus vehículos en tarjetas
+- Feat: Barra de progreso visual (Abierto → En atención → Resuelto → Cerrado) en `casos-legales/[id]`
 
 **I.4.2 — Solicitar documentos al asociado** ❌ PENDIENTE (fase App Flutter)
 - Modelo `SolicitudDocumento` con estado pendiente/entregado/vencido
@@ -285,8 +296,8 @@ Fase 8 (Polish):
 
 | Componente | Progreso | Notas |
 |------------|----------|-------|
-| **API** | ~97% | Todo funcional. Pendiente: D.3 limpieza (enum), I.4 documentos caso, J.1 verificación vehicular |
-| **CRM Web** | ~97% | 18+ rutas. Pendiente: I.2-I.4 flujo abogado (casos/documentos) |
+| **API** | ~98% | Todo funcional. Pendiente: D.3 limpieza (enum), I.4.2 solicitar docs, J.1 verificación vehicular |
+| **CRM Web** | ~98% | 18+ rutas. I.4.1 completo con streaming. Pendiente: I.4.2 (App Flutter), mejoras E3 |
 | **App Flutter** | ~93% | 139 tests. Pendiente: C.3 shell profesional, E2.2 filtro cupones, J.2 UX verificación |
 | **Infra** | ✅ | Docker + Nginx + SSL + deploy script. Commit `0d1b003` en producción |
 | **IA** | ~98% | Documentos ✅, Auto-decide ✅, Anti-troll ✅, Cifrado ✅ |
