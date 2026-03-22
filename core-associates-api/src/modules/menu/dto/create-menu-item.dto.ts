@@ -2,7 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsOptional,
-  IsArray,
   IsInt,
   IsBoolean,
   IsEnum,
@@ -33,12 +32,6 @@ export class CreateMenuItemDto {
   @IsString()
   @MaxLength(50)
   icono?: string;
-
-  @ApiPropertyOptional({ example: ['admin', 'operador'] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  permisos?: string[];
 
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()

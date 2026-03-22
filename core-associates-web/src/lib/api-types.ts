@@ -5,7 +5,6 @@ export interface MenuItem {
   titulo: string;
   ruta: string | null;
   icono: string | null;
-  permisos: string[];
   orden: number;
   tipo: 'enlace' | 'seccion' | 'separador';
   visible: boolean;
@@ -484,6 +483,9 @@ export interface AbogadoCRM {
   estado: 'activo' | 'inactivo';
   avatarUrl: string | null;
   especialidad: string | null;
+  cedulaProfesional: string | null;
+  telefono: string | null;
+  direccion: string | null;
   ultimoAcceso: string | null;
   createdAt: string;
   _count: { casosComoAbogado: number };

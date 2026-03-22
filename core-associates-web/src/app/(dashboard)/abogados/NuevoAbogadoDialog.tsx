@@ -31,6 +31,9 @@ export function NuevoAbogadoDialog({ onClose, onSaved }: NuevoAbogadoDialogProps
     password: '',
     confirmPassword: '',
     especialidad: '',
+    cedulaProfesional: '',
+    telefono: '',
+    direccion: '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -81,6 +84,9 @@ export function NuevoAbogadoDialog({ onClose, onSaved }: NuevoAbogadoDialogProps
         rolId: abogadoRolId,
       };
       if (form.especialidad) body.especialidad = form.especialidad;
+      if (form.cedulaProfesional.trim()) body.cedulaProfesional = form.cedulaProfesional.trim();
+      if (form.telefono.trim()) body.telefono = form.telefono.trim();
+      if (form.direccion.trim()) body.direccion = form.direccion.trim();
 
       await apiClient('/auth/register-admin', {
         method: 'POST',
@@ -144,6 +150,39 @@ export function NuevoAbogadoDialog({ onClose, onSaved }: NuevoAbogadoDialogProps
                 <option key={e.value} value={e.value}>{e.label}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Cédula profesional</label>
+            <input
+              name="cedulaProfesional"
+              value={form.cedulaProfesional}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              placeholder="12345678"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Teléfono</label>
+            <input
+              name="telefono"
+              value={form.telefono}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              placeholder="55 1234 5678"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Dirección</label>
+            <input
+              name="direccion"
+              value={form.direccion}
+              onChange={handleChange}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              placeholder="Calle, Núm, Colonia, Alcaldía"
+            />
           </div>
 
           <div>

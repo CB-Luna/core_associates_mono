@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Mail, Briefcase, Scale, Clock, Calendar, Save, User } from 'lucide-react';
+import { ArrowLeft, Mail, Briefcase, Scale, Clock, Calendar, Save, User, Phone, MapPin, FileText } from 'lucide-react';
 import { apiClient, apiImageUrl } from '@/lib/api-client';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import type { AbogadoDetalle, CasoLegal } from '@/lib/api-types';
@@ -62,8 +62,11 @@ export default function AbogadoDetailPage() {
   const [loading, setLoading] = useState(true);
   const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
 
-  // Edit especialidad
+  // Edit fields
   const [editEsp, setEditEsp] = useState('');
+  const [editCedula, setEditCedula] = useState('');
+  const [editTelefono, setEditTelefono] = useState('');
+  const [editDireccion, setEditDireccion] = useState('');
   const [savingEsp, setSavingEsp] = useState(false);
 
   const fetchAbogado = useCallback(async () => {
@@ -71,6 +74,9 @@ export default function AbogadoDetailPage() {
       const data = await apiClient<AbogadoDetalle>(`/auth/users/abogados/${id}`);
       setAbogado(data);
       setEditEsp(data.especialidad || '');
+      setEditCedula(data.cedulaProfesional || '');
+      setEditTelefono(data.telefono || '');
+      setEditDireccion(data.direccion || '');
     } catch (err: any) {
       toast('error', 'Error', err.message || 'No se pudo cargar el abogado');
     } finally {
@@ -91,16 +97,27 @@ export default function AbogadoDetailPage() {
     return () => { revoked = true; if (avatarSrc) URL.revokeObjectURL(avatarSrc); };
   }, [abogado?.id, abogado?.avatarUrl]);
 
-  const handleSaveEspecialidad = async () => {
+  const handleSaveProfile = async () => {
     if (!abogado) return;
     setSavingEsp(true);
     try {
       await apiClient(`/auth/users/${abogado.id}`, {
         method: 'PUT',
-        body: JSON.stringify({ especialidad: editEsp }),
+        body: JSON.stringify({
+          especialidad: editEsp,
+          cedulaProfesional: editCedula,
+          telefono: editTelefono,
+          direccion: editDireccion,
+        }),
       });
-      setAbogado({ ...abogado, especialidad: editEsp || null });
-      toast('success', 'Especialidad actualizada');
+      setAbogado({
+        ...abogado,
+        especialidad: editEsp || null,
+        cedulaProfesional: editCedula || null,
+        telefono: editTelefono || null,
+        direccion: editDireccion || null,
+      });
+      toast('success', 'Perfil actualizado');
     } catch (err: any) {
       toast('error', 'Error', err.message || 'No se pudo actualizar');
     } finally {
@@ -179,29 +196,89 @@ export default function AbogadoDetailPage() {
                 <span>Último acceso: {formatFechaConHora(abogado.ultimoAcceso)}</span>
               </div>
             )}
+            {abogado.telefono && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Phone className="h-4 w-4 text-gray-400" />
+                <span>{abogado.telefono}</span>
+              </div>
+            )}
+            {abogado.cedulaProfesional && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <FileText className="h-4 w-4 text-gray-400" />
+                <span>Cédula: {abogado.cedulaProfesional}</span>
+              </div>
+            )}
           </div>
 
-          {/* Especialidad editor */}
-          <div className="mt-6 border-t border-gray-100 pt-4">
-            <label className="mb-1.5 block text-xs font-medium text-gray-500 uppercase tracking-wider">Especialidad</label>
-            <div className="flex items-center gap-2">
+          {/* Datos profesionales editor */}
+          <div className="mt-6 border-t border-gray-100 pt-4 space-y-3">
+            <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Datos profesionales</h3>
+
+            <div>
+              <label className="mb-1 block text-xs text-gray-500">Especialidad</label>
               <select
                 value={editEsp}
                 onChange={(e) => setEditEsp(e.target.value)}
-                className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
               >
                 {especialidadOptions.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
-              <button
-                onClick={handleSaveEspecialidad}
-                disabled={savingEsp || editEsp === (abogado.especialidad || '')}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white transition-colors hover:bg-violet-700 disabled:opacity-40"
-              >
-                <Save className="h-4 w-4" />
-              </button>
             </div>
+
+            <div>
+              <label className="mb-1 flex items-center gap-1.5 text-xs text-gray-500">
+                <FileText className="h-3.5 w-3.5" /> Cédula profesional
+              </label>
+              <input
+                type="text"
+                value={editCedula}
+                onChange={(e) => setEditCedula(e.target.value)}
+                placeholder="Ej. 12345678"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 flex items-center gap-1.5 text-xs text-gray-500">
+                <Phone className="h-3.5 w-3.5" /> Teléfono
+              </label>
+              <input
+                type="tel"
+                value={editTelefono}
+                onChange={(e) => setEditTelefono(e.target.value)}
+                placeholder="Ej. 55 1234 5678"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 flex items-center gap-1.5 text-xs text-gray-500">
+                <MapPin className="h-3.5 w-3.5" /> Dirección
+              </label>
+              <input
+                type="text"
+                value={editDireccion}
+                onChange={(e) => setEditDireccion(e.target.value)}
+                placeholder="Dirección del despacho"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+
+            <button
+              onClick={handleSaveProfile}
+              disabled={savingEsp || (
+                editEsp === (abogado.especialidad || '') &&
+                editCedula === (abogado.cedulaProfesional || '') &&
+                editTelefono === (abogado.telefono || '') &&
+                editDireccion === (abogado.direccion || '')
+              )}
+              className="w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {savingEsp ? 'Guardando…' : 'Guardar cambios'}
+            </button>
           </div>
         </div>
 

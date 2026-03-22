@@ -208,7 +208,7 @@ async function main() {
   for (const item of menuItems) {
     await prisma.moduloMenu.upsert({
       where: { codigo: item.codigo },
-      update: { titulo: item.titulo, ruta: item.ruta, icono: item.icono, permisos: item.permisos, orden: item.orden },
+      update: { titulo: item.titulo, ruta: item.ruta, icono: item.icono, orden: item.orden },
       create: item,
     });
   }

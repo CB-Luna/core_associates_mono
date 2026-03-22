@@ -231,6 +231,9 @@ export class AuthService {
           estado: true,
           avatarUrl: true,
           especialidad: true,
+          cedulaProfesional: true,
+          telefono: true,
+          direccion: true,
           ultimoAcceso: true,
           createdAt: true,
           _count: {
@@ -276,6 +279,9 @@ export class AuthService {
         estado: true,
         avatarUrl: true,
         especialidad: true,
+        cedulaProfesional: true,
+        telefono: true,
+        direccion: true,
         proveedorId: true,
         ultimoAcceso: true,
         createdAt: true,
@@ -319,6 +325,9 @@ export class AuthService {
     rolId?: string;
     proveedorId?: string;
     especialidad?: string;
+    cedulaProfesional?: string;
+    telefono?: string;
+    direccion?: string;
   }) {
     const existing = await this.prisma.usuario.findUnique({
       where: { email: data.email },
@@ -354,6 +363,9 @@ export class AuthService {
         ...(rolRecord?.temaIdPorDefecto && { temaId: rolRecord.temaIdPorDefecto }),
         ...(data.proveedorId && { proveedorId: data.proveedorId }),
         ...(data.especialidad && { especialidad: data.especialidad }),
+        ...(data.cedulaProfesional && { cedulaProfesional: data.cedulaProfesional }),
+        ...(data.telefono && { telefono: data.telefono }),
+        ...(data.direccion && { direccion: data.direccion }),
       },
       select: {
         id: true,
@@ -377,6 +389,9 @@ export class AuthService {
     rolId?: string;
     estado?: string;
     especialidad?: string;
+    cedulaProfesional?: string;
+    telefono?: string;
+    direccion?: string;
   }) {
     const usuario = await this.prisma.usuario.findUnique({ where: { id } });
     if (!usuario) throw new NotFoundException('Usuario no encontrado');
@@ -414,6 +429,9 @@ export class AuthService {
         ...rolUpdateData,
         ...(data.estado && { estado: data.estado as EstadoUsuario }),
         ...(data.especialidad !== undefined && { especialidad: data.especialidad || null }),
+        ...(data.cedulaProfesional !== undefined && { cedulaProfesional: data.cedulaProfesional || null }),
+        ...(data.telefono !== undefined && { telefono: data.telefono || null }),
+        ...(data.direccion !== undefined && { direccion: data.direccion || null }),
       },
       select: {
         id: true,

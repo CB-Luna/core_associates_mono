@@ -11,6 +11,7 @@ const HMAC_SECRET = 'core-associates-secret';
 const ROL_ADMIN_ID     = 'a0000000-0000-4000-8000-000000000001';
 const ROL_OPERADOR_ID  = 'a0000000-0000-4000-8000-000000000002';
 const ROL_PROVEEDOR_ID = 'a0000000-0000-4000-8000-000000000003';
+const ROL_ABOGADO_ID   = 'a0000000-0000-4000-8000-000000000004';
 
 async function main() {
   console.log('=== SEED DEMO: Poblando datos de demostración ===\n');
@@ -336,23 +337,23 @@ async function main() {
 
   // ── MEN\u00da (con encoding UTF-8 correcto) ──
   const menuItems = [
-    { codigo: 'dashboard', titulo: 'Dashboard', ruta: '/dashboard', icono: 'LayoutDashboard', permisos: ['admin', 'operador', 'proveedor'], orden: 1 },
-    { codigo: 'asociados', titulo: 'Asociados', ruta: '/asociados', icono: 'Users', permisos: ['admin', 'operador'], orden: 2 },
-    { codigo: 'proveedores', titulo: 'Proveedores', ruta: '/proveedores', icono: 'Building2', permisos: ['admin', 'operador'], orden: 3 },
-    { codigo: 'promociones', titulo: 'Promociones', ruta: '/promociones', icono: 'Tag', permisos: ['admin', 'operador', 'proveedor'], orden: 4 },
-    { codigo: 'cupones', titulo: 'Cupones', ruta: '/cupones', icono: 'Ticket', permisos: ['admin', 'operador', 'proveedor'], orden: 5 },
-    { codigo: 'casos-legales', titulo: 'Casos Legales', ruta: '/casos-legales', icono: 'Scale', permisos: ['admin', 'operador'], orden: 6 },
-    { codigo: 'abogados', titulo: 'Abogados', ruta: '/abogados', icono: 'Gavel', permisos: ['admin', 'operador'], orden: 7 },
-    { codigo: 'documentos', titulo: 'Documentos', ruta: '/documentos', icono: 'FileText', permisos: ['admin', 'operador'], orden: 8 },
-    { codigo: 'mapa-sos', titulo: 'Mapa SOS', ruta: '/mapa-sos', icono: 'MapPinned', permisos: ['admin', 'operador'], orden: 9 },
-    { codigo: 'reportes', titulo: 'Reportes', ruta: '/reportes', icono: 'BarChart3', permisos: ['admin'], orden: 10 },
-    { codigo: 'configuracion', titulo: 'Configuración', ruta: '/configuracion', icono: 'Settings', permisos: ['admin'], orden: 11 },
+    { codigo: 'dashboard', titulo: 'Dashboard', ruta: '/dashboard', icono: 'LayoutDashboard', orden: 1 },
+    { codigo: 'asociados', titulo: 'Asociados', ruta: '/asociados', icono: 'Users', orden: 2 },
+    { codigo: 'proveedores', titulo: 'Proveedores', ruta: '/proveedores', icono: 'Building2', orden: 3 },
+    { codigo: 'promociones', titulo: 'Promociones', ruta: '/promociones', icono: 'Tag', orden: 4 },
+    { codigo: 'cupones', titulo: 'Cupones', ruta: '/cupones', icono: 'Ticket', orden: 5 },
+    { codigo: 'casos-legales', titulo: 'Casos Legales', ruta: '/casos-legales', icono: 'Scale', orden: 6 },
+    { codigo: 'abogados', titulo: 'Abogados', ruta: '/abogados', icono: 'Gavel', orden: 7 },
+    { codigo: 'documentos', titulo: 'Documentos', ruta: '/documentos', icono: 'FileText', orden: 8 },
+    { codigo: 'mapa-sos', titulo: 'Mapa SOS', ruta: '/mapa-sos', icono: 'MapPinned', orden: 9 },
+    { codigo: 'reportes', titulo: 'Reportes', ruta: '/reportes', icono: 'BarChart3', orden: 10 },
+    { codigo: 'configuracion', titulo: 'Configuración', ruta: '/configuracion', icono: 'Settings', orden: 11 },
   ];
 
   for (const item of menuItems) {
     await prisma.moduloMenu.upsert({
       where: { codigo: item.codigo },
-      update: { titulo: item.titulo, ruta: item.ruta, icono: item.icono, permisos: item.permisos, orden: item.orden },
+      update: { titulo: item.titulo, ruta: item.ruta, icono: item.icono, orden: item.orden },
       create: item,
     });
   }
@@ -361,6 +362,7 @@ async function main() {
   await prisma.rol.update({ where: { id: ROL_ADMIN_ID }, data: { icono: 'ShieldCheck', color: '#EF4444' } });
   await prisma.rol.update({ where: { id: ROL_OPERADOR_ID }, data: { icono: 'Headset', color: '#3B82F6' } });
   await prisma.rol.update({ where: { id: ROL_PROVEEDOR_ID }, data: { icono: 'Building2', color: '#10B981' } });
+  await prisma.rol.update({ where: { id: ROL_ABOGADO_ID }, data: { icono: 'Gavel', color: '#8B5CF6' } });
   console.log('✓ Roles actualizados con icono y color');
 
   // ── ROLES ↔ MODULOS DE MENÚ (RolModuloMenu) ──
@@ -371,6 +373,7 @@ async function main() {
     { rolId: ROL_ADMIN_ID, codigos: ['dashboard', 'asociados', 'proveedores', 'promociones', 'cupones', 'casos-legales', 'abogados', 'documentos', 'mapa-sos', 'reportes', 'configuracion'] },
     { rolId: ROL_OPERADOR_ID, codigos: ['dashboard', 'asociados', 'proveedores', 'promociones', 'cupones', 'casos-legales', 'abogados', 'documentos', 'mapa-sos'] },
     { rolId: ROL_PROVEEDOR_ID, codigos: ['dashboard', 'promociones', 'cupones'] },
+    { rolId: ROL_ABOGADO_ID, codigos: ['dashboard', 'casos-legales', 'mapa-sos'] },
   ];
 
   for (const assignment of rolMenuAssignments) {

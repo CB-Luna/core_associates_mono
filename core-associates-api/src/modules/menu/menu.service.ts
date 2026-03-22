@@ -14,35 +14,18 @@ const PROTECTED_CODES = ['configuracion'];
 export class MenuService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getMenuTree(userRol: string, rolId?: string) {
-    let items: any[];
+  async getMenuTree(rolId?: string) {
+    if (!rolId) return [];
 
-    if (rolId) {
-      // Nuevo sistema: buscar items via RolModuloMenu
-      const rolMenuItems = await this.prisma.rolModuloMenu.findMany({
-        where: { rolId },
-        include: { moduloMenu: true },
-        orderBy: { orden: 'asc' },
-      });
+    const rolMenuItems = await this.prisma.rolModuloMenu.findMany({
+      where: { rolId },
+      include: { moduloMenu: true },
+      orderBy: { orden: 'asc' },
+    });
 
-      if (rolMenuItems.length > 0) {
-        items = rolMenuItems
-          .filter((rm) => rm.moduloMenu.visible)
-          .map((rm) => ({ ...rm.moduloMenu, orden: rm.orden }));
-      } else {
-        // Fallback: si el rol no tiene items asignados aún, usar el sistema legacy
-        items = await this.prisma.moduloMenu.findMany({
-          where: { visible: true, permisos: { has: userRol } },
-          orderBy: { orden: 'asc' },
-        });
-      }
-    } else {
-      // Sistema legacy: filtrar por array de strings
-      items = await this.prisma.moduloMenu.findMany({
-        where: { visible: true, permisos: { has: userRol } },
-        orderBy: { orden: 'asc' },
-      });
-    }
+    const items = rolMenuItems
+      .filter((rm) => rm.moduloMenu.visible)
+      .map((rm) => ({ ...rm.moduloMenu, orden: rm.orden }));
 
     // Build hierarchical tree
     const map = new Map<string, any>();
@@ -85,7 +68,6 @@ export class MenuService {
         titulo: dto.titulo,
         ruta: dto.ruta ?? null,
         icono: dto.icono ?? null,
-        permisos: dto.permisos ?? [],
         orden: dto.orden ?? 0,
         tipo: (dto.tipo as any) ?? 'enlace',
         visible: dto.visible ?? true,
@@ -106,10 +88,6 @@ export class MenuService {
       // No permitir cambiar el código de un item protegido
       if (dto.codigo !== undefined && dto.codigo !== item.codigo) {
         throw new BadRequestException(`No se puede cambiar el código del item protegido '${item.codigo}'`);
-      }
-      // Siempre debe tener 'admin' en permisos
-      if (dto.permisos !== undefined && !dto.permisos.includes('admin')) {
-        throw new BadRequestException(`El item '${item.codigo}' es un módulo crítico del sistema y siempre debe incluir el rol 'admin'`);
       }
       // No se puede ocultar
       if (dto.visible === false) {
@@ -134,7 +112,6 @@ export class MenuService {
         ...(dto.titulo !== undefined && { titulo: dto.titulo }),
         ...(dto.ruta !== undefined && { ruta: dto.ruta }),
         ...(dto.icono !== undefined && { icono: dto.icono }),
-        ...(dto.permisos !== undefined && { permisos: dto.permisos }),
         ...(dto.orden !== undefined && { orden: dto.orden }),
         ...(dto.tipo !== undefined && { tipo: dto.tipo as any }),
         ...(dto.visible !== undefined && { visible: dto.visible }),

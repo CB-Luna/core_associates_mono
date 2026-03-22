@@ -118,7 +118,6 @@ model ModuloMenu {
   titulo    String    @db.VarChar(100)
   ruta      String?   @db.VarChar(200)
   icono     String?   @db.VarChar(50) // Nombre de ícono Lucide
-  permisos  String[]  @default([]) // Roles con acceso: admin, operador, proveedor
   orden     Int       @default(0)
   tipo      TipoMenu  @default(enlace)
   visible   Boolean   @default(true)
@@ -433,8 +432,11 @@ model Usuario {
   rolId         String?       @map("rol_id") @db.Uuid
   proveedorId   String?       @map("proveedor_id") @db.Uuid
   avatarUrl     String?       @map("avatar_url") @db.VarChar(255)
-  especialidad  String?       @db.VarChar(100)
-  temaId        String?       @map("tema_id") @db.Uuid
+  especialidad       String?       @db.VarChar(100)
+  cedulaProfesional  String?       @map("cedula_profesional") @db.VarChar(50)
+  telefono           String?       @db.VarChar(20)
+  direccion          String?       @db.VarChar(300)
+  temaId             String?       @map("tema_id") @db.Uuid
   estado        EstadoUsuario @default(activo)
   ultimoAcceso  DateTime?     @map("ultimo_acceso")
   createdAt     DateTime      @default(now()) @map("created_at")

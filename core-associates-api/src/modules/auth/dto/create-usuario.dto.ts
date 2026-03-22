@@ -36,4 +36,19 @@ export class CreateUsuarioDto {
   @IsOptional()
   @IsString()
   especialidad?: string;
+
+  @ApiPropertyOptional({ description: 'Cédula profesional del abogado' })
+  @IsOptional()
+  @IsString()
+  cedulaProfesional?: string;
+
+  @ApiPropertyOptional({ description: 'Teléfono directo del abogado' })
+  @IsOptional()
+  @IsString()
+  telefono?: string;
+
+  @ApiPropertyOptional({ description: 'Dirección de contacto del abogado' })
+  @IsOptional()
+  @IsString()
+  direccion?: string;
 }

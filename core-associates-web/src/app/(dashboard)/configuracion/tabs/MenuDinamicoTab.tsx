@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { Badge } from '@/components/ui/Badge';
-import { type MenuItem } from '@/lib/api-types';
 import { getIcon, iconMap } from '@/lib/icon-map';
 import {
   RefreshCw, Plus, Pencil, ChevronUp, ChevronDown,
@@ -22,7 +21,6 @@ interface MenuItemFlat {
   titulo: string;
   ruta: string | null;
   icono: string | null;
-  permisos: string[];
   orden: number;
   tipo: 'enlace' | 'seccion' | 'separador';
   visible: boolean;
@@ -34,7 +32,6 @@ const EMPTY_ITEM: Omit<MenuItemFlat, 'id'> = {
   titulo: '',
   ruta: '',
   icono: null,
-  permisos: ['admin'],
   orden: 0,
   tipo: 'enlace',
   visible: true,
@@ -42,7 +39,6 @@ const EMPTY_ITEM: Omit<MenuItemFlat, 'id'> = {
 };
 
 const AVAILABLE_ICONS = Object.keys(iconMap);
-const ROLES = ['admin', 'operador', 'proveedor'];
 const TIPOS: MenuItemFlat['tipo'][] = ['enlace', 'seccion', 'separador'];
 
 export function MenuDinamicoTab() {
@@ -123,7 +119,6 @@ export function MenuDinamicoTab() {
       titulo: item.titulo,
       ruta: item.ruta || '',
       icono: item.icono,
-      permisos: [...item.permisos],
       orden: item.orden,
       tipo: item.tipo,
       visible: item.visible,
@@ -159,17 +154,6 @@ export function MenuDinamicoTab() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const togglePermiso = (rol: string) => {
-    // No permitir quitar 'admin' de items protegidos
-    if (rol === 'admin' && editingItem && PROTECTED_CODES.includes(editingItem.codigo)) return;
-    setFormData((prev) => ({
-      ...prev,
-      permisos: prev.permisos.includes(rol)
-        ? prev.permisos.filter((r) => r !== rol)
-        : [...prev.permisos, rol],
-    }));
   };
 
   return (
@@ -267,22 +251,6 @@ export function MenuDinamicoTab() {
                       <span className="font-mono">{item.codigo}</span>
                       {item.ruta && <span className="font-mono">{item.ruta}</span>}
                     </div>
-                  </div>
-
-                  {/* Permisos */}
-                  <div className="hidden sm:flex flex-wrap gap-1">
-                    {item.permisos.map((p) => (
-                      <span
-                        key={p}
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          p === 'admin' ? 'bg-red-100 text-red-700' :
-                          p === 'operador' ? 'bg-blue-100 text-blue-700' :
-                          'bg-amber-100 text-amber-700'
-                        }`}
-                      >
-                        {p}
-                      </span>
-                    ))}
                   </div>
 
                   {/* Actions */}
@@ -403,35 +371,6 @@ export function MenuDinamicoTab() {
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
-                </div>
-              </div>
-
-              {/* Permisos (roles) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Roles con acceso</label>
-                <div className="flex gap-2">
-                  {ROLES.map((rol) => {
-                    const isActive = formData.permisos.includes(rol);
-                    const isLocked = rol === 'admin' && !!editingItem && PROTECTED_CODES.includes(editingItem.codigo);
-                    return (
-                      <button
-                        key={rol}
-                        type="button"
-                        onClick={() => togglePermiso(rol)}
-                        disabled={isLocked}
-                        className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${isLocked ? 'cursor-not-allowed opacity-70' : ''} ${
-                          isActive
-                            ? rol === 'admin' ? 'bg-red-600 text-white' :
-                              rol === 'operador' ? 'bg-blue-600 text-white' :
-                              'bg-amber-600 text-white'
-                            : 'bg-gray-100 text-gray-500'
-                        }`}
-                        title={isLocked ? 'El rol admin es obligatorio para este módulo' : undefined}
-                      >
-                        {rol}{isLocked && ' \uD83D\uDD12'}
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
 

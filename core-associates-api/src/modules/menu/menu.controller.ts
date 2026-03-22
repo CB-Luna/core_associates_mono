@@ -21,7 +21,7 @@ export class MenuController {
   @ApiResponse({ status: 200, description: 'Árbol de menú filtrado por permisos del rol' })
   @ApiResponse({ status: 401, description: 'No autenticado' })
   getMenu(@CurrentUser() user: { id: string; rol: string; rolId?: string; tipo: string }) {
-    return this.menuService.getMenuTree(user.rol, user.rolId);
+    return this.menuService.getMenuTree(user.rolId);
   }
 
   @Get('all')
