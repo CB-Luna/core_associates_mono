@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
+import { ChatWidget } from '@/components/chat/ChatWidget';
 import { useAuthStore } from '@/stores/auth-store';
 
 // Routes accessible to proveedor role
@@ -78,6 +79,9 @@ export default function DashboardLayout({
         <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 dark:bg-gray-900">{children}</main>
       </div>
+
+      {/* Chat widget — persists across pages */}
+      <ChatWidget />
     </div>
   );
 }

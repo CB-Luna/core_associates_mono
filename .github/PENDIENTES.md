@@ -2,7 +2,7 @@
 
 > **Última actualización**: 22 de marzo de 2026  
 > Solo tareas **pendientes**. Lo completado está archivado en `.github/completados/`.  
-> Commit actual en producción: `23ecdf8` → `https://core-asoc.cbluna-dev.com`
+> Commit actual en producción: `856240b` → `https://core-asoc.cbluna-dev.com`
 
 ---
 
@@ -12,7 +12,7 @@ El CRM web (admin/operador/abogado) y la API están funcionales al ~98%. La App 
 
 | Módulo | Descripción | Prioridad |
 |--------|-------------|-----------|
-| **F** | Flujo abogado — mejoras operativas pendientes | Alta |
+| **F** | Flujo abogado — F.1/F.2/F.3 ✅ completados; F.4/F.5 pendientes | Media |
 | **K** | Asistente IA (chatbot CRM) — modo clásico + modo IA avanzado | Alta |
 | **C** | App Móvil — shell profesional del abogado | Media-Alta |
 | **J** | Verificación vehicular | Media |
@@ -25,40 +25,17 @@ El CRM web (admin/operador/abogado) y la API están funcionales al ~98%. La App 
 
 Hallazgos tras auditar el código actual del flujo de casos legales. El abogado tiene las herramientas base (ver casos, notas, documentos, aceptar/rechazar/escalar) pero hay huecos operativos.
 
-### F.1 — Abogado puede marcar caso como "Resuelto"
+### ~~F.1 — Abogado puede marcar caso como "Resuelto"~~ ✅ `856240b`
 
-**Problema**: Hoy el abogado solo puede cambiar un caso a `en_atencion` o `escalado` (DTO `CambiarEstadoAbogadoDto`). Si termina su gestión legal, tiene que avisar por fuera al operador para que resuelva/cierre. Eso es un cuello de botella.
+Completado. DTO `CambiarEstadoAbogadoDto` acepta `resuelto`. Botón "Marcar como resuelto" en `mis-casos/[id]/page.tsx`. Al resolver: `fechaCierre` se estampa + notificación a operadores.
 
-**Solución**: Agregar `resuelto` al DTO `CambiarEstadoAbogadoDto` + botón "Marcar como resuelto" en `mis-casos/[id]/page.tsx`. Flujo propuesto:
-1. **Abogado resuelve** → estado pasa a `resuelto`, notifica a operadores
-2. **Operador verifica** → si todo bien, cambia a `cerrado` (cierre administrativo)
+### ~~F.2 — Validación de transiciones de estado~~ ✅ `856240b`
 
-**Alcance**: API (DTO + service) + CRM (botón en vista abogado)  
-**Esfuerzo**: Bajo
+Completado. Matriz `TRANSICIONES_VALIDAS` en `casos-legales.service.ts`. `updateEstado()` valida transiciones y lanza `BadRequestException` si es inválida. Tests: 21/21.
 
-### F.2 — Validación de transiciones de estado
+### ~~F.3 — Notas privadas del abogado~~ ✅ `856240b`
 
-**Problema**: `updateEstado()` en el service acepta cualquier transición — un admin puede saltar de `cerrado` a `abierto` sin restricciones. Puede causar inconsistencias (reabrir sin re-asignar abogado).
-
-**Solución**: Matriz de transiciones permitidas en el service:
-```
-abierto      → en_atencion, cancelado
-en_atencion  → escalado, resuelto, cancelado
-escalado     → en_atencion, resuelto, cancelado
-resuelto     → cerrado, en_atencion (reabrir)
-cerrado      → (fin)
-cancelado    → abierto (reactivar, solo admin)
-```
-
-**Alcance**: API (service)  
-**Esfuerzo**: Bajo
-
-### F.3 — Notas privadas del abogado
-
-**Problema**: La UI del abogado (`mis-casos/[id]`) fuerza `esPrivada: false`. El abogado no puede dejar notas internas que solo vea el equipo admin/operador (ej: "Asociado no coopera", "Documento sospechoso").
-
-**Solución**: Agregar toggle `esPrivada` en el formulario de notas del abogado, idéntico al del admin.  
-**Esfuerzo**: Bajo
+Completado. Toggle `esPrivada` con icono Lock en formulario de notas del abogado. Notas privadas con borde/fondo amber + icono candado.
 
 ### F.4 — Solicitud de documentos al asociado
 
@@ -336,10 +313,10 @@ El campo `Usuario.rol` (enum: admin, operador, proveedor, abogado) coexiste con 
 ## Orden de Implementación
 
 ```
-Fase 1 — Flujo Abogado (mejoras rápidas):
-  ├─ F.1 Abogado puede resolver caso (DTO + botón)
-  ├─ F.2 Validación de transiciones de estado
-  └─ F.3 Notas privadas del abogado
+Fase 1 — Flujo Abogado (mejoras rápidas): ✅ COMPLETADA (856240b)
+  ├─ ✅ F.1 Abogado puede resolver caso
+  ├─ ✅ F.2 Validación de transiciones de estado
+  └─ ✅ F.3 Notas privadas del abogado
 
 Fase 2 — Asistente IA (chatbot CRM):
   ├─ K.1 Componente UI (ventana flotante draggable)

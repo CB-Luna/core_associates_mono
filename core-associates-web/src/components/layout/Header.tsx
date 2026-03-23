@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, ChevronRight, Settings, User as UserIcon, Menu, Search, X } from 'lucide-react';
+import { LogOut, ChevronRight, Settings, User as UserIcon, Menu, Search, X, MessageCircle } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useMenuStore } from '@/stores/menu-store';
+import { useChatStore } from '@/stores/chat-store';
 import { Badge } from '@/components/ui/Badge';
 import { DarkModeToggle } from '@/components/ui/DarkModeToggle';
 import { apiImageUrl } from '@/lib/api-client';
@@ -170,6 +171,15 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
           <Search className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Buscar...</span>
           <kbd className="hidden rounded border border-gray-300 bg-white px-1 py-0.5 font-mono text-[10px] text-gray-400 dark:border-gray-600 dark:bg-gray-800 sm:inline">⌘K</kbd>
+        </button>
+
+        {/* Chat assistant */}
+        <button
+          onClick={useChatStore.getState().toggleOpen}
+          className="relative rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+          title="Asistente"
+        >
+          <MessageCircle className="h-4.5 w-4.5" />
         </button>
 
         {/* Notifications */}
