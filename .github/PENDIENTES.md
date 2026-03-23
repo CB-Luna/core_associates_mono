@@ -2,7 +2,7 @@
 
 > **Última actualización**: 22 de marzo de 2026  
 > Solo tareas **pendientes**. Lo completado está archivado en `.github/completados/`.  
-> Commit actual en producción: `856240b` → `https://core-asoc.cbluna-dev.com`
+> Commit actual en producción: `618b2b4` → `https://core-asoc.cbluna-dev.com`
 
 ---
 
@@ -66,53 +66,13 @@ Completado. Toggle `esPrivada` con icono Lock en formulario de notas del abogado
 
 Chatbot embebido en el CRM, accesible desde cualquier página via icono en el Header. Tiene dos modos: **clásico** (consultas directas a BD, sin costo de tokens) y **avanzado** (IA por API para preguntas complejas).
 
-### K.1 — Componente UI del chatbot
+### ~~K.1 — Componente UI del chatbot~~ ✅ `65088a5`
 
-**Requerimientos UX**:
-- Icono en el Header (visible en todas las páginas del dashboard)
-- Al presionar: se abre una **ventana flotante draggable** (no modal bloqueante)
-- Puede **moverse** por la pantalla, **minimizarse** (queda como icono flotante), y **cerrarse**
-- Solo una instancia a la vez
-- Persiste entre cambios de página (vive en el layout del dashboard, no en cada page)
-- Historial de conversación en la sesión actual (se limpia al cerrar/refresh)
+Completado. Ventana flotante draggable con 5 componentes: `ChatWidget.tsx` (wrapper draggable), `ChatHeader.tsx` (título + toggle modo + minimizar/cerrar), `ChatMessages.tsx` (lista mensajes + sugerencias), `ChatInput.tsx` (input + enviar), `ChatBubble.tsx` (burbujas user/assistant). Store Zustand `chat-store.ts`. Integrado en dashboard layout + botón MessageCircle en Header.
 
-**Componentes**:
-```
-components/chat/
-├── ChatWidget.tsx        ← ventana flotante draggable (wrapper)
-├── ChatHeader.tsx        ← título, toggle modo, botones minimizar/cerrar
-├── ChatMessages.tsx      ← lista de mensajes con scroll
-├── ChatInput.tsx         ← input de texto + enviar
-└── ChatBubble.tsx        ← burbuja individual (usuario vs asistente)
-```
+### ~~K.2 — Modo clásico (consultas directas a BD)~~ ✅ `65088a5`
 
-**Alcance**: CRM Web  
-**Esfuerzo**: Medio
-
-### K.2 — Modo clásico (consultas directas a BD)
-
-**Concepto**: Un conjunto de "intents" predefinidos que mapean preguntas en español a queries específicas a la API. **Sin costo de tokens.**
-
-**Intents de ejemplo**:
-| Pregunta natural | Intent | Endpoint API |
-|---|---|---|
-| "¿Cuántos asociados tengo?" | `count_asociados` | `GET /reportes/estadisticas` |
-| "¿Cuántos proveedores hay?" | `count_proveedores` | `GET /reportes/estadisticas` |
-| "¿Tengo más asociados que proveedores?" | `compare_asociados_proveedores` | `GET /reportes/estadisticas` |
-| "¿Cuál proveedor tiene más promociones?" | `top_proveedor_promociones` | `GET /reportes/top-proveedores` |
-| "¿Cuántos abogados tengo?" | `count_abogados` | `GET /auth/users?rol=abogado` |
-| "¿Cuántos abogados de penal?" | `count_abogados_especialidad` | `GET /auth/users?rol=abogado&especialidad=penal` |
-| "¿Abogados sin casos asignados?" | `abogados_sin_casos` | Nuevo endpoint o query |
-| "¿Cuántos casos abiertos hay?" | `count_casos_estado` | `GET /reportes/estadisticas` |
-| "¿Cuántos cupones se canjearon este mes?" | `count_cupones_mes` | `GET /reportes/estadisticas` |
-
-**Implementación**:
-- Motor de matching sencillo: normalizar texto (quitar acentos, lowercase) → buscar keywords → mapear a intent → ejecutar query → formatear respuesta amigable
-- Si no matchea ningún intent → responder amablemente que no entiende + sugerir preguntas ejemplo
-- **No requiere API de IA** — es matching de patrones + calls a endpoints existentes
-
-**Alcance**: CRM Web (lógica en frontend, usa endpoints API existentes + algunos nuevos)  
-**Esfuerzo**: Medio
+Completado. Motor de intents en `lib/chat/intent-matcher.ts` con 15 intents: count_asociados, asociados_activos, asociados_pendientes, count_proveedores, compare_asociados_proveedores, top_proveedor_promociones, cupones_mes, cupones_canjeados, casos_abiertos, casos_por_estado, casos_por_tipo, docs_pendientes, saludo, ayuda. Normalización de acentos, cache de 1 min, usa endpoints `/reportes/dashboard` y `/reportes/avanzado`. 12 tests unitarios.
 
 ### K.3 — Modo avanzado (IA por API)
 
@@ -155,24 +115,9 @@ components/chat/
 | `providerChat` | Provider de IA para el chatbot (puede diferir del de documentos) | `anthropic` |
 | `modeloChat` | Modelo específico (ej: claude-3-haiku para ahorrar) | `claude-3-haiku-20240307` |
 
-### K.5 — Permiso RBAC del chatbot
+### ~~K.5 — Permiso RBAC del chatbot~~ ✅ `618b2b4`
 
-**Ubicación**: Configuración → Roles y Permisos
-
-Nuevos permisos a crear:
-| Permiso | Descripción |
-|---|---|
-| `asistente:ver` | Puede ver y usar el chatbot (modo clásico) |
-| `asistente:modo-avanzado` | Puede activar el toggle de modo avanzado (IA por API) |
-| `asistente:configurar` | Puede editar la configuración del chatbot en Conf IA |
-
-**Seed por rol**:
-- **Admin**: `asistente:ver`, `asistente:modo-avanzado`, `asistente:configurar`
-- **Operador**: `asistente:ver`, `asistente:modo-avanzado`
-- **Abogado**: `asistente:ver` (solo modo clásico por defecto)
-- **Proveedor**: ninguno (o solo `asistente:ver` si se desea)
-
-El icono del chatbot en el Header solo aparece si el usuario tiene `asistente:ver`. El toggle de modo avanzado solo aparece si tiene `asistente:modo-avanzado`.
+Completado: migración `20260323100000_add_asistente_permisos` con 3 permisos (`asistente:ver`, `asistente:modo-avanzado`, `asistente:configurar`). Header, ChatWidget y ChatHeader condicionados a permisos RBAC.
 
 ### K.6 — Backend: módulo `asistente-ia`
 
@@ -319,9 +264,9 @@ Fase 1 — Flujo Abogado (mejoras rápidas): ✅ COMPLETADA (856240b)
   └─ ✅ F.3 Notas privadas del abogado
 
 Fase 2 — Asistente IA (chatbot CRM):
-  ├─ K.1 Componente UI (ventana flotante draggable)
-  ├─ K.2 Modo clásico (intents → queries BD)
-  ├─ K.5 Permisos RBAC (asistente:ver, asistente:modo-avanzado)
+  ├─ ✅ K.1 Componente UI (ventana flotante draggable)
+  ├─ ✅ K.2 Modo clásico (intents → queries BD)
+  ├─ ✅ K.5 Permisos RBAC (asistente:ver, asistente:modo-avanzado)
   ├─ K.4 Configuración IA para chatbot (ConfAITab)
   ├─ K.6 Backend módulo asistente-ia
   └─ K.3 Modo avanzado (IA por API + guard contenido)
