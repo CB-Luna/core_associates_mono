@@ -2,7 +2,7 @@
 
 > **Última actualización**: 22 de marzo de 2026  
 > Solo tareas **pendientes**. Lo completado está archivado en `.github/completados/`.  
-> Commit actual en producción: `ba3bb58` → `https://core-asoc.cbluna-dev.com`
+> Commit actual en producción: `4d2e1e1` → `https://core-asoc.cbluna-dev.com`
 
 ---
 
@@ -107,26 +107,9 @@ Completado: migración `20260323110000_add_chatbot_config_fields` con 3 campos n
 
 Completado: migración `20260323100000_add_asistente_permisos` con 3 permisos (`asistente:ver`, `asistente:modo-avanzado`, `asistente:configurar`). Header, ChatWidget y ChatHeader condicionados a permisos RBAC.
 
-### K.6 — Backend: módulo `asistente-ia`
+### K.6 — Backend: módulo `asistente-ia` ✅
 
-```
-modules/asistente-ia/
-├── asistente-ia.module.ts
-├── asistente-ia.controller.ts      ← POST /asistente/preguntar
-├── asistente-ia.service.ts         ← routing clásico→IA, guard contenido
-├── dto/
-│   └── preguntar.dto.ts            ← { pregunta: string, modoAvanzado: boolean }
-├── intents/
-│   ├── intent-matcher.ts           ← motor de matching de intents
-│   └── intents.registry.ts         ← registro de todos los intents
-└── guards/
-    └── content-guard.ts            ← validación de contenido + roles
-```
-
-**Endpoint**: `POST /api/v1/asistente/preguntar`
-- Body: `{ pregunta, modoAvanzado }`
-- Respuesta: `{ respuesta, fuente: 'clasico' | 'ia', intent?: string }`
-- Guard: `JwtAuthGuard` + permiso `asistente:ver` (+ `asistente:modo-avanzado` si `modoAvanzado=true`)
+Completado: módulo NestJS `asistente-ia` con controller (`POST /asistente/preguntar`), service (intent-matcher + content-guard backend), DTO validado, 15 intents replicados del frontend. ChatWidget migrado a usar API backend en lugar de intent-matcher local. Commit `4d2e1e1`.
 
 **Esfuerzo total módulo K**: Alto  
 **Prioridad**: Alta
@@ -256,7 +239,7 @@ Fase 2 — Asistente IA (chatbot CRM):
   ├─ ✅ K.2 Modo clásico (intents → queries BD)
   ├─ ✅ K.5 Permisos RBAC (asistente:ver, asistente:modo-avanzado)
   ├─ ✅ K.4 Configuración IA para chatbot (ConfAITab)
-  ├─ K.6 Backend módulo asistente-ia
+  ├─ ✅ K.6 Backend módulo asistente-ia
   └─ K.3 Modo avanzado (IA por API + guard contenido)
 
 Fase 3 — App Móvil Profesional:
@@ -295,10 +278,10 @@ Fase 6 — Polish:
 
 | Componente | Progreso | Pendiente principal |
 |------------|----------|---------------------|
-| **API** | ~98% | F (flujo abogado), K.6 (backend chatbot), J.1 (verificación) |
-| **CRM Web** | ~98% | K.1-K.5 (chatbot UI + config), F.1/F.3 (botones abogado) |
+| **API** | ~99% | F (flujo abogado), J.1 (verificación) |
+| **CRM Web** | ~99% | K.1-K.6 ✅ (chatbot completo), F.1/F.3 (botones abogado) |
 | **App Flutter** | ~93% | C (shell profesional), F.4 (docs bidireccionales), E.1 (filtro cupones) |
 | **Infra** | 100% | Docker + Nginx + SSL + deploy script funcionando |
-| **IA** | ~98% | K.3/K.6 (chatbot IA), documentos KYC ya funcional |
+| **IA** | ~99% | K.3 (modo avanzado IA) pendiente, documentos KYC + chatbot clásico funcionales |
 
-**Producción**: `https://core-asoc.cbluna-dev.com` (commit `23ecdf8`)
+**Producción**: `https://core-asoc.cbluna-dev.com` (commit `4d2e1e1`)
