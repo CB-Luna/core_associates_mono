@@ -25,6 +25,7 @@ import { HealthModule } from './modules/health/health.module';
 import { AiModule } from './modules/ai/ai.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { NotificacionesCrmModule } from './modules/notificaciones-crm/notificaciones-crm.module';
+import { AsistenteIaModule } from './modules/asistente-ia/asistente-ia.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { NotificacionesCrmModule } from './modules/notificaciones-crm/notificaci
     AiModule,
     RolesModule,
     NotificacionesCrmModule,
+    AsistenteIaModule,
   ],
   providers: [
     {

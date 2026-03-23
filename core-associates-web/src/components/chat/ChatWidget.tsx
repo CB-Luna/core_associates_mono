@@ -6,7 +6,6 @@ import { useChatStore } from '@/stores/chat-store';
 import { usePermisos } from '@/lib/permisos';
 import { apiClient } from '@/lib/api-client';
 import type { ChatbotStatus } from '@/lib/api-types';
-import { matchIntent } from '@/lib/chat/intent-matcher';
 import { ChatHeader } from './ChatHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
@@ -15,7 +14,7 @@ const DEFAULT_W = 380;
 const DEFAULT_H = 480;
 
 export function ChatWidget() {
-  const { isOpen, isMinimized, isLoading, addMessage, setLoading, restore } = useChatStore();
+  const { isOpen, isMinimized, isLoading, addMessage, setLoading, restore, mode } = useChatStore();
   const { puede } = usePermisos();
 
   // ── Global chatbot status (from admin config) ──
@@ -66,29 +65,31 @@ export function ChatWidget() {
     dragging.current = false;
   }, []);
 
-  // ── Send message handler ──
+  // ── Send message handler (now uses backend) ──
   const handleSend = useCallback(
     async (text: string) => {
       addMessage({ role: 'user', content: text });
       setLoading(true);
 
       try {
-        const result = await matchIntent(text);
-        if (result) {
-          addMessage({
-            role: 'assistant',
-            content: result.respuesta,
-            source: result.source,
-            intent: result.intent,
-          });
-        } else {
-          addMessage({
-            role: 'assistant',
-            content:
-              'No encontré información para esa pregunta. Intenta con algo como "¿Cuántos asociados hay?" o escribe **ayuda** para ver lo que puedo hacer.',
-            source: 'clasico',
-          });
-        }
+        const result = await apiClient<{
+          respuesta: string;
+          fuente: 'clasico' | 'ia';
+          intent?: string;
+        }>('/asistente/preguntar', {
+          method: 'POST',
+          body: JSON.stringify({
+            pregunta: text,
+            modoAvanzado: mode === 'avanzado',
+          }),
+        });
+
+        addMessage({
+          role: 'assistant',
+          content: result.respuesta,
+          source: result.fuente,
+          intent: result.intent,
+        });
       } catch {
         addMessage({
           role: 'assistant',
@@ -99,7 +100,7 @@ export function ChatWidget() {
         setLoading(false);
       }
     },
-    [addMessage, setLoading],
+    [addMessage, setLoading, mode],
   );
 
   // ── Sin permiso o chatbot desactivado globalmente → no renderizar ──
