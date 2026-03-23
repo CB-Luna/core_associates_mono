@@ -74,6 +74,7 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const { user, loadFromStorage, logout } = useAuthStore();
   const menuItems = useMenuStore((s) => s.items);
   const { puede } = usePermisos();
+  const puedeBuscar = puede('busqueda:ver');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -97,6 +98,7 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
 
   // Ctrl+K / Cmd+K to open search
   useEffect(() => {
+    if (!puedeBuscar) return;
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
@@ -106,7 +108,7 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, []);
+  }, [puedeBuscar]);
 
   useEffect(() => {
     if (searchOpen) {
@@ -166,14 +168,16 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
       {/* Right side controls */}
       <div className="flex items-center gap-1.5 sm:gap-3">
         {/* Search button */}
-        <button
-          onClick={() => setSearchOpen(true)}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50/80 px-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-400 dark:hover:bg-gray-700 sm:px-3"
-        >
-          <Search className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Buscar...</span>
-          <kbd className="hidden rounded border border-gray-300 bg-white px-1 py-0.5 font-mono text-[10px] text-gray-400 dark:border-gray-600 dark:bg-gray-800 sm:inline">⌘K</kbd>
-        </button>
+        {puedeBuscar && (
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50/80 px-2 py-1.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-400 dark:hover:bg-gray-700 sm:px-3"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Buscar...</span>
+            <kbd className="hidden rounded border border-gray-300 bg-white px-1 py-0.5 font-mono text-[10px] text-gray-400 dark:border-gray-600 dark:bg-gray-800 sm:inline">⌘K</kbd>
+          </button>
+        )}
 
         {/* Chat assistant */}
         {puede('asistente:ver') && (

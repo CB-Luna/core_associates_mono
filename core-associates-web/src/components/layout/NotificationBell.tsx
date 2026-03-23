@@ -4,12 +4,15 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
+import { usePermisos } from '@/lib/permisos';
 import type { NotificacionCRM } from '@/lib/api-types';
 
 const POLL_INTERVAL = 30_000; // 30 seconds
 
 export function NotificationBell() {
   const router = useRouter();
+  const { puede } = usePermisos();
+  const tienePermiso = puede('notificaciones-crm:ver');
   const [count, setCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [notificaciones, setNotificaciones] = useState<NotificacionCRM[]>([]);
@@ -27,10 +30,11 @@ export function NotificationBell() {
   }, []);
 
   useEffect(() => {
+    if (!tienePermiso) return;
     fetchCount();
     const interval = setInterval(fetchCount, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [fetchCount]);
+  }, [fetchCount, tienePermiso]);
 
   // Fetch recent when opening
   const fetchRecent = useCallback(async () => {
@@ -46,8 +50,10 @@ export function NotificationBell() {
   }, []);
 
   useEffect(() => {
-    if (open) fetchRecent();
-  }, [open, fetchRecent]);
+    if (open && tienePermiso) fetchRecent();
+  }, [open, fetchRecent, tienePermiso]);
+
+  if (!tienePermiso) return null;
 
   // Close on outside click
   useEffect(() => {
