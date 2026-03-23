@@ -36,8 +36,6 @@ export function ChatHeader({ modoAvanzadoGlobal = true }: { modoAvanzadoGlobal?:
               className={`rounded-full px-2 py-0.5 transition-colors ${
                 mode === 'avanzado' ? 'bg-white text-primary-700 font-medium' : 'text-white/80 hover:text-white'
               }`}
-              title="Próximamente — requiere configuración IA"
-              disabled
             >
               Avanzado
             </button>

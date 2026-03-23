@@ -54,6 +54,9 @@ export class AiAnalysisService {
       return { analisisId: existing.id };
     }
 
+    // Read provider/model from config
+    const aiConfig = await this.aiService.getConfig('document_analyzer');
+
     // Create or reset analysis record
     const analisis = existing
       ? await this.prisma.analisisDocumento.update({
@@ -63,8 +66,8 @@ export class AiAnalysisService {
       : await this.prisma.analisisDocumento.create({
           data: {
             documentoId,
-            provider: 'anthropic',
-            modelo: 'claude-sonnet-4-5-20250929',
+            provider: aiConfig.provider,
+            modelo: aiConfig.model,
             estado: 'procesando',
           },
         });
@@ -100,6 +103,9 @@ export class AiAnalysisService {
         prompt,
       );
 
+      // Read current provider/model for the finished record
+      const finishedConfig = await this.aiService.getConfig('document_analyzer');
+
       // Update analysis record
       const analisis = await this.prisma.analisisDocumento.update({
         where: { id: analisisId },
@@ -110,7 +116,8 @@ export class AiAnalysisService {
           validaciones: data.validaciones || Prisma.DbNull,
           tokensUsados: tokens,
           tiempoMs: timeMs,
-          modelo: 'claude-sonnet-4-5-20250929',
+          provider: finishedConfig.provider,
+          modelo: finishedConfig.model,
         },
       });
 
