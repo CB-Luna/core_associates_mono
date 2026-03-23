@@ -150,4 +150,22 @@ export class UpdateAiConfigDto {
   @Min(1)
   @Max(168)
   horasBloqueoPreval?: number;
+
+  // ── Campos chatbot ──
+  @ApiPropertyOptional({ description: 'Chatbot globalmente activo' })
+  @IsOptional()
+  @IsBoolean()
+  chatbotActivo?: boolean;
+
+  @ApiPropertyOptional({ description: 'Modo avanzado disponible para usuarios con permiso' })
+  @IsOptional()
+  @IsBoolean()
+  modoAvanzadoDisponible?: boolean;
+
+  @ApiPropertyOptional({ example: 20, description: 'Máx preguntas IA por usuario/hora' })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(200)
+  maxPreguntasPorHora?: number;
 }

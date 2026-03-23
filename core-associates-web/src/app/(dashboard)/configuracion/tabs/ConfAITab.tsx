@@ -42,6 +42,9 @@ export function ConfAITab() {
     umbralAutoRechazo: 0.40,
     maxRechazosPreval: 5,
     horasBloqueoPreval: 24,
+    chatbotActivo: true,
+    modoAvanzadoDisponible: true,
+    maxPreguntasPorHora: 20,
   });
 
   const populateForm = useCallback((config: ConfiguracionIA) => {
@@ -58,6 +61,9 @@ export function ConfAITab() {
       umbralAutoRechazo: config.umbralAutoRechazo ?? 0.40,
       maxRechazosPreval: config.maxRechazosPreval ?? 5,
       horasBloqueoPreval: config.horasBloqueoPreval ?? 24,
+      chatbotActivo: config.chatbotActivo ?? true,
+      modoAvanzadoDisponible: config.modoAvanzadoDisponible ?? true,
+      maxPreguntasPorHora: config.maxPreguntasPorHora ?? 20,
     });
   }, []);
 
@@ -109,6 +115,12 @@ export function ConfAITab() {
       };
       if (form.apiKey) body.apiKey = form.apiKey;
       if (form.promptSistema) body.promptSistema = form.promptSistema;
+      // Campos chatbot (solo para configs tipo chatbot)
+      if (selected.clave.includes('chatbot')) {
+        body.chatbotActivo = form.chatbotActivo;
+        body.modoAvanzadoDisponible = form.modoAvanzadoDisponible;
+        body.maxPreguntasPorHora = form.maxPreguntasPorHora;
+      }
 
       await apiClient(`/ai/config/${selected.id}`, {
         method: 'PUT',
@@ -372,6 +384,50 @@ export function ConfAITab() {
                 </div>
               </div>
             </div>
+
+            {/* Configuracion Chatbot — solo para configs tipo chatbot */}
+            {selected.clave.includes('chatbot') && (
+              <div className="rounded-xl border bg-white p-5 shadow-sm">
+                <h4 className="mb-1 text-sm font-semibold text-gray-700">Configuracion del Chatbot</h4>
+                <p className="mb-4 text-xs text-gray-400">Controla la disponibilidad global del asistente IA en el CRM</p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="flex items-center gap-3">
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input type="checkbox" checked={form.chatbotActivo}
+                        onChange={(e) => setForm((f) => ({ ...f, chatbotActivo: e.target.checked }))}
+                        className="peer sr-only"
+                      />
+                      <div className="h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:bg-indigo-600 peer-checked:after:translate-x-full peer-checked:after:border-white" />
+                    </label>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Chatbot activo</p>
+                      <p className="text-xs text-gray-400">Mostrar el asistente a usuarios</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input type="checkbox" checked={form.modoAvanzadoDisponible}
+                        onChange={(e) => setForm((f) => ({ ...f, modoAvanzadoDisponible: e.target.checked }))}
+                        className="peer sr-only"
+                      />
+                      <div className="h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all peer-checked:bg-indigo-600 peer-checked:after:translate-x-full peer-checked:after:border-white" />
+                    </label>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Modo avanzado</p>
+                      <p className="text-xs text-gray-400">Permitir consultas IA por API</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Max preguntas/hora</label>
+                    <input type="number" min="1" max="200" value={form.maxPreguntasPorHora}
+                      onChange={(e) => setForm((f) => ({ ...f, maxPreguntasPorHora: parseInt(e.target.value) || 20 }))}
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                    <p className="mt-1 text-xs text-gray-400">Limite de rate por usuario</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* System Prompt */}
             <div className="rounded-xl border bg-white p-5 shadow-sm">

@@ -258,6 +258,11 @@ model ConfiguracionIA {
   maxRechazosPreval     Int    @default(5)    @map("max_rechazos_preval")
   horasBloqueoPreval    Int    @default(24)   @map("horas_bloqueo_preval")
 
+  // Campos específicos del chatbot (solo aplican a clave='chatbot_assistant')
+  chatbotActivo              Boolean @default(true)  @map("chatbot_activo")
+  modoAvanzadoDisponible     Boolean @default(true)  @map("modo_avanzado_disponible")
+  maxPreguntasPorHora        Int     @default(20)    @map("max_preguntas_por_hora")
+
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 

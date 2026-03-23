@@ -4,7 +4,7 @@ import { Minus, X, Trash2 } from 'lucide-react';
 import { useChatStore } from '@/stores/chat-store';
 import { usePermisos } from '@/lib/permisos';
 
-export function ChatHeader() {
+export function ChatHeader({ modoAvanzadoGlobal = true }: { modoAvanzadoGlobal?: boolean }) {
   const mode = useChatStore((s) => s.mode);
   const setMode = useChatStore((s) => s.setMode);
   const minimize = useChatStore((s) => s.minimize);
@@ -12,7 +12,7 @@ export function ChatHeader() {
   const clearHistory = useChatStore((s) => s.clearHistory);
   const msgCount = useChatStore((s) => s.messages.length);
   const { puede } = usePermisos();
-  const puedeAvanzado = puede('asistente:modo-avanzado');
+  const puedeAvanzado = puede('asistente:modo-avanzado') && modoAvanzadoGlobal;
 
   return (
     <div className="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-primary-600 to-primary-700 px-3 py-2 text-white dark:border-gray-600">

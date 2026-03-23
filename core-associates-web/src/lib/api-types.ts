@@ -457,8 +457,17 @@ export interface ConfiguracionIA {
   umbralAutoRechazo: number;
   maxRechazosPreval: number;
   horasBloqueoPreval: number;
+  chatbotActivo: boolean;
+  modoAvanzadoDisponible: boolean;
+  maxPreguntasPorHora: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ChatbotStatus {
+  chatbotActivo: boolean;
+  modoAvanzadoDisponible: boolean;
+  maxPreguntasPorHora: number;
 }
 
 // Notificación CRM (para usuarios del panel)

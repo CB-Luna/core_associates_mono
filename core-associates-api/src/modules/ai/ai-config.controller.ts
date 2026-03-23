@@ -37,6 +37,34 @@ export class AiConfigController {
     }));
   }
 
+  /**
+   * Endpoint ligero para el ChatWidget: devuelve solo flags del chatbot.
+   * Requiere JWT pero no requiere permiso ia:configurar (cualquier usuario con sesión).
+   * IMPORTANTE: debe ir ANTES de :id para que NestJS no lo capture como param.
+   */
+  @Get('chatbot-status')
+  @Permisos() // Solo JWT, sin permiso específico
+  @ApiOperation({ summary: 'Estado del chatbot (flags públicos)' })
+  async chatbotStatus() {
+    const config = await this.prisma.configuracionIA.findUnique({
+      where: { clave: 'chatbot_assistant' },
+      select: {
+        activo: true,
+        chatbotActivo: true,
+        modoAvanzadoDisponible: true,
+        maxPreguntasPorHora: true,
+      },
+    });
+    if (!config) {
+      return { chatbotActivo: false, modoAvanzadoDisponible: false, maxPreguntasPorHora: 20 };
+    }
+    return {
+      chatbotActivo: config.activo && config.chatbotActivo,
+      modoAvanzadoDisponible: config.modoAvanzadoDisponible,
+      maxPreguntasPorHora: config.maxPreguntasPorHora,
+    };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener configuración de IA por ID' })
   async findOne(@Param('id') id: string) {
@@ -78,6 +106,9 @@ export class AiConfigController {
     if (dto.temperatura !== undefined) data.temperatura = dto.temperatura;
     if (dto.maxTokens !== undefined) data.maxTokens = dto.maxTokens;
     if (dto.activo !== undefined) data.activo = dto.activo;
+    if (dto.chatbotActivo !== undefined) data.chatbotActivo = dto.chatbotActivo;
+    if (dto.modoAvanzadoDisponible !== undefined) data.modoAvanzadoDisponible = dto.modoAvanzadoDisponible;
+    if (dto.maxPreguntasPorHora !== undefined) data.maxPreguntasPorHora = dto.maxPreguntasPorHora;
 
     return this.prisma.configuracionIA.update({
       where: { id },

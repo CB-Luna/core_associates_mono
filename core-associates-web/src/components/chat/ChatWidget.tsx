@@ -4,6 +4,8 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { useChatStore } from '@/stores/chat-store';
 import { usePermisos } from '@/lib/permisos';
+import { apiClient } from '@/lib/api-client';
+import type { ChatbotStatus } from '@/lib/api-types';
 import { matchIntent } from '@/lib/chat/intent-matcher';
 import { ChatHeader } from './ChatHeader';
 import { ChatMessages } from './ChatMessages';
@@ -15,6 +17,16 @@ const DEFAULT_H = 480;
 export function ChatWidget() {
   const { isOpen, isMinimized, isLoading, addMessage, setLoading, restore } = useChatStore();
   const { puede } = usePermisos();
+
+  // ── Global chatbot status (from admin config) ──
+  const [chatbotStatus, setChatbotStatus] = useState<ChatbotStatus | null>(null);
+
+  useEffect(() => {
+    if (!puede('asistente:ver')) return;
+    apiClient<ChatbotStatus>('/ai/config/chatbot-status')
+      .then(setChatbotStatus)
+      .catch(() => setChatbotStatus({ chatbotActivo: true, modoAvanzadoDisponible: true, maxPreguntasPorHora: 20 }));
+  }, [puede]);
 
   // ── Dragging logic ──
   const widgetRef = useRef<HTMLDivElement>(null);
@@ -90,8 +102,9 @@ export function ChatWidget() {
     [addMessage, setLoading],
   );
 
-  // ── Sin permiso → no renderizar ──
+  // ── Sin permiso o chatbot desactivado globalmente → no renderizar ──
   if (!puede('asistente:ver')) return null;
+  if (chatbotStatus && !chatbotStatus.chatbotActivo) return null;
 
   // ── Minimised FAB ──
   if (isMinimized) {
@@ -126,7 +139,7 @@ export function ChatWidget() {
     >
       {/* Drag handle wraps header */}
       <div data-drag-handle className="cursor-move">
-        <ChatHeader />
+        <ChatHeader modoAvanzadoGlobal={chatbotStatus?.modoAvanzadoDisponible ?? true} />
       </div>
 
       {/* Messages area */}
