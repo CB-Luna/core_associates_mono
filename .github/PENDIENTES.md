@@ -2,7 +2,7 @@
 
 > **Última actualización**: 22 de marzo de 2026  
 > Solo tareas **pendientes**. Lo completado está archivado en `.github/completados/`.  
-> Commit actual en producción: `618b2b4` → `https://core-asoc.cbluna-dev.com`
+> Commit actual en producción: `ba3bb58` → `https://core-asoc.cbluna-dev.com`
 
 ---
 
@@ -99,21 +99,9 @@ Completado. Motor de intents en `lib/chat/intent-matcher.ts` con 15 intents: cou
 **Alcance**: API (nuevo módulo `asistente-ia`) + CRM Web  
 **Esfuerzo**: Alto
 
-### K.4 — Configuración de IA para chatbot
+### ~~K.4 — Configuración de IA para chatbot~~ ✅ `ba3bb58`
 
-**Ubicación**: Página Configuración → pestaña "Conf IA" (ya existe `ConfAITab` para documentos KYC)
-
-**Nuevos parámetros** (dentro de `ConfAITab` o nuevo sub-tab):
-| Parámetro | Descripción | Default |
-|---|---|---|
-| `chatbotActivo` | Activar/desactivar el chatbot globalmente | `true` |
-| `modoAvanzadoDisponible` | Permitir que usuarios activen el modo IA | `true` |
-| `maxPreguntasPorHora` | Límite de preguntas IA (modo avanzado) por usuario/hora | `20` |
-| `maxTokensPorPregunta` | Tope de tokens por respuesta | `1024` |
-| `temasPermitidos` | Lista de temas/keywords que el guard permite | (array predefinido) |
-| `promptSistemaChat` | System prompt para el asistente IA | (template con contexto del dominio) |
-| `providerChat` | Provider de IA para el chatbot (puede diferir del de documentos) | `anthropic` |
-| `modeloChat` | Modelo específico (ej: claude-3-haiku para ahorrar) | `claude-3-haiku-20240307` |
+Completado: migración `20260323110000_add_chatbot_config_fields` con 3 campos nuevos en `ConfiguracionIA` (chatbotActivo, modoAvanzadoDisponible, maxPreguntasPorHora). Seed `chatbot_assistant` con provider Anthropic + claude-haiku. Endpoint `GET /ai/config/chatbot-status` (JWT sin permiso específico). ConfAITab muestra sección "Configuración del Chatbot" para configs tipo chatbot. ChatWidget consulta config global y oculta widget si chatbot desactivado. ChatHeader respeta modoAvanzadoDisponible global.
 
 ### ~~K.5 — Permiso RBAC del chatbot~~ ✅ `618b2b4`
 
@@ -267,7 +255,7 @@ Fase 2 — Asistente IA (chatbot CRM):
   ├─ ✅ K.1 Componente UI (ventana flotante draggable)
   ├─ ✅ K.2 Modo clásico (intents → queries BD)
   ├─ ✅ K.5 Permisos RBAC (asistente:ver, asistente:modo-avanzado)
-  ├─ K.4 Configuración IA para chatbot (ConfAITab)
+  ├─ ✅ K.4 Configuración IA para chatbot (ConfAITab)
   ├─ K.6 Backend módulo asistente-ia
   └─ K.3 Modo avanzado (IA por API + guard contenido)
 
