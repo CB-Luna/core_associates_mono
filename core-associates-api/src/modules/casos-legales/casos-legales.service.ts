@@ -148,10 +148,33 @@ export class CasosLegalesService {
     return caso;
   }
 
+  // Matriz de transiciones válidas por estado
+  private readonly TRANSICIONES_VALIDAS: Record<string, string[]> = {
+    abierto: ['en_atencion', 'cancelado'],
+    en_atencion: ['escalado', 'resuelto', 'cancelado'],
+    escalado: ['en_atencion', 'resuelto', 'cancelado'],
+    resuelto: ['cerrado', 'en_atencion'],
+    cerrado: [],
+    cancelado: ['abierto'],
+  };
+
   async updateEstado(id: string, estado: string) {
+    const caso = await this.prisma.casoLegal.findUnique({ where: { id } });
+    if (!caso) throw new NotFoundException('Caso no encontrado');
+
+    const permitidos = this.TRANSICIONES_VALIDAS[caso.estado] || [];
+    if (!permitidos.includes(estado)) {
+      throw new BadRequestException(
+        `No se puede cambiar de "${caso.estado}" a "${estado}". Transiciones permitidas: ${permitidos.join(', ') || 'ninguna'}`,
+      );
+    }
+
     const data: any = { estado };
     if (['resuelto', 'cerrado'].includes(estado)) {
       data.fechaCierre = new Date();
+    }
+    if (estado === 'en_atencion' && caso.estado === 'resuelto') {
+      data.fechaCierre = null; // Reabrir limpia fecha cierre
     }
     return this.prisma.casoLegal.update({ where: { id }, data });
   }
@@ -396,7 +419,7 @@ export class CasosLegalesService {
     return { message: 'Postulación registrada exitosamente' };
   }
 
-  async cambiarEstadoAbogado(casoId: string, abogadoUsuarioId: string, estado: 'en_atencion' | 'escalado') {
+  async cambiarEstadoAbogado(casoId: string, abogadoUsuarioId: string, estado: 'en_atencion' | 'escalado' | 'resuelto') {
     const caso = await this.prisma.casoLegal.findFirst({
       where: { id: casoId, abogadoUsuarioId },
     });
@@ -405,15 +428,29 @@ export class CasosLegalesService {
       throw new BadRequestException('No se puede cambiar el estado de este caso');
     }
 
+    const data: any = { estado };
+    if (estado === 'resuelto') {
+      data.fechaCierre = new Date();
+    }
+
     const updated = await this.prisma.casoLegal.update({
       where: { id: casoId },
-      data: { estado },
+      data,
     });
 
     if (estado === 'escalado') {
       await this.notificarOperadores(
         'Caso escalado',
         `El abogado escaló el caso ${caso.codigo}`,
+        'estado_cambio',
+        caso.id,
+      );
+    }
+
+    if (estado === 'resuelto') {
+      await this.notificarOperadores(
+        'Caso resuelto por abogado',
+        `El abogado marcó el caso ${caso.codigo} como resuelto. Pendiente cierre administrativo.`,
         'estado_cambio',
         caso.id,
       );

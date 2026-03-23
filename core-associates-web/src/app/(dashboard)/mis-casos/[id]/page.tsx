@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, MapPin, Calendar, User, MessageSquare, Send, CheckCircle, XCircle, AlertTriangle, Phone, Mail, Paperclip, Upload, Trash2, FileText, Download, Car } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, User, MessageSquare, Send, CheckCircle, XCircle, AlertTriangle, Phone, Mail, Paperclip, Upload, Trash2, FileText, Download, Car, Lock, Scale } from 'lucide-react';
 import { apiClient, apiImageUrl } from '@/lib/api-client';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import type { CasoLegal, NotaCaso, DocumentoCaso } from '@/lib/api-types';
@@ -35,6 +35,7 @@ export default function MiCasoAbogadoDetailPage() {
 
   // Note form
   const [notaContenido, setNotaContenido] = useState('');
+  const [notaPrivada, setNotaPrivada] = useState(false);
   const [sendingNota, setSendingNota] = useState(false);
 
   // Actions
@@ -185,10 +186,11 @@ export default function MiCasoAbogadoDetailPage() {
     try {
       const nota = await apiClient<NotaCaso>(`/casos-legales/${caso.id}/notas`, {
         method: 'POST',
-        body: JSON.stringify({ contenido: notaContenido, esPrivada: false }),
+        body: JSON.stringify({ contenido: notaContenido, esPrivada: notaPrivada }),
       });
       setCaso((prev) => prev ? { ...prev, notas: [nota, ...(prev.notas || [])] } : prev);
       setNotaContenido('');
+      setNotaPrivada(false);
       toast('success', 'Nota agregada');
     } catch (err: any) {
       toast('error', 'Error', err.message);
@@ -216,6 +218,7 @@ export default function MiCasoAbogadoDetailPage() {
 
   const esAbierto = caso.estado === 'abierto';
   const enAtencion = caso.estado === 'en_atencion';
+  const esEscalado = caso.estado === 'escalado';
 
   return (
     <div>
@@ -258,11 +261,30 @@ export default function MiCasoAbogadoDetailPage() {
       {enAtencion && (
         <div className="mt-4 flex gap-3">
           <button
+            onClick={() => handleCambiarEstado('resuelto')}
+            disabled={actionLoading}
+            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
+          >
+            <Scale className="h-4 w-4" /> Marcar como resuelto
+          </button>
+          <button
             onClick={() => handleCambiarEstado('escalado')}
             disabled={actionLoading}
             className="inline-flex items-center gap-2 rounded-lg border border-orange-300 px-4 py-2 text-sm font-medium text-orange-600 transition hover:bg-orange-50 disabled:opacity-50"
           >
             <AlertTriangle className="h-4 w-4" /> Escalar caso
+          </button>
+        </div>
+      )}
+
+      {esEscalado && (
+        <div className="mt-4 flex gap-3">
+          <button
+            onClick={() => handleCambiarEstado('resuelto')}
+            disabled={actionLoading}
+            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
+          >
+            <Scale className="h-4 w-4" /> Marcar como resuelto
           </button>
         </div>
       )}
@@ -446,6 +468,14 @@ export default function MiCasoAbogadoDetailPage() {
                   className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                 />
                 <button
+                  type="button"
+                  onClick={() => setNotaPrivada(!notaPrivada)}
+                  title={notaPrivada ? 'Nota privada (solo staff)' : 'Nota visible para todos'}
+                  className={`rounded-lg border p-2 transition ${notaPrivada ? 'border-amber-300 bg-amber-50 text-amber-600' : 'border-gray-300 text-gray-400 hover:bg-gray-50'}`}
+                >
+                  <Lock className="h-4 w-4" />
+                </button>
+                <button
                   type="submit"
                   disabled={sendingNota || !notaContenido.trim()}
                   className="rounded-lg bg-primary-600 p-2 text-white transition hover:bg-primary-700 disabled:opacity-50"
@@ -453,14 +483,22 @@ export default function MiCasoAbogadoDetailPage() {
                   <Send className="h-4 w-4" />
                 </button>
               </div>
+              {notaPrivada && (
+                <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> Esta nota será privada — solo visible para operadores y abogados
+                </p>
+              )}
             </form>
 
             {/* Notes list */}
             <div className="mt-4 max-h-96 space-y-3 overflow-y-auto">
               {(caso.notas || []).map((nota) => (
-                <div key={nota.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900">
+                <div key={nota.id} className={`rounded-lg border p-3 ${nota.esPrivada ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/30' : 'border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-900'}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{nota.autor?.nombre || 'Sistema'}</span>
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                      {nota.autor?.nombre || 'Sistema'}
+                      {nota.esPrivada && <Lock className="h-3 w-3 text-amber-500" />}
+                    </span>
                     <span className="text-[10px] text-gray-400">{formatFechaConHora(nota.createdAt)}</span>
                   </div>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{nota.contenido}</p>

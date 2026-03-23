@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { CasosLegalesService } from './casos-legales.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificacionesCrmService } from '../notificaciones-crm/notificaciones-crm.service';
+import { StorageService } from '../storage/storage.service';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 describe('CasosLegalesService', () => {
@@ -14,6 +16,7 @@ describe('CasosLegalesService', () => {
         create: jest.fn(),
         findMany: jest.fn(),
         findUnique: jest.fn(),
+        findFirst: jest.fn(),
         update: jest.fn(),
         count: jest.fn(),
       },
@@ -23,12 +26,24 @@ describe('CasosLegalesService', () => {
       proveedor: {
         findUnique: jest.fn(),
       },
+      usuario: {
+        findUnique: jest.fn(),
+        findMany: jest.fn(),
+      },
+      documentoCaso: {
+        create: jest.fn(),
+        findMany: jest.fn(),
+        findFirst: jest.fn(),
+        delete: jest.fn(),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CasosLegalesService,
         { provide: PrismaService, useValue: prisma },
+        { provide: NotificacionesCrmService, useValue: { crearNotificacion: jest.fn(), crear: jest.fn() } },
+        { provide: StorageService, useValue: { uploadFile: jest.fn(), deleteFile: jest.fn(), getFileBuffer: jest.fn() } },
       ],
     }).compile();
 
@@ -176,7 +191,8 @@ describe('CasosLegalesService', () => {
   });
 
   describe('updateEstado', () => {
-    it('should update estado', async () => {
+    it('should update estado when transition is valid', async () => {
+      prisma.casoLegal.findUnique.mockResolvedValue({ id: 'c1', estado: 'abierto' });
       prisma.casoLegal.update.mockResolvedValue({ id: 'c1', estado: 'en_atencion' });
 
       const result = await service.updateEstado('c1', 'en_atencion');
@@ -188,6 +204,7 @@ describe('CasosLegalesService', () => {
     });
 
     it('should set fechaCierre when estado is resuelto', async () => {
+      prisma.casoLegal.findUnique.mockResolvedValue({ id: 'c1', estado: 'en_atencion' });
       prisma.casoLegal.update.mockResolvedValue({ id: 'c1', estado: 'resuelto' });
 
       await service.updateEstado('c1', 'resuelto');
@@ -201,6 +218,7 @@ describe('CasosLegalesService', () => {
     });
 
     it('should set fechaCierre when estado is cerrado', async () => {
+      prisma.casoLegal.findUnique.mockResolvedValue({ id: 'c1', estado: 'resuelto' });
       prisma.casoLegal.update.mockResolvedValue({ id: 'c1', estado: 'cerrado' });
 
       await service.updateEstado('c1', 'cerrado');
@@ -212,14 +230,46 @@ describe('CasosLegalesService', () => {
         }),
       });
     });
+
+    it('should throw NotFoundException when case not found', async () => {
+      prisma.casoLegal.findUnique.mockResolvedValue(null);
+      await expect(service.updateEstado('bad', 'en_atencion')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException for invalid transition', async () => {
+      prisma.casoLegal.findUnique.mockResolvedValue({ id: 'c1', estado: 'cerrado' });
+      await expect(service.updateEstado('c1', 'abierto')).rejects.toThrow('No se puede cambiar');
+    });
+
+    it('should allow reactivating cancelled case', async () => {
+      prisma.casoLegal.findUnique.mockResolvedValue({ id: 'c1', estado: 'cancelado' });
+      prisma.casoLegal.update.mockResolvedValue({ id: 'c1', estado: 'abierto' });
+
+      await service.updateEstado('c1', 'abierto');
+      expect(prisma.casoLegal.update).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+        data: { estado: 'abierto' },
+      });
+    });
+
+    it('should clear fechaCierre when reopening a resolved case', async () => {
+      prisma.casoLegal.findUnique.mockResolvedValue({ id: 'c1', estado: 'resuelto' });
+      prisma.casoLegal.update.mockResolvedValue({ id: 'c1', estado: 'en_atencion' });
+
+      await service.updateEstado('c1', 'en_atencion');
+      expect(prisma.casoLegal.update).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+        data: expect.objectContaining({ fechaCierre: null }),
+      });
+    });
   });
 
   describe('assignAbogado', () => {
     it('should assign abogado and set en_atencion', async () => {
-      prisma.proveedor.findUnique.mockResolvedValue({ id: 'abg-1', tipo: 'abogado' });
+      prisma.usuario.findUnique.mockResolvedValue({ id: 'abg-1', nombre: 'Test', rol: 'abogado', estado: 'activo', proveedorId: 'prov-1' });
       prisma.casoLegal.update.mockResolvedValue({
         id: 'c1',
-        abogadoId: 'abg-1',
+        abogadoUsuarioId: 'abg-1',
         estado: 'en_atencion',
       });
 
@@ -227,7 +277,7 @@ describe('CasosLegalesService', () => {
       expect(prisma.casoLegal.update).toHaveBeenCalledWith({
         where: { id: 'c1' },
         data: expect.objectContaining({
-          abogadoId: 'abg-1',
+          abogadoUsuarioId: 'abg-1',
           estado: 'en_atencion',
           fechaAsignacion: expect.any(Date),
         }),
@@ -236,8 +286,8 @@ describe('CasosLegalesService', () => {
       expect(result.estado).toBe('en_atencion');
     });
 
-    it('should throw NotFoundException if proveedor not found', async () => {
-      prisma.proveedor.findUnique.mockResolvedValue(null);
+    it('should throw NotFoundException if usuario not found', async () => {
+      prisma.usuario.findUnique.mockResolvedValue(null);
       await expect(service.assignAbogado('c1', 'bad-id')).rejects.toThrow(NotFoundException);
     });
   });
