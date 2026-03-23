@@ -3,6 +3,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { useChatStore } from '@/stores/chat-store';
+import { usePermisos } from '@/lib/permisos';
 import { matchIntent } from '@/lib/chat/intent-matcher';
 import { ChatHeader } from './ChatHeader';
 import { ChatMessages } from './ChatMessages';
@@ -13,6 +14,7 @@ const DEFAULT_H = 480;
 
 export function ChatWidget() {
   const { isOpen, isMinimized, isLoading, addMessage, setLoading, restore } = useChatStore();
+  const { puede } = usePermisos();
 
   // ── Dragging logic ──
   const widgetRef = useRef<HTMLDivElement>(null);
@@ -87,6 +89,9 @@ export function ChatWidget() {
     },
     [addMessage, setLoading],
   );
+
+  // ── Sin permiso → no renderizar ──
+  if (!puede('asistente:ver')) return null;
 
   // ── Minimised FAB ──
   if (isMinimized) {

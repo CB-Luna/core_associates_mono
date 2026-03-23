@@ -2,6 +2,7 @@
 
 import { Minus, X, Trash2 } from 'lucide-react';
 import { useChatStore } from '@/stores/chat-store';
+import { usePermisos } from '@/lib/permisos';
 
 export function ChatHeader() {
   const mode = useChatStore((s) => s.mode);
@@ -10,6 +11,8 @@ export function ChatHeader() {
   const close = useChatStore((s) => s.close);
   const clearHistory = useChatStore((s) => s.clearHistory);
   const msgCount = useChatStore((s) => s.messages.length);
+  const { puede } = usePermisos();
+  const puedeAvanzado = puede('asistente:modo-avanzado');
 
   return (
     <div className="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-primary-600 to-primary-700 px-3 py-2 text-white dark:border-gray-600">
@@ -17,7 +20,7 @@ export function ChatHeader() {
       <div className="flex items-center gap-2">
         <span className="text-sm font-semibold">Asistente</span>
 
-        {/* Mode toggle pill */}
+        {/* Mode toggle pill — avanzado solo si tiene permiso */}
         <div className="flex rounded-full bg-white/20 p-0.5 text-[10px]">
           <button
             onClick={() => setMode('clasico')}
@@ -27,16 +30,18 @@ export function ChatHeader() {
           >
             Clásico
           </button>
-          <button
-            onClick={() => setMode('avanzado')}
-            className={`rounded-full px-2 py-0.5 transition-colors ${
-              mode === 'avanzado' ? 'bg-white text-primary-700 font-medium' : 'text-white/80 hover:text-white'
-            }`}
-            title="Próximamente — requiere configuración IA"
-            disabled
-          >
-            Avanzado
-          </button>
+          {puedeAvanzado && (
+            <button
+              onClick={() => setMode('avanzado')}
+              className={`rounded-full px-2 py-0.5 transition-colors ${
+                mode === 'avanzado' ? 'bg-white text-primary-700 font-medium' : 'text-white/80 hover:text-white'
+              }`}
+              title="Próximamente — requiere configuración IA"
+              disabled
+            >
+              Avanzado
+            </button>
+          )}
         </div>
       </div>
 
