@@ -426,6 +426,7 @@ export interface AnalisisDocumento {
   confianza: number | null;
   datosExtraidos: Record<string, { valor: string | boolean; confianza: number }> | null;
   validaciones: Record<string, boolean> | null;
+  errorMsg?: string | null;
   createdAt: string;
 }
 

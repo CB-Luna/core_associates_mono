@@ -107,10 +107,10 @@ export function ChatWidget() {
           source: result.fuente,
           intent: result.intent,
         });
-      } catch {
+      } catch (err: any) {
         addMessage({
           role: 'assistant',
-          content: 'Ocurrió un error al consultar los datos. Inténtalo de nuevo.',
+          content: err?.message || 'Ocurrió un error al consultar los datos. Inténtalo de nuevo.',
           source: 'clasico',
         });
       } finally {

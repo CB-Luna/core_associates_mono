@@ -38,6 +38,10 @@ export class PermisosGuard implements CanActivate {
 
     const userPermisos = usuario?.rolRef?.permisos.map((rp) => rp.permiso.codigo) ?? [];
 
+    // Inyectar permisos en request.user para que controllers puedan accederlos
+    const request = context.switchToHttp().getRequest();
+    request.user.permisos = userPermisos;
+
     // Super-admin tiene acceso total (D.3 RBAC dinámico)
     if (userPermisos.includes('sistema:super-admin')) {
       return true;

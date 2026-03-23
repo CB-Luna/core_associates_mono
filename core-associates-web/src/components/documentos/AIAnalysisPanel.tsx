@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Brain,
   RefreshCw,
@@ -90,6 +90,19 @@ export function AIAnalysisPanel({ analisis, documentoId, documentoTipo, onAnalys
   const [expanded, setExpanded] = useState(true);
   const [reanalyzing, setReanalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Polling: cuando el análisis está procesando, refrescar cada 3s
+  useEffect(() => {
+    if (analisis?.estado === 'procesando') {
+      pollRef.current = setInterval(() => {
+        onAnalysisUpdated?.();
+      }, 3000);
+    }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [analisis?.estado, onAnalysisUpdated]);
 
   const handleAnalyze = async () => {
     setReanalyzing(true);
@@ -162,6 +175,9 @@ export function AIAnalysisPanel({ analisis, documentoId, documentoTipo, onAnalys
             Reintentar
           </button>
         </div>
+        {analisis.errorMsg && (
+          <p className="mt-2 text-xs text-red-600">{analisis.errorMsg}</p>
+        )}
       </div>
     );
   }
