@@ -145,4 +145,53 @@ export class AiService {
 
     return { data: parsed, tokens, timeMs };
   }
+
+  /**
+   * Send a text-only chat message to the AI provider.
+   * Used by the chatbot assistant (K.3 modo avanzado).
+   */
+  async chat(
+    userMessage: string,
+    systemPrompt: string,
+    configKey = 'chatbot_assistant',
+  ): Promise<{ text: string; tokens: number; timeMs: number }> {
+    const startTime = Date.now();
+    const apiKey = await this.getApiKey(configKey);
+    const config = await this.getConfig(configKey);
+
+    const body: Record<string, any> = {
+      model: config.model,
+      max_tokens: Math.min(config.maxTokens, 1024), // limit for chat responses
+      temperature: config.temperature,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }],
+    };
+
+    this.logger.log(`Chatbot request to ${config.model} (${configKey})`);
+
+    const response = await fetch(this.apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      this.logger.error(`Anthropic chat error: ${response.status} - ${errorText}`);
+      throw new Error(`Error del servicio de IA: ${response.status}`);
+    }
+
+    const result: AnthropicResponse = await response.json();
+    const timeMs = Date.now() - startTime;
+    const tokens = result.usage.input_tokens + result.usage.output_tokens;
+    const text = result.content.find((c) => c.type === 'text')?.text || '';
+
+    this.logger.log(`Chatbot responded in ${timeMs}ms, ${tokens} tokens`);
+
+    return { text, tokens, timeMs };
+  }
 }

@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ReportesService } from '../reportes/reportes.service';
+import { AiService } from '../ai/ai.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { matchIntent } from './intents/intent-matcher';
 import { validateContent } from './guards/content-guard';
+import { buildSystemPrompt } from './prompts/system-prompt';
 
 export interface RespuestaAsistente {
   respuesta: string;
@@ -9,15 +12,25 @@ export interface RespuestaAsistente {
   intent?: string;
 }
 
+/** Simple in-memory rate limiter: Map<userId, { count, windowStart }> */
+const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
+const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
 @Injectable()
 export class AsistenteIaService {
   private readonly logger = new Logger(AsistenteIaService.name);
 
-  constructor(private readonly reportes: ReportesService) {}
+  constructor(
+    private readonly reportes: ReportesService,
+    private readonly aiService: AiService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async preguntar(
     pregunta: string,
     modoAvanzado: boolean,
+    userId: string,
+    userPermisos: string[],
   ): Promise<RespuestaAsistente> {
     // 1. Content guard
     const guardResult = validateContent(pregunta);
@@ -25,27 +38,82 @@ export class AsistenteIaService {
       return { respuesta: guardResult.reason!, fuente: 'clasico' };
     }
 
-    // 2. Classic mode: intent matching
+    // 2. Classic mode: intent matching (always tried first, even in advanced mode)
     const match = matchIntent(pregunta);
     if (match) {
       const respuesta = await this.resolveIntent(match.resolverKey);
       return { respuesta, fuente: 'clasico', intent: match.id };
     }
 
-    // 3. If modoAvanzado requested → placeholder for K.3
+    // 3. If modoAvanzado requested → call IA API
     if (modoAvanzado) {
-      return {
-        respuesta: 'El modo avanzado con IA está en desarrollo. Por ahora solo puedo responder con datos del sistema.',
-        fuente: 'clasico',
-      };
+      return this.askIA(pregunta, userId, userPermisos);
     }
 
-    // 4. No match
+    // 4. No match in classic mode
     return {
       respuesta:
         'No encontré información para esa pregunta. Intenta con algo como "¿Cuántos asociados hay?" o escribe **ayuda** para ver lo que puedo hacer.',
       fuente: 'clasico',
     };
+  }
+
+  // ── Advanced mode: call IA provider ──
+
+  private async askIA(
+    pregunta: string,
+    userId: string,
+    userPermisos: string[],
+  ): Promise<RespuestaAsistente> {
+    // Rate limiting
+    const rateLimitResult = await this.checkRateLimit(userId);
+    if (!rateLimitResult.allowed) {
+      return {
+        respuesta: `Has alcanzado el límite de ${rateLimitResult.limit} preguntas por hora en modo avanzado. Intenta más tarde o usa el modo clásico.`,
+        fuente: 'clasico',
+      };
+    }
+
+    try {
+      const systemPrompt = buildSystemPrompt(userPermisos);
+      const { text } = await this.aiService.chat(pregunta, systemPrompt, 'chatbot_assistant');
+
+      if (!text.trim()) {
+        return { respuesta: 'La IA no generó una respuesta. Intenta reformular tu pregunta.', fuente: 'ia' };
+      }
+
+      return { respuesta: text, fuente: 'ia' };
+    } catch (err) {
+      this.logger.error(`Error calling IA: ${err instanceof Error ? err.message : err}`);
+      return {
+        respuesta: 'No pude conectar con el servicio de IA en este momento. Intenta de nuevo o usa el modo clásico.',
+        fuente: 'clasico',
+      };
+    }
+  }
+
+  private async checkRateLimit(userId: string): Promise<{ allowed: boolean; limit: number }> {
+    // Get configured limit
+    const config = await this.prisma.configuracionIA.findUnique({
+      where: { clave: 'chatbot_assistant' },
+      select: { maxPreguntasPorHora: true },
+    }).catch(() => null);
+    const limit = config?.maxPreguntasPorHora ?? 20;
+
+    const now = Date.now();
+    const entry = rateLimitMap.get(userId);
+
+    if (!entry || now - entry.windowStart > RATE_WINDOW_MS) {
+      rateLimitMap.set(userId, { count: 1, windowStart: now });
+      return { allowed: true, limit };
+    }
+
+    if (entry.count >= limit) {
+      return { allowed: false, limit };
+    }
+
+    entry.count++;
+    return { allowed: true, limit };
   }
 
   // ── Intent resolvers (use ReportesService directly) ──

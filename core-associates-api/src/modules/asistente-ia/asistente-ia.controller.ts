@@ -37,6 +37,8 @@ export class AsistenteIaController {
     return this.service.preguntar(
       dto.pregunta,
       dto.modoAvanzado ?? false,
+      user.id,
+      user.permisos ?? [],
     );
   }
 }
