@@ -16,16 +16,17 @@ const DEFAULT_H = 480;
 export function ChatWidget() {
   const { isOpen, isMinimized, isLoading, addMessage, setLoading, restore, mode } = useChatStore();
   const { puede } = usePermisos();
+  const tienePermiso = puede('asistente:ver');
 
   // ── Global chatbot status (from admin config) ──
   const [chatbotStatus, setChatbotStatus] = useState<ChatbotStatus | null>(null);
 
   useEffect(() => {
-    if (!puede('asistente:ver')) return;
+    if (!tienePermiso) return;
     apiClient<ChatbotStatus>('/ai/config/chatbot-status')
       .then(setChatbotStatus)
       .catch(() => setChatbotStatus({ chatbotActivo: true, modoAvanzadoDisponible: true, maxPreguntasPorHora: 20 }));
-  }, [puede]);
+  }, [tienePermiso]);
 
   // ── Dragging logic ──
   const widgetRef = useRef<HTMLDivElement>(null);
@@ -104,7 +105,7 @@ export function ChatWidget() {
   );
 
   // ── Sin permiso o chatbot desactivado globalmente → no renderizar ──
-  if (!puede('asistente:ver')) return null;
+  if (!tienePermiso) return null;
   if (chatbotStatus && !chatbotStatus.chatbotActivo) return null;
 
   // ── Minimised FAB ──
