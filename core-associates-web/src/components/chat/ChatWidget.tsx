@@ -6,6 +6,24 @@ import { useChatStore } from '@/stores/chat-store';
 import { usePermisos } from '@/lib/permisos';
 import { apiClient } from '@/lib/api-client';
 import type { ChatbotStatus } from '@/lib/api-types';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
+/** Fetch seguro que NUNCA dispara el 401-handler de apiClient. */
+async function fetchChatbotStatus(): Promise<ChatbotStatus> {
+  const fallback: ChatbotStatus = { chatbotActivo: true, modoAvanzadoDisponible: true, maxPreguntasPorHora: 20 };
+  try {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return fallback;
+    const res = await fetch(`${API_URL}/api/v1/asistente/chatbot-status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return fallback;
+    return await res.json();
+  } catch {
+    return fallback;
+  }
+}
 import { ChatHeader } from './ChatHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
@@ -23,9 +41,7 @@ export function ChatWidget() {
 
   useEffect(() => {
     if (!tienePermiso) return;
-    apiClient<ChatbotStatus>('/ai/config/chatbot-status')
-      .then(setChatbotStatus)
-      .catch(() => setChatbotStatus({ chatbotActivo: true, modoAvanzadoDisponible: true, maxPreguntasPorHora: 20 }));
+    fetchChatbotStatus().then(setChatbotStatus);
   }, [tienePermiso]);
 
   // ── Dragging logic ──
