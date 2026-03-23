@@ -2,7 +2,7 @@
 
 > **Última actualización**: 22 de marzo de 2026  
 > Solo tareas **pendientes**. Lo completado está archivado en `.github/completados/`.  
-> Commit actual en producción: `4d2e1e1` → `https://core-asoc.cbluna-dev.com`
+> Commit actual en producción: `812ae1d` → `https://core-asoc.cbluna-dev.com`
 
 ---
 
@@ -74,30 +74,11 @@ Completado. Ventana flotante draggable con 5 componentes: `ChatWidget.tsx` (wrap
 
 Completado. Motor de intents en `lib/chat/intent-matcher.ts` con 15 intents: count_asociados, asociados_activos, asociados_pendientes, count_proveedores, compare_asociados_proveedores, top_proveedor_promociones, cupones_mes, cupones_canjeados, casos_abiertos, casos_por_estado, casos_por_tipo, docs_pendientes, saludo, ayuda. Normalización de acentos, cache de 1 min, usa endpoints `/reportes/dashboard` y `/reportes/avanzado`. 12 tests unitarios.
 
-### K.3 — Modo avanzado (IA por API)
+### K.3 — Modo avanzado (IA por API) ✅ `812ae1d`
 
-**Concepto**: Al activar el toggle "Asistente avanzado" (nombre final TBD — algo profesional, no "IA avanzada"), las preguntas que el modo clásico no pueda responder se envían a la API de IA (Anthropic/OpenAI/Google según configuración en `ConfiguracionIA`).
+Completado: `AiService.chat()` para mensajes de texto al proveedor de IA (Anthropic). System prompt con inyección de permisos del usuario (`buildSystemPrompt`). Rate limiting in-memory por usuario (configurable via `maxPreguntasPorHora` en `ConfiguracionIA`). Flujo inteligente: primero intents clásicos (gratis), luego IA solo si no hay match y modo avanzado activo. Content guard bloquea contenido ofensivo y prompt injection.
 
-**Flujo inteligente de routing** (ahorrar tokens):
-1. El usuario escribe una pregunta
-2. Primero pasa por el motor de intents del modo clásico
-3. **Si hay match** → responde el motor clásico (gratis, incluso con modo avanzado activo)
-4. **Si no hay match** → se envía a la IA por API
-5. Antes de enviar a IA: el guard de contenido valida que la pregunta sea relevante al sistema
-
-**Guard de contenido / filtro**:
-- Lista de temas permitidos: asociados, proveedores, promociones, cupones, casos legales, abogados, membresías, vehículos, reportes, configuración
-- Si la pregunta no tiene relación con el sistema → rechazar con mensaje educado ("Solo puedo ayudarte con temas relacionados a la plataforma de Core Associates")
-- Bloquear contenido ofensivo, spam, intentos de prompt injection
-- Opcional: limitar N preguntas por hora/día por usuario (configuración para evitar abuso de tokens)
-
-**Restricción por rol**:
-- El guard debe validar que el usuario no pregunte sobre datos a los que su rol no tiene acceso
-- Ejemplo: un operador no debería poder preguntar "¿Cuánto gasta la empresa en IA?" si eso es solo para admins
-- Se implementa inyectando el contexto de permisos del usuario en el system prompt de la IA
-
-**Alcance**: API (nuevo módulo `asistente-ia`) + CRM Web  
-**Esfuerzo**: Alto
+**Módulo K completo** — Chatbot CRM con modo clásico + avanzado, RBAC, config admin, backend centralizado.
 
 ### ~~K.4 — Configuración de IA para chatbot~~ ✅ `ba3bb58`
 
@@ -240,7 +221,7 @@ Fase 2 — Asistente IA (chatbot CRM):
   ├─ ✅ K.5 Permisos RBAC (asistente:ver, asistente:modo-avanzado)
   ├─ ✅ K.4 Configuración IA para chatbot (ConfAITab)
   ├─ ✅ K.6 Backend módulo asistente-ia
-  └─ K.3 Modo avanzado (IA por API + guard contenido)
+  └─ ✅ K.3 Modo avanzado (IA por API + guard contenido)
 
 Fase 3 — App Móvil Profesional:
   ├─ C.1 Login dual (email/password para profesionales)
@@ -282,6 +263,6 @@ Fase 6 — Polish:
 | **CRM Web** | ~99% | K.1-K.6 ✅ (chatbot completo), F.1/F.3 (botones abogado) |
 | **App Flutter** | ~93% | C (shell profesional), F.4 (docs bidireccionales), E.1 (filtro cupones) |
 | **Infra** | 100% | Docker + Nginx + SSL + deploy script funcionando |
-| **IA** | ~99% | K.3 (modo avanzado IA) pendiente, documentos KYC + chatbot clásico funcionales |
+| **IA** | 100% | Módulo K completo (chatbot clásico + IA avanzado). Requires `ANTHROPIC_API_KEY` en producción para modo avanzado. |
 
-**Producción**: `https://core-asoc.cbluna-dev.com` (commit `4d2e1e1`)
+**Producción**: `https://core-asoc.cbluna-dev.com` (commit `812ae1d`)
