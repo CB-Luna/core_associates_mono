@@ -16,6 +16,13 @@ export interface RespuestaAsistente {
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
 const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
+// ── Conversation history (in-memory, per userId) ──
+interface HistoryMessage { role: 'user' | 'assistant'; content: string }
+interface ConversationEntry { messages: HistoryMessage[]; lastAccess: number }
+const conversationMap = new Map<string, ConversationEntry>();
+const CONVERSATION_TTL_MS = 30 * 60 * 1000; // 30 min
+const MAX_HISTORY_MESSAGES = 10; // 5 pairs
+
 @Injectable()
 export class AsistenteIaService {
   private readonly logger = new Logger(AsistenteIaService.name);
@@ -38,24 +45,36 @@ export class AsistenteIaService {
       return { respuesta: guardResult.reason!, fuente: 'clasico' };
     }
 
-    // 2. Classic mode: intent matching (always tried first, even in advanced mode)
+    // Save user message to history
+    this.addToHistory(userId, 'user', pregunta);
+
+    // 2. Entity resolver (direct DB lookup — no AI tokens)
+    const entityResult = await this.resolveEntityQuery(pregunta);
+    if (entityResult) {
+      this.addToHistory(userId, 'assistant', entityResult);
+      return { respuesta: entityResult, fuente: 'clasico', intent: 'entity_lookup' };
+    }
+
+    // 3. Classic mode: intent matching (always tried first, even in advanced mode)
     const match = matchIntent(pregunta);
     if (match) {
       const respuesta = await this.resolveIntent(match.resolverKey);
+      this.addToHistory(userId, 'assistant', respuesta);
       return { respuesta, fuente: 'clasico', intent: match.id };
     }
 
-    // 3. If modoAvanzado requested → call IA API
+    // 4. If modoAvanzado requested → call IA API with conversation context
     if (modoAvanzado) {
-      return this.askIA(pregunta, userId, userPermisos);
+      const result = await this.askIA(pregunta, userId, userPermisos);
+      this.addToHistory(userId, 'assistant', result.respuesta);
+      return result;
     }
 
-    // 4. No match in classic mode
-    return {
-      respuesta:
-        'No encontré información para esa pregunta. Intenta con algo como "¿Cuántos asociados hay?" o escribe **ayuda** para ver lo que puedo hacer.',
-      fuente: 'clasico',
-    };
+    // 5. No match in classic mode
+    const fallback =
+      'No encontré información para esa pregunta. Intenta con algo como "¿Cuántos asociados hay?", un ID como **ASC-0017**, o escribe **ayuda** para ver lo que puedo hacer.';
+    this.addToHistory(userId, 'assistant', fallback);
+    return { respuesta: fallback, fuente: 'clasico' };
   }
 
   // ── Advanced mode: call IA provider ──
@@ -76,7 +95,18 @@ export class AsistenteIaService {
 
     try {
       const dataContext = await this.buildDataContext(pregunta);
-      const systemPrompt = buildSystemPrompt(userPermisos, dataContext);
+
+      // Build conversation context from history (exclude current question)
+      const history = this.getHistory(userId);
+      const previousMessages = history.slice(0, -1);
+      let conversationContext: string | undefined;
+      if (previousMessages.length > 0) {
+        conversationContext = previousMessages
+          .map((m) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
+          .join('\n');
+      }
+
+      const systemPrompt = buildSystemPrompt(userPermisos, dataContext, conversationContext);
       const { text } = await this.aiService.chat(pregunta, systemPrompt, 'chatbot_assistant');
 
       if (!text.trim()) {
@@ -90,6 +120,193 @@ export class AsistenteIaService {
         respuesta: 'No pude conectar con el servicio de IA en este momento. Intenta de nuevo o usa el modo clásico.',
         fuente: 'clasico',
       };
+    }
+  }
+
+  // ── Conversation history helpers ──
+
+  private addToHistory(userId: string, role: 'user' | 'assistant', content: string) {
+    this.cleanExpiredConversations();
+    const entry = conversationMap.get(userId) || { messages: [], lastAccess: Date.now() };
+    entry.messages.push({ role, content });
+    if (entry.messages.length > MAX_HISTORY_MESSAGES) {
+      entry.messages = entry.messages.slice(-MAX_HISTORY_MESSAGES);
+    }
+    entry.lastAccess = Date.now();
+    conversationMap.set(userId, entry);
+  }
+
+  private getHistory(userId: string): HistoryMessage[] {
+    const entry = conversationMap.get(userId);
+    if (!entry) return [];
+    if (Date.now() - entry.lastAccess > CONVERSATION_TTL_MS) {
+      conversationMap.delete(userId);
+      return [];
+    }
+    return entry.messages;
+  }
+
+  private cleanExpiredConversations() {
+    const now = Date.now();
+    for (const [key, entry] of conversationMap) {
+      if (now - entry.lastAccess > CONVERSATION_TTL_MS) {
+        conversationMap.delete(key);
+      }
+    }
+  }
+
+  // ── Entity resolver: direct DB lookups (classic mode, zero AI tokens) ──
+
+  private async resolveEntityQuery(pregunta: string): Promise<string | null> {
+    // 1. ASC-XXXX direct lookup
+    const ascMatch = pregunta.match(/ASC-?\s*(\d{1,5})/i);
+    if (ascMatch) {
+      const num = ascMatch[1].padStart(4, '0');
+      return this.lookupAsociado(`ASC-${num}`);
+    }
+
+    // 2. PRV-XXXX direct lookup
+    const prvMatch = pregunta.match(/PRV-?\s*(\d{1,5})/i);
+    if (prvMatch) {
+      const num = prvMatch[1].padStart(4, '0');
+      return this.lookupProveedor(`PRV-${num}`);
+    }
+
+    // 3. Phone number lookup (10-digit, optional +52)
+    const phoneMatch = pregunta.match(/(?:\+52)?(\d{10})/);
+    if (phoneMatch) {
+      return this.lookupByPhone(phoneMatch[1]);
+    }
+
+    // 4. Name search: "quien es [nombre]", "buscar asociado [nombre]", etc.
+    const namePatterns = [
+      /(?:quien|quién)\s+es\s+(?:el\s+)?(?:asociado\s+)?(.{3,})/i,
+      /busca(?:r)?\s+(?:al?\s+)?(?:asociado\s+)?(.{3,})/i,
+      /datos?\s+(?:del?\s+)?(?:asociado\s+)?(.{3,})/i,
+      /informaci[oó]n\s+(?:del?\s+)?(?:asociado\s+)?(.{3,})/i,
+    ];
+    for (const pattern of namePatterns) {
+      const match = pregunta.match(pattern);
+      if (match) {
+        const name = match[1].trim().replace(/[?¿!¡.,"]/g, '').trim();
+        if (name.length >= 3 && !/^\d+$/.test(name)) {
+          return this.searchAsociadoByName(name);
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private async lookupAsociado(idUnico: string): Promise<string | null> {
+    try {
+      const a = await this.prisma.asociado.findFirst({
+        where: { idUnico },
+        include: {
+          vehiculos: { select: { marca: true, modelo: true, anio: true, placas: true, color: true } },
+          documentos: { select: { tipo: true, estado: true, motivoRechazo: true } },
+          casosLegales: { select: { tipoPercance: true, estado: true, createdAt: true }, take: 5, orderBy: { createdAt: 'desc' } },
+        },
+      });
+      if (!a) return `No se encontró ningún asociado con ID **${idUnico}**.`;
+      return this.formatAsociadoResponse(a);
+    } catch {
+      return null;
+    }
+  }
+
+  private formatAsociadoResponse(a: any): string {
+    let r = `📋 **Asociado ${a.idUnico}**\n`;
+    r += `- **Nombre**: ${a.nombre || ''} ${a.apellidoPat || ''} ${a.apellidoMat || ''}\n`;
+    r += `- **Teléfono**: ${a.telefono}\n`;
+    r += `- **Email**: ${a.email || 'No registrado'}\n`;
+    r += `- **Estado**: ${a.estado}\n`;
+    r += `- **Registro**: ${a.fechaRegistro?.toISOString().split('T')[0] || 'N/A'}`;
+    if (a.vehiculos?.length) {
+      r += `\n- **Vehículos**: ${a.vehiculos.map((v: any) => `${v.marca} ${v.modelo} ${v.anio} (${v.placas}, ${v.color})`).join('; ')}`;
+    }
+    if (a.documentos?.length) {
+      r += `\n- **Documentos**: ${a.documentos.map((d: any) => `${d.tipo}: ${d.estado}${d.motivoRechazo ? ' (' + d.motivoRechazo + ')' : ''}`).join('; ')}`;
+    }
+    if (a.casosLegales?.length) {
+      r += `\n- **Casos legales**: ${a.casosLegales.map((c: any) => `${c.tipoPercance} (${c.estado})`).join('; ')}`;
+    }
+    return r;
+  }
+
+  private async lookupProveedor(idUnico: string): Promise<string | null> {
+    try {
+      const p = await this.prisma.proveedor.findFirst({
+        where: { idUnico },
+        include: {
+          promociones: { where: { estado: 'activa' }, select: { titulo: true, tipoDescuento: true, valorDescuento: true, fechaFin: true } },
+          _count: { select: { cuponesEmitidos: true, cuponesCanjeados: true } },
+        },
+      });
+      if (!p) return `No se encontró ningún proveedor con ID **${idUnico}**.`;
+      let r = `🏪 **Proveedor ${p.idUnico}**\n`;
+      r += `- **Razón social**: ${p.razonSocial}\n`;
+      r += `- **Tipo**: ${p.tipo}\n`;
+      r += `- **Estado**: ${p.estado}\n`;
+      r += `- **Contacto**: ${p.contactoNombre || 'N/A'} | ${p.telefono || 'Sin tel.'} | ${p.email || 'Sin email'}\n`;
+      r += `- **Cupones emitidos**: ${p._count.cuponesEmitidos} | **Canjeados**: ${p._count.cuponesCanjeados}`;
+      if (p.promociones?.length) {
+        r += `\n- **Promociones activas**:`;
+        p.promociones.forEach((pr: any) => {
+          r += `\n  • ${pr.titulo} (${pr.tipoDescuento === 'porcentaje' ? pr.valorDescuento + '%' : '$' + pr.valorDescuento} — vence ${pr.fechaFin.toISOString().split('T')[0]})`;
+        });
+      }
+      return r;
+    } catch {
+      return null;
+    }
+  }
+
+  private async searchAsociadoByName(name: string): Promise<string | null> {
+    try {
+      const parts = name.split(/\s+/).filter((p) => p.length >= 2);
+      if (!parts.length) return null;
+
+      const asociados = await this.prisma.asociado.findMany({
+        where: {
+          OR: parts.flatMap((part) => [
+            { nombre: { contains: part, mode: 'insensitive' as const } },
+            { apellidoPat: { contains: part, mode: 'insensitive' as const } },
+            { apellidoMat: { contains: part, mode: 'insensitive' as const } },
+          ]),
+        },
+        select: { idUnico: true, nombre: true, apellidoPat: true, apellidoMat: true, estado: true, telefono: true },
+        take: 5,
+      });
+
+      if (!asociados.length) return `No encontré asociados con el nombre **"${name}"**.`;
+      if (asociados.length === 1) return this.lookupAsociado(asociados[0].idUnico);
+
+      let r = `Encontré **${asociados.length}** asociados que coinciden con "${name}":\n`;
+      asociados.forEach((a, i) => {
+        r += `${i + 1}. **${a.idUnico}** — ${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''} (${a.estado})\n`;
+      });
+      r += `\nEscribe el ID (ej: **${asociados[0].idUnico}**) para ver el detalle completo.`;
+      return r;
+    } catch {
+      return null;
+    }
+  }
+
+  private async lookupByPhone(phone: string): Promise<string | null> {
+    try {
+      const telefono = `+52${phone}`;
+      const a = await this.prisma.asociado.findUnique({
+        where: { telefono },
+        include: {
+          vehiculos: { select: { marca: true, modelo: true, anio: true, placas: true, color: true } },
+          documentos: { select: { tipo: true, estado: true } },
+        },
+      });
+      if (!a) return `No se encontró ningún asociado con teléfono **${telefono}**.`;
+      return this.formatAsociadoResponse(a);
+    } catch {
+      return null;
     }
   }
 
@@ -314,10 +531,78 @@ export class AsistenteIaService {
         const d = await this.reportes.getDashboardMetrics();
         return `Hay **${d.documentos.pendientes}** documentos pendientes de revisión.`;
       }
+      case 'asociados_rechazados': {
+        const count = await this.prisma.asociado.count({ where: { estado: 'rechazado' } });
+        return `Hay **${count}** asociados rechazados.`;
+      }
+      case 'listar_ultimos_asociados': {
+        const asociados = await this.prisma.asociado.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          select: { idUnico: true, nombre: true, apellidoPat: true, estado: true, createdAt: true },
+        });
+        if (!asociados.length) return 'No hay asociados registrados aún.';
+        const lines = asociados.map((a, i) => `${i + 1}. **${a.idUnico}** — ${a.nombre} ${a.apellidoPat} (${a.estado}) — ${a.createdAt.toISOString().split('T')[0]}`);
+        return `Últimos 5 asociados registrados:\n${lines.join('\n')}`;
+      }
+      case 'proveedores_activos': {
+        const d = await this.reportes.getDashboardMetrics();
+        return `Hay **${d.proveedores.activos}** proveedores activos de un total de ${d.proveedores.total}.`;
+      }
+      case 'proveedores_tipo': {
+        const groups = await this.prisma.proveedor.groupBy({
+          by: ['tipo'],
+          _count: { id: true },
+        });
+        if (!groups.length) return 'No hay proveedores registrados.';
+        const lines = groups.map((g) => `• ${g.tipo}: **${g._count.id}**`);
+        return `Proveedores por tipo:\n${lines.join('\n')}`;
+      }
+      case 'promociones_activas': {
+        const promos = await this.prisma.promocion.findMany({
+          where: { estado: 'activa' },
+          include: { proveedor: { select: { razonSocial: true } } },
+          take: 10,
+          orderBy: { fechaFin: 'asc' },
+        });
+        if (!promos.length) return 'No hay promociones activas en este momento.';
+        const lines = promos.map((p, i) => `${i + 1}. **${p.titulo}** (${p.proveedor.razonSocial}) — ${p.tipoDescuento === 'porcentaje' ? p.valorDescuento + '%' : '$' + p.valorDescuento} — vence ${p.fechaFin.toISOString().split('T')[0]}`);
+        return `Promociones activas (${promos.length}):\n${lines.join('\n')}`;
+      }
+      case 'listar_abogados': {
+        const abogados = await this.prisma.usuario.findMany({
+          where: { rolRef: { nombre: 'abogado' } },
+          select: { nombre: true, email: true, especialidad: true, cedulaProfesional: true },
+        });
+        if (!abogados.length) return 'No hay abogados registrados en el sistema.';
+        const lines = abogados.map((a, i) => `${i + 1}. **${a.nombre}** — ${a.especialidad || 'General'} | Cédula: ${a.cedulaProfesional || 'N/A'}`);
+        return `Abogados registrados (${abogados.length}):\n${lines.join('\n')}`;
+      }
+      case 'resumen_general': {
+        const d = await this.reportes.getDashboardMetrics();
+        return `📊 **Resumen general de la plataforma:**\n` +
+          `- Asociados: **${d.asociados.total}** total (${d.asociados.activos} activos, ${d.asociados.pendientes} pendientes)\n` +
+          `- Proveedores: **${d.proveedores.total}** total (${d.proveedores.activos} activos)\n` +
+          `- Cupones este mes: **${d.cupones.delMes}**\n` +
+          `- Casos legales abiertos: **${d.casosLegales.abiertos}**\n` +
+          `- Documentos pendientes: **${d.documentos.pendientes}**`;
+      }
       case 'saludo':
         return '¡Hola! 👋 Soy el asistente de Core Associates. Puedo ayudarte con información sobre asociados, proveedores, cupones, casos legales y más. ¿Qué necesitas saber?';
       case 'ayuda':
-        return `Puedo responder preguntas como:\n• ¿Cuántos asociados hay?\n• ¿Cuántos casos abiertos tengo?\n• ¿Cuántos cupones se generaron este mes?\n• ¿Cuál es el mejor proveedor?\n• ¿Cuántos documentos pendientes hay?\n• Desglose de casos por estado\n\nEscribe tu pregunta en lenguaje natural.`;
+        return `Puedo responder preguntas como:\n` +
+          `• ¿Cuántos asociados hay? / asociados activos / pendientes / rechazados\n` +
+          `• Últimos asociados registrados\n` +
+          `• ¿Quién es ASC-0017? (buscar por ID)\n` +
+          `• Buscar asociado Abraham Domínguez (buscar por nombre)\n` +
+          `• ¿Cuántos proveedores hay? / proveedores por tipo\n` +
+          `• Promociones activas\n` +
+          `• ¿Cuántos cupones este mes? / cupones canjeados\n` +
+          `• Casos abiertos / desglose por estado / por tipo\n` +
+          `• Abogados disponibles\n` +
+          `• Documentos pendientes\n` +
+          `• Resumen general / dashboard\n\n` +
+          `Escribe tu pregunta en lenguaje natural, o usa un ID como **ASC-0017** o **PRV-0001** para consultar directamente.`;
       default:
         this.logger.warn(`Resolver key no encontrada: ${key}`);
         return 'No pude procesar esa consulta. Intenta con otro tema.';

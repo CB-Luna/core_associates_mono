@@ -27,12 +27,32 @@ export const INTENTS: IntentDef[] = [
     keywords: [['asociados', 'pendientes']],
     resolverKey: 'asociados_pendientes',
   },
+  {
+    id: 'asociados_rechazados',
+    keywords: [['asociados', 'rechazados']],
+    resolverKey: 'asociados_rechazados',
+  },
+  {
+    id: 'listar_ultimos_asociados',
+    keywords: [['ultimos', 'asociados'], ['asociados', 'recientes'], ['nuevos', 'asociados'], ['ultimos', 'registros']],
+    resolverKey: 'listar_ultimos_asociados',
+  },
 
   // ── Proveedores ───────────────────────────────────
   {
     id: 'count_proveedores',
     keywords: [['cuantos', 'proveedores'], ['total', 'proveedores'], ['numero', 'proveedores']],
     resolverKey: 'count_proveedores',
+  },
+  {
+    id: 'proveedores_activos',
+    keywords: [['proveedores', 'activos']],
+    resolverKey: 'proveedores_activos',
+  },
+  {
+    id: 'proveedores_tipo',
+    keywords: [['proveedores', 'tipo'], ['tipos', 'proveedor'], ['categorias', 'proveedores']],
+    resolverKey: 'proveedores_tipo',
   },
   {
     id: 'compare_asociados_proveedores',
@@ -64,6 +84,13 @@ export const INTENTS: IntentDef[] = [
     resolverKey: 'cupones_canjeados',
   },
 
+  // ── Promociones ───────────────────────────────────
+  {
+    id: 'promociones_activas',
+    keywords: [['promociones', 'activas'], ['que', 'promociones'], ['promociones', 'disponibles'], ['listar', 'promociones']],
+    resolverKey: 'promociones_activas',
+  },
+
   // ── Casos legales ─────────────────────────────────
   {
     id: 'casos_abiertos',
@@ -81,11 +108,25 @@ export const INTENTS: IntentDef[] = [
     resolverKey: 'casos_por_tipo',
   },
 
+  // ── Abogados ──────────────────────────────────────
+  {
+    id: 'listar_abogados',
+    keywords: [['abogados', 'disponibles'], ['lista', 'abogados'], ['cuantos', 'abogados'], ['abogados', 'registrados']],
+    resolverKey: 'listar_abogados',
+  },
+
   // ── Documentos ────────────────────────────────────
   {
     id: 'docs_pendientes',
     keywords: [['documentos', 'pendientes'], ['docs', 'pendientes'], ['documentos', 'revision']],
     resolverKey: 'docs_pendientes',
+  },
+
+  // ── Resumen general ───────────────────────────────
+  {
+    id: 'resumen_general',
+    keywords: [['resumen', 'general'], ['resumen', 'plataforma'], ['como', 'va'], ['estado', 'general'], ['dashboard']],
+    resolverKey: 'resumen_general',
   },
 
   // ── Saludos / meta ────────────────────────────────

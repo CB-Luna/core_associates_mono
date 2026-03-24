@@ -5,8 +5,8 @@ import '../../data/models/documento.dart';
 
 final documentsProvider =
     AsyncNotifierProvider<DocumentsNotifier, List<Documento>>(
-  DocumentsNotifier.new,
-);
+      DocumentsNotifier.new,
+    );
 
 class DocumentsNotifier extends AsyncNotifier<List<Documento>> {
   @override

@@ -46,7 +46,7 @@ const PERMISSION_CONTEXT: Record<string, string> = {
   'abogados:editar': 'Gestionar abogados',
 };
 
-export function buildSystemPrompt(userPermisos: string[], dataContext?: string): string {
+export function buildSystemPrompt(userPermisos: string[], dataContext?: string, conversationContext?: string): string {
   const accessLines = userPermisos
     .map((p) => PERMISSION_CONTEXT[p])
     .filter(Boolean)
@@ -60,5 +60,9 @@ export function buildSystemPrompt(userPermisos: string[], dataContext?: string):
     ? `\n\n## DATOS EN TIEMPO REAL:\nA continuación se muestran datos reales de la base de datos para que respondas con precisión:\n\n${dataContext}`
     : '\n\n## DATOS EN TIEMPO REAL:\nNo se encontraron datos específicos para esta consulta. Si el usuario necesita información concreta, pídele que especifique (ej: ID de asociado como ASC-0017, nombre, teléfono).';
 
-  return BASE_PROMPT + accessSection + dataSection;
+  const historySection = conversationContext
+    ? `\n\n## HISTORIAL DE CONVERSACIÓN:\nMensajes anteriores en esta conversación. Úsalos para entender el contexto si la pregunta actual es un seguimiento:\n\n${conversationContext}`
+    : '';
+
+  return BASE_PROMPT + accessSection + dataSection + historySection;
 }
