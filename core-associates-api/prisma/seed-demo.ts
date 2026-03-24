@@ -20,6 +20,7 @@ async function main() {
   const adminHash = await bcrypt.hash('Admin2026!', 10);
   const operadorHash = await bcrypt.hash('Operador2026!', 10);
   const proveedorHash = await bcrypt.hash('Proveedor2026!', 10);
+  const abogadoHash = await bcrypt.hash('Abogado2026!', 10);
 
   const admin = await prisma.usuario.upsert({
     where: { email: 'admin@coreassociates.com' },
@@ -33,7 +34,40 @@ async function main() {
     create: { email: 'operador@coreassociates.com', passwordHash: operadorHash, nombre: 'Operador Principal', rol: 'operador', rolId: ROL_OPERADOR_ID, estado: 'activo' },
   });
 
-  console.log('\u2713 Usuarios admin y operador creados');
+  // Usuarios abogado (para app de abogados)
+  const abogado1 = await prisma.usuario.upsert({
+    where: { email: 'abogado1@gmail.com' },
+    update: {},
+    create: {
+      email: 'abogado1@gmail.com',
+      passwordHash: abogadoHash,
+      nombre: 'Lic. Roberto Hernández',
+      rol: 'abogado',
+      rolId: ROL_ABOGADO_ID,
+      estado: 'activo',
+      especialidad: 'Derecho Penal y Tránsito',
+      cedulaProfesional: 'CP-123456',
+      telefono: '+525555123456',
+    },
+  });
+
+  const abogado2 = await prisma.usuario.upsert({
+    where: { email: 'abogado2@gmail.com' },
+    update: {},
+    create: {
+      email: 'abogado2@gmail.com',
+      passwordHash: abogadoHash,
+      nombre: 'Lic. Patricia Gómez',
+      rol: 'abogado',
+      rolId: ROL_ABOGADO_ID,
+      estado: 'activo',
+      especialidad: 'Derecho Civil y Seguros',
+      cedulaProfesional: 'CP-789012',
+      telefono: '+525589012345',
+    },
+  });
+
+  console.log('\u2713 Usuarios admin, operador y abogados creados');
 
   // ── PROVEEDORES ──
   const proveedoresData = [
@@ -291,6 +325,7 @@ async function main() {
 
     if (c.estado !== 'abierto') {
       casoCreateData.abogadoId = abogadoProveedores[i % abogadoProveedores.length].id;
+      casoCreateData.abogadoUsuarioId = [abogado1.id, abogado2.id][i % 2];
       casoCreateData.fechaAsignacion = new Date(fechaApertura.getTime() + 2 * 60 * 60 * 1000);
     }
 
@@ -414,7 +449,7 @@ async function main() {
 
   console.log('\n=== SEED DEMO COMPLETADO ===');
   console.log('Resumen:');
-  console.log('  - 3 usuarios (admin, operador, proveedor)');
+  console.log('  - 5 usuarios (admin, operador, proveedor, 2 abogados)');
   console.log(`  - ${proveedores.length} proveedores (talleres, comida, abogados, lavado, capacitaci\u00f3n)`);
   console.log(`  - ${asociados.length} asociados (8 activos, 3 pendientes, 1 suspendido)`);
   console.log(`  - ${asociados.length} veh\u00edculos`);

@@ -9,6 +9,7 @@ const prisma = new PrismaClient({ adapter });
 const ROL_ADMIN_ID     = 'a0000000-0000-4000-8000-000000000001';
 const ROL_OPERADOR_ID  = 'a0000000-0000-4000-8000-000000000002';
 const ROL_PROVEEDOR_ID = 'a0000000-0000-4000-8000-000000000003';
+const ROL_ABOGADO_ID   = 'a0000000-0000-4000-8000-000000000004';
 
 async function main() {
   console.log('Seeding database...');
@@ -80,6 +81,42 @@ async function main() {
     },
   });
   console.log(`Proveedor user created: ${proveedorUser.email}`);
+
+  // Crear usuarios abogados
+  const abogadoHash = await bcrypt.hash('Abogado2026!', 10);
+  const abogado1 = await prisma.usuario.upsert({
+    where: { email: 'abogado1@gmail.com' },
+    update: {},
+    create: {
+      email: 'abogado1@gmail.com',
+      passwordHash: abogadoHash,
+      nombre: 'Lic. Roberto Hernández',
+      rol: 'abogado',
+      rolId: ROL_ABOGADO_ID,
+      estado: 'activo',
+      especialidad: 'Derecho Penal y Tránsito',
+      cedulaProfesional: 'CP-123456',
+      telefono: '+525555123456',
+    },
+  });
+  console.log(`Abogado 1 created: ${abogado1.email}`);
+
+  const abogado2 = await prisma.usuario.upsert({
+    where: { email: 'abogado2@gmail.com' },
+    update: {},
+    create: {
+      email: 'abogado2@gmail.com',
+      passwordHash: abogadoHash,
+      nombre: 'Lic. Patricia Gómez',
+      rol: 'abogado',
+      rolId: ROL_ABOGADO_ID,
+      estado: 'activo',
+      especialidad: 'Derecho Civil y Seguros',
+      cedulaProfesional: 'CP-789012',
+      telefono: '+525555789012',
+    },
+  });
+  console.log(`Abogado 2 created: ${abogado2.email}`);
 
   // Crear segundo proveedor (comida)
   const proveedor2 = await prisma.proveedor.upsert({

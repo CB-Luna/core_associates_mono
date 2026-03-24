@@ -1,8 +1,8 @@
 # Pendientes — Core Associates
 
-> **Última actualización**: 22 de marzo de 2026  
+> **Última actualización**: 24 de marzo de 2026  
 > Solo tareas **pendientes**. Lo completado está archivado en `.github/completados/`.  
-> Commit actual en producción: `812ae1d` → `https://core-asoc.cbluna-dev.com`
+> Commit actual en producción: `ac8499b` → `https://core-asoc.cbluna-dev.com`
 
 ---
 
@@ -13,8 +13,8 @@ El CRM web (admin/operador/abogado) y la API están funcionales al ~98%. La App 
 | Módulo | Descripción | Prioridad |
 |--------|-------------|-----------|
 | **F** | Flujo abogado — F.1/F.2/F.3 ✅ completados; F.4/F.5 pendientes | Media |
-| **K** | Asistente IA (chatbot CRM) — modo clásico + modo IA avanzado | Alta |
-| **C** | App Móvil — shell profesional del abogado | Media-Alta |
+| **K** | Asistente IA (chatbot CRM) — ✅ COMPLETADO | — |
+| **C** | App Móvil Abogados — app separada `core_associates_app_abogados/` | **Alta** |
 | **J** | Verificación vehicular | Media |
 | **D** | RBAC — eliminar enum legacy `RolUsuario` | Baja |
 | **E** | Mejoras menores (App + CRM) | Baja |
@@ -97,47 +97,42 @@ Completado: módulo NestJS `asistente-ia` con controller (`POST /asistente/pregu
 
 ---
 
-## C. App Móvil — Shell Profesional del Abogado
+## C. App Móvil Abogados — App Separada
 
-La app actual solo tiene login OTP para asociados. El abogado necesita acceso móvil para recibir push y gestionar casos en campo.
+> **Plan detallado**: ver [APP_ABOGADOS.md](APP_ABOGADOS.md)
 
-### C.1 — Login dual en la app
+App Flutter independiente (`core_associates_app_abogados/`) para abogados como operadores de campo. Conectada al mismo backend `core-associates-api`. El abogado deja de ser "usuario de CRM" y pasa a ser "agente en tiempo real".
 
-- Nueva pantalla `LoginProfesionalScreen` con email + password
-- Reutiliza `POST /auth/login` (mismo endpoint del CRM)
-- Pantalla de selección: "Soy asociado" (OTP) vs "Soy profesional" (email)
+**Login**: Email/password (reutiliza `POST /auth/login`).  
+**Bottom Nav**: Inicio | Casos | Mapa | Perfil.
 
-### C.2 — Shell profesional
+### C.1 — Scaffold + Auth (Fase 3.1)
 
-GoRouter detecta `tipo` del JWT → redirige a shell correspondiente:
-```
-/profesional/home     → Resumen de casos (activos, pendientes, resueltos este mes)
-/profesional/casos    → Lista de casos asignados (filtro por estado, pull-to-refresh)
-/profesional/perfil   → Datos personales, cambiar contraseña, cerrar sesión
-```
-Bottom nav: **Inicio** · **Mis Casos** · **Perfil**
+- Proyecto Flutter nuevo, core infrastructure (ApiClient, SecureStorage, Theme)
+- LoginScreen email/password, GoRouter + shell con BottomNav
 
-### C.3 — Pantalla de detalle del caso
+### C.2 — Casos: feature principal (Fase 3.2)
 
-Info caso + asociado + mapa + timeline de notas + agregar nota + botones aceptar/rechazar/escalar/resolver + documentos.
+- Dashboard con stats, Mis Casos (lista + detalle), Casos Disponibles + postularse
+- Notas (timeline + agregar + privadas), documentos (subir foto/archivo)
+- Acciones: aceptar, rechazar, en_atención, escalar, resolver
 
-### C.4 — Push notifications para abogado
+### C.3 — Mapa + Navegación (Fase 3.3)
 
-- Registrar token FCM con `POST /notificaciones/register-token-usuario`
-- Push: asignación de caso, nueva nota, cambio de estado
-- Tap → navega al detalle del caso
+- Mapa SOS con markers por tipo/prioridad
+- Deeplink a Google Maps/Waze
+- Filtros en mapa
 
-### C.5 — Estructura de archivos
+### C.4 — Push Notifications FCM (Fase 3.4)
 
-```
-features/profesional/
-├── data/
-│   ├── profesional_repository.dart
-│   └── models/
-└── presentation/
-    ├── providers/
-    └── screens/
-```
+- Registro token FCM, notificaciones foreground/background
+- Deep link desde push → detalle del caso
+
+### C.5 — Extras (Fase 3.5)
+
+- Toggle disponibilidad (migración backend)
+- Chat interno básico + deeplink WhatsApp
+- Perfil completo
 
 **Esfuerzo**: Alto  
 **Prioridad**: Media-Alta
@@ -223,11 +218,12 @@ Fase 2 — Asistente IA (chatbot CRM):
   ├─ ✅ K.6 Backend módulo asistente-ia
   └─ ✅ K.3 Modo avanzado (IA por API + guard contenido)
 
-Fase 3 — App Móvil Profesional:
-  ├─ C.1 Login dual (email/password para profesionales)
-  ├─ C.2 Shell profesional (GoRouter + BottomNav)
-  ├─ C.3 Detalle de caso (notas, docs, acciones)
+Fase 3 — App Móvil Abogados (app separada → core_associates_app_abogados/):
+  ├─ C.1 Scaffold + Auth (email/password, GoRouter shell)
+  ├─ C.2 Casos: dashboard, mis casos, disponibles, detalle, notas, docs, acciones
+  ├─ C.3 Mapa SOS + navegación GPS
   ├─ C.4 Push notifications (FCM)
+  ├─ C.5 Extras: disponibilidad, chat básico, perfil
   └─ D   Eliminar enum RolUsuario (coordinar con nuevo routing)
 
 Fase 4 — Notificaciones y Documentos Bidireccionales:
