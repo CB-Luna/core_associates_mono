@@ -13,14 +13,12 @@ interface ChatState {
   messages: ChatMessage[];
   isOpen: boolean;
   isMinimized: boolean;
-  mode: 'clasico' | 'avanzado';
   isLoading: boolean;
 
   toggleOpen: () => void;
   minimize: () => void;
   restore: () => void;
   close: () => void;
-  setMode: (mode: 'clasico' | 'avanzado') => void;
   addMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
   setLoading: (v: boolean) => void;
   clearHistory: () => void;
@@ -32,7 +30,6 @@ export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   isOpen: false,
   isMinimized: false,
-  mode: 'clasico',
   isLoading: false,
 
   toggleOpen: () =>
@@ -44,8 +41,6 @@ export const useChatStore = create<ChatState>((set) => ({
   minimize: () => set({ isMinimized: true }),
   restore: () => set({ isMinimized: false, isOpen: true }),
   close: () => set({ isOpen: false, isMinimized: false }),
-
-  setMode: (mode) => set({ mode }),
 
   addMessage: (msg) =>
     set((s) => ({

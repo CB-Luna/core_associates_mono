@@ -16,9 +16,11 @@ class DocumentProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final uploaded = documents.length;
-    final enRevision = documents.where((d) => d.estado == 'pendiente').length;
-    final approved = documents.where((d) => d.estado == 'aprobado').length;
+    // Exclude rejected docs from "uploaded" count — they must be re-uploaded
+    final validDocs = documents.where((d) => d.estado != 'rechazado').toList();
+    final uploaded = validDocs.length;
+    final enRevision = validDocs.where((d) => d.estado == 'pendiente').length;
+    final approved = validDocs.where((d) => d.estado == 'aprobado').length;
     final rejected = documents.where((d) => d.estado == 'rechazado').length;
 
     return Container(

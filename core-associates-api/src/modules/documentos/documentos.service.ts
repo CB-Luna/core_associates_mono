@@ -138,6 +138,11 @@ export class DocumentosService {
       throw new NotFoundException('Documento no encontrado');
     }
 
+    // Delete S3 file on rejection (user must re-upload a new image)
+    if (estado === 'rechazado' && doc.s3Key) {
+      await this.storage.deleteFile(doc.s3Bucket, doc.s3Key).catch(() => {});
+    }
+
     const updated = await this.prisma.documento.update({
       where: { id },
       data: {
@@ -145,6 +150,7 @@ export class DocumentosService {
         revisadoPorId,
         motivoRechazo: estado === 'rechazado' ? motivoRechazo : null,
         fechaRevision: new Date(),
+        ...(estado === 'rechazado' ? { s3Key: '' } : {}),
       },
     });
 

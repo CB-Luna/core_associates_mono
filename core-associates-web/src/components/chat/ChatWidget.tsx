@@ -32,7 +32,7 @@ const DEFAULT_W = 380;
 const DEFAULT_H = 480;
 
 export function ChatWidget() {
-  const { isOpen, isMinimized, isLoading, addMessage, setLoading, restore, mode } = useChatStore();
+  const { isOpen, isMinimized, isLoading, addMessage, setLoading, restore } = useChatStore();
   const { puede } = usePermisos();
   const tienePermiso = puede('asistente:ver');
 
@@ -97,7 +97,6 @@ export function ChatWidget() {
           method: 'POST',
           body: JSON.stringify({
             pregunta: text,
-            modoAvanzado: mode === 'avanzado',
           }),
         });
 
@@ -117,7 +116,7 @@ export function ChatWidget() {
         setLoading(false);
       }
     },
-    [addMessage, setLoading, mode],
+    [addMessage, setLoading],
   );
 
   // ── Sin permiso o chatbot desactivado globalmente → no renderizar ──
@@ -157,7 +156,7 @@ export function ChatWidget() {
     >
       {/* Drag handle wraps header */}
       <div data-drag-handle className="cursor-move">
-        <ChatHeader modoAvanzadoGlobal={chatbotStatus?.modoAvanzadoDisponible ?? true} />
+        <ChatHeader />
       </div>
 
       {/* Messages area */}

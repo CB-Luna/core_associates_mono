@@ -245,22 +245,7 @@ export class AiAnalysisService {
       return;
     }
 
-    // All validations passed and high confidence → auto-approve
-    const allValidationsPass = Object.values(validaciones).every((v) => v === true);
-    if (allValidationsPass && confianza >= umbralAprobacion) {
-      await this.prisma.documento.update({
-        where: { id: documentoId },
-        data: {
-          estado: 'aprobado',
-          motivoRechazo: null,
-          fechaRevision: new Date(),
-        },
-      });
-      this.logger.log(`Document ${documentoId} auto-approved: confidence=${(confianza * 100).toFixed(0)}%`);
-      return;
-    }
-
-    // Between thresholds → leave as 'pendiente' for manual review
-    this.logger.log(`Document ${documentoId} left for manual review: confidence=${(confianza * 100).toFixed(0)}%`);
+    // AI never auto-approves — always leave for human review (pendiente)
+    this.logger.log(`Document ${documentoId} pre-validated OK, left for human review: confidence=${(confianza * 100).toFixed(0)}%`);
   }
 }

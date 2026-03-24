@@ -32,25 +32,44 @@ class DocumentsScreen extends ConsumerStatefulWidget {
   ConsumerState<DocumentsScreen> createState() => _DocumentsScreenState();
 }
 
-class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
+class _DocumentsScreenState extends ConsumerState<DocumentsScreen>
+    with WidgetsBindingObserver {
   final _picker = ImagePicker();
   String? _uploadingTipo;
   Timer? _pollTimer;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
     super.dispose();
   }
 
-  /// Start or stop polling depending on whether any document has analysis in 'procesando'.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresh documents when coming back to the app (e.g., after CRM changes status)
+    if (state == AppLifecycleState.resumed) {
+      ref.read(documentsProvider.notifier).refresh();
+    }
+  }
+
+  /// Start or stop polling depending on whether any document needs updates.
+  /// Polls when docs are 'procesando' (AI analyzing) or 'pendiente' (awaiting CRM review).
   void _updatePolling(List<Documento> docs) {
-    final hasProcessing = docs.any((d) => d.analisis?.isProcessing == true);
-    if (hasProcessing && _pollTimer == null) {
-      _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    final needsPolling = docs.any(
+      (d) => d.analisis?.isProcessing == true || d.estado == 'pendiente',
+    );
+    if (needsPolling && _pollTimer == null) {
+      _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
         ref.read(documentsProvider.notifier).refresh();
       });
-    } else if (!hasProcessing && _pollTimer != null) {
+    } else if (!needsPolling && _pollTimer != null) {
       _pollTimer?.cancel();
       _pollTimer = null;
     }

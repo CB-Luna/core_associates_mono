@@ -35,7 +35,7 @@ export class AsistenteIaService {
 
   async preguntar(
     pregunta: string,
-    modoAvanzado: boolean,
+    _modoAvanzado: boolean,
     userId: string,
     userPermisos: string[],
   ): Promise<RespuestaAsistente> {
@@ -55,7 +55,7 @@ export class AsistenteIaService {
       return { respuesta: entityResult, fuente: 'clasico', intent: 'entity_lookup' };
     }
 
-    // 3. Classic mode: intent matching (always tried first, even in advanced mode)
+    // 3. Classic mode: intent matching (always tried first)
     const match = matchIntent(pregunta);
     if (match) {
       const respuesta = await this.resolveIntent(match.resolverKey);
@@ -63,14 +63,15 @@ export class AsistenteIaService {
       return { respuesta, fuente: 'clasico', intent: match.id };
     }
 
-    // 4. If modoAvanzado requested → call IA API with conversation context
-    if (modoAvanzado) {
+    // 4. Auto-escalate to IA if user has permission (no toggle needed)
+    const puedeAvanzado = userPermisos.includes('asistente:modo-avanzado');
+    if (puedeAvanzado) {
       const result = await this.askIA(pregunta, userId, userPermisos);
       this.addToHistory(userId, 'assistant', result.respuesta);
       return result;
     }
 
-    // 5. No match in classic mode
+    // 5. No match in classic mode and no AI permission
     const fallback =
       'No encontré información para esa pregunta. Intenta con algo como "¿Cuántos asociados hay?", un ID como **ASC-0017**, o escribe **ayuda** para ver lo que puedo hacer.';
     this.addToHistory(userId, 'assistant', fallback);
@@ -88,7 +89,7 @@ export class AsistenteIaService {
     const rateLimitResult = await this.checkRateLimit(userId);
     if (!rateLimitResult.allowed) {
       return {
-        respuesta: `Has alcanzado el límite de ${rateLimitResult.limit} preguntas por hora en modo avanzado. Intenta más tarde o usa el modo clásico.`,
+        respuesta: `Has alcanzado el límite de ${rateLimitResult.limit} preguntas por hora con IA. Intenta más tarde o haz preguntas directas como "¿Cuántos asociados hay?".`,
         fuente: 'clasico',
       };
     }
@@ -117,7 +118,7 @@ export class AsistenteIaService {
     } catch (err) {
       this.logger.error(`Error calling IA: ${err instanceof Error ? err.message : err}`);
       return {
-        respuesta: 'No pude conectar con el servicio de IA en este momento. Intenta de nuevo o usa el modo clásico.',
+        respuesta: 'No pude conectar con el servicio de IA en este momento. Intenta de nuevo en unos minutos.',
         fuente: 'clasico',
       };
     }
@@ -185,6 +186,22 @@ export class AsistenteIaService {
       /datos?\s+(?:del?\s+)?(?:asociado\s+)?(.{3,})/i,
       /informaci[oó]n\s+(?:del?\s+)?(?:asociado\s+)?(.{3,})/i,
     ];
+
+    // 5. Phone-by-name: "teléfono de Ana García", "dame el número de Juan"
+    const phoneByNamePatterns = [
+      /(?:tel[eé]fono|numero|n[uú]mero|celular|tel)\s+(?:de(?:l)?\s+)?(?:(?:el|la|los)\s+)?(?:asociado\s+)?(.{3,})/i,
+      /(?:dame|dime|cu[aá]l\s+es)\s+(?:el\s+)?(?:tel[eé]fono|numero|n[uú]mero|celular)\s+(?:de(?:l)?\s+)?(?:(?:el|la)\s+)?(?:asociado\s+)?(.{3,})/i,
+    ];
+    for (const pattern of phoneByNamePatterns) {
+      const match = pregunta.match(pattern);
+      if (match) {
+        const name = match[1].trim().replace(/[?¿!¡.,"]/g, '').trim();
+        if (name.length >= 3 && !/^\d+$/.test(name)) {
+          return this.searchPhoneByName(name);
+        }
+      }
+    }
+
     for (const pattern of namePatterns) {
       const match = pregunta.match(pattern);
       if (match) {
@@ -287,6 +304,39 @@ export class AsistenteIaService {
         r += `${i + 1}. **${a.idUnico}** — ${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''} (${a.estado})\n`;
       });
       r += `\nEscribe el ID (ej: **${asociados[0].idUnico}**) para ver el detalle completo.`;
+      return r;
+    } catch {
+      return null;
+    }
+  }
+
+  private async searchPhoneByName(name: string): Promise<string | null> {
+    try {
+      const parts = name.split(/\s+/).filter((p) => p.length >= 2);
+      if (!parts.length) return null;
+
+      const asociados = await this.prisma.asociado.findMany({
+        where: {
+          OR: parts.flatMap((part) => [
+            { nombre: { contains: part, mode: 'insensitive' as const } },
+            { apellidoPat: { contains: part, mode: 'insensitive' as const } },
+            { apellidoMat: { contains: part, mode: 'insensitive' as const } },
+          ]),
+        },
+        select: { idUnico: true, nombre: true, apellidoPat: true, apellidoMat: true, telefono: true, estado: true },
+        take: 10,
+      });
+
+      if (!asociados.length) return `No encontré asociados con el nombre **"${name}"**.`;
+      if (asociados.length === 1) {
+        const a = asociados[0];
+        return `📞 **${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''}** (${a.idUnico})\n- Teléfono: **${a.telefono}**\n- Estado: ${a.estado}`;
+      }
+
+      let r = `Encontré **${asociados.length}** asociados que coinciden con "${name}":\n`;
+      asociados.forEach((a, i) => {
+        r += `${i + 1}. **${a.idUnico}** — ${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''} — Tel: **${a.telefono}** (${a.estado})\n`;
+      });
       return r;
     } catch {
       return null;
@@ -531,6 +581,12 @@ export class AsistenteIaService {
         const d = await this.reportes.getDashboardMetrics();
         return `Hay **${d.documentos.pendientes}** documentos pendientes de revisión.`;
       }
+      case 'docs_faltantes': {
+        return this.resolveDocsFaltantes();
+      }
+      case 'vehiculos_marca': {
+        return this.resolveVehiculosMarca();
+      }
       case 'asociados_rechazados': {
         const count = await this.prisma.asociado.count({ where: { estado: 'rechazado' } });
         return `Hay **${count}** asociados rechazados.`;
@@ -595,17 +651,75 @@ export class AsistenteIaService {
           `• Últimos asociados registrados\n` +
           `• ¿Quién es ASC-0017? (buscar por ID)\n` +
           `• Buscar asociado Abraham Domínguez (buscar por nombre)\n` +
+          `• Teléfono de Ana García (buscar teléfono por nombre)\n` +
           `• ¿Cuántos proveedores hay? / proveedores por tipo\n` +
           `• Promociones activas\n` +
           `• ¿Cuántos cupones este mes? / cupones canjeados\n` +
           `• Casos abiertos / desglose por estado / por tipo\n` +
           `• Abogados disponibles\n` +
-          `• Documentos pendientes\n` +
+          `• Documentos pendientes / faltantes\n` +
+          `• ¿Quiénes no han subido la INE? / ¿sin selfie?\n` +
+          `• Asociados con Toyota / Nissan (vehículos por marca)\n` +
           `• Resumen general / dashboard\n\n` +
           `Escribe tu pregunta en lenguaje natural, o usa un ID como **ASC-0017** o **PRV-0001** para consultar directamente.`;
       default:
         this.logger.warn(`Resolver key no encontrada: ${key}`);
         return 'No pude procesar esa consulta. Intenta con otro tema.';
+    }
+  }
+
+  // ── New resolvers for docs faltantes and vehiculos por marca ──
+
+  private async resolveDocsFaltantes(): Promise<string> {
+    const docTypes = ['ine_frente', 'ine_reverso', 'selfie', 'tarjeta_circulacion'];
+    const labels: Record<string, string> = {
+      ine_frente: 'INE Frente',
+      ine_reverso: 'INE Reverso',
+      selfie: 'Selfie',
+      tarjeta_circulacion: 'Tarjeta de Circulación',
+    };
+
+    try {
+      const totalAsociados = await this.prisma.asociado.count({
+        where: { estado: { in: ['activo', 'pendiente'] } },
+      });
+
+      const lines: string[] = [];
+      for (const tipo of docTypes) {
+        const conDoc = await this.prisma.documento.groupBy({
+          by: ['asociadoId'],
+          where: {
+            tipo: tipo as any,
+            estado: { in: ['pendiente', 'aprobado'] },
+            asociado: { estado: { in: ['activo', 'pendiente'] } },
+          },
+        });
+        const sinDoc = totalAsociados - conDoc.length;
+        lines.push(`• **${labels[tipo]}**: ${sinDoc} asociados sin subir (${conDoc.length} ya subieron)`);
+      }
+
+      return `📋 **Documentos faltantes** (de ${totalAsociados} asociados activos/pendientes):\n${lines.join('\n')}`;
+    } catch {
+      return 'No pude obtener la información de documentos faltantes.';
+    }
+  }
+
+  private async resolveVehiculosMarca(): Promise<string> {
+    try {
+      const groups = await this.prisma.vehiculo.groupBy({
+        by: ['marca'],
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+        take: 15,
+      });
+
+      if (!groups.length) return 'No hay vehículos registrados en el sistema.';
+
+      const total = groups.reduce((sum, g) => sum + g._count.id, 0);
+      const lines = groups.map((g, i) => `${i + 1}. **${g.marca}**: ${g._count.id} vehículo(s)`);
+      return `🚘 **Vehículos por marca** (${total} total):\n${lines.join('\n')}`;
+    } catch {
+      return 'No pude obtener la información de vehículos por marca.';
     }
   }
 }

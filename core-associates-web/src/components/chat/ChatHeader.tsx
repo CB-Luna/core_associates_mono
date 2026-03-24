@@ -2,45 +2,18 @@
 
 import { Minus, X, Trash2 } from 'lucide-react';
 import { useChatStore } from '@/stores/chat-store';
-import { usePermisos } from '@/lib/permisos';
 
-export function ChatHeader({ modoAvanzadoGlobal = true }: { modoAvanzadoGlobal?: boolean }) {
-  const mode = useChatStore((s) => s.mode);
-  const setMode = useChatStore((s) => s.setMode);
+export function ChatHeader() {
   const minimize = useChatStore((s) => s.minimize);
   const close = useChatStore((s) => s.close);
   const clearHistory = useChatStore((s) => s.clearHistory);
   const msgCount = useChatStore((s) => s.messages.length);
-  const { puede } = usePermisos();
-  const puedeAvanzado = puede('asistente:modo-avanzado') && modoAvanzadoGlobal;
 
   return (
     <div className="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-primary-600 to-primary-700 px-3 py-2 text-white dark:border-gray-600">
-      {/* Left: title + mode toggle */}
+      {/* Left: title */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-semibold">Asistente</span>
-
-        {/* Mode toggle pill — avanzado solo si tiene permiso */}
-        <div className="flex rounded-full bg-white/20 p-0.5 text-[10px]">
-          <button
-            onClick={() => setMode('clasico')}
-            className={`rounded-full px-2 py-0.5 transition-colors ${
-              mode === 'clasico' ? 'bg-white text-primary-700 font-medium' : 'text-white/80 hover:text-white'
-            }`}
-          >
-            Clásico
-          </button>
-          {puedeAvanzado && (
-            <button
-              onClick={() => setMode('avanzado')}
-              className={`rounded-full px-2 py-0.5 transition-colors ${
-                mode === 'avanzado' ? 'bg-white text-primary-700 font-medium' : 'text-white/80 hover:text-white'
-              }`}
-            >
-              Avanzado
-            </button>
-          )}
-        </div>
+        <span className="text-sm font-semibold">Asistente IA</span>
       </div>
 
       {/* Right: actions */}

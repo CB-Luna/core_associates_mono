@@ -121,6 +121,33 @@ export const INTENTS: IntentDef[] = [
     keywords: [['documentos', 'pendientes'], ['docs', 'pendientes'], ['documentos', 'revision']],
     resolverKey: 'docs_pendientes',
   },
+  {
+    id: 'docs_faltantes',
+    keywords: [
+      ['no', 'subido', 'ine'], ['falta', 'ine'], ['sin', 'ine'],
+      ['no', 'subido', 'selfie'], ['falta', 'selfie'], ['sin', 'selfie'],
+      ['no', 'subido', 'tarjeta'], ['falta', 'tarjeta'], ['sin', 'tarjeta'],
+      ['documentos', 'faltantes'], ['docs', 'faltantes'],
+      ['no', 'han', 'subido'], ['no', 'subieron'],
+      ['faltan', 'documentos'], ['sin', 'documentos'],
+    ],
+    resolverKey: 'docs_faltantes',
+  },
+
+  // ── Vehículos por marca ───────────────────────────
+  {
+    id: 'vehiculos_marca',
+    keywords: [
+      ['asociados', 'toyota'], ['asociados', 'nissan'], ['asociados', 'suzuki'],
+      ['asociados', 'honda'], ['asociados', 'chevrolet'], ['asociados', 'volkswagen'],
+      ['asociados', 'ford'], ['asociados', 'mazda'], ['asociados', 'hyundai'], ['asociados', 'kia'],
+      ['vehiculos', 'marca'], ['autos', 'marca'], ['coches', 'marca'],
+      ['tienen', 'toyota'], ['tienen', 'nissan'], ['tienen', 'suzuki'],
+      ['tienen', 'honda'], ['tienen', 'chevrolet'], ['tienen', 'volkswagen'],
+      ['tienen', 'ford'], ['tienen', 'mazda'], ['tienen', 'hyundai'], ['tienen', 'kia'],
+    ],
+    resolverKey: 'vehiculos_marca',
+  },
 
   // ── Resumen general ───────────────────────────────
   {

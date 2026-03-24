@@ -4,7 +4,6 @@ import {
   Post,
   Body,
   UseGuards,
-  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -64,14 +63,10 @@ export class AsistenteIaController {
     @Body() dto: PreguntarDto,
     @CurrentUser() user: { id: string; permisos: string[] },
   ) {
-    // Validate advanced mode permission
-    if (dto.modoAvanzado && !user.permisos?.includes('asistente:modo-avanzado')) {
-      throw new ForbiddenException('No tienes permiso para el modo avanzado.');
-    }
-
+    // Auto-escalation: service decides based on user permissions (toggle removed)
     return this.service.preguntar(
       dto.pregunta,
-      dto.modoAvanzado ?? false,
+      false, // ignored — service auto-escalates if user has permission
       user.id,
       user.permisos ?? [],
     );

@@ -35,6 +35,13 @@ const ALLOWED_TOPIC_KEYWORDS = [
   'configuracion', 'sistema', 'usuario', 'rol', 'permiso',
   // Entity ID prefixes
   'asc', 'prv',
+  // Document types
+  'ine', 'selfie', 'tarjeta', 'circulacion',
+  'subido', 'subir', 'falta', 'faltante', 'faltantes', 'faltan', 'sin',
+  // Vehicle brands & queries
+  'vehiculo', 'placa', 'auto', 'coche', 'carro', 'marca',
+  'toyota', 'nissan', 'suzuki', 'honda', 'chevrolet', 'volkswagen',
+  'ford', 'mazda', 'hyundai', 'kia', 'bmw', 'mercedes', 'audi',
   // Query words
   'cuantos', 'cuantas', 'cuanto', 'cuanta',
   'quien', 'quienes', 'cual', 'cuales',
@@ -43,10 +50,10 @@ const ALLOWED_TOPIC_KEYWORDS = [
   'listar', 'lista', 'listado', 'mostrar',
   'ultimo', 'ultimos', 'reciente', 'recientes',
   'estado', 'estatus', 'activo', 'pendiente',
-  'nombre', 'telefono', 'email', 'correo',
-  'vehiculo', 'placa', 'auto', 'coche', 'carro',
+  'nombre', 'telefono', 'email', 'correo', 'numero', 'celular',
   'nota', 'notas', 'seguimiento',
   'resumen', 'total', 'top', 'mejor',
+  'dame', 'dime',
   // Greetings / meta
   'hola', 'ayuda', 'gracias', 'bien', 'bueno',
 ];
