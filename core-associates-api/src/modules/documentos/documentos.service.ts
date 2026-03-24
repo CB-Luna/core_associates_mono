@@ -224,7 +224,7 @@ export class DocumentosService {
         file.buffer,
         file.mimetype,
         prompt,
-        'pre_validador',
+        'document_analyzer',
       );
       resultado = {
         valida: !!data.valida,

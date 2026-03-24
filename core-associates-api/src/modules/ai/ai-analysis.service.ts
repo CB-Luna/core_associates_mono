@@ -177,6 +177,17 @@ export class AiAnalysisService {
   }
 
   /**
+   * Human-readable labels for critical validation keys.
+   */
+  private readonly VALIDATION_LABELS: Record<string, string> = {
+    es_ine_valida: 'El documento no parece ser una credencial INE válida',
+    es_ine_reverso: 'El documento no parece ser el reverso de una credencial INE',
+    es_selfie_valida: 'La selfie no cumple con los requisitos (rostro visible, buena iluminación)',
+    es_tarjeta_circulacion: 'El documento no parece ser una tarjeta de circulación',
+    imagen_legible: 'La imagen no es legible, por favor sube una foto más clara',
+  };
+
+  /**
    * Auto-approve or auto-reject a document based on AI confidence vs configured thresholds.
    */
   private async autoDecideDocumento(documentoId: string, aiData: any) {
@@ -201,21 +212,32 @@ export class AiAnalysisService {
     );
 
     if (hasCriticalFailure || confianza < umbralRechazo) {
-      // Auto-reject
+      // Auto-reject — build user-friendly messages
       const motivos: string[] = [];
       if (hasCriticalFailure) {
         const failed = criticalKeys.filter((k) => validaciones[k] === false);
-        motivos.push(`Validación IA fallida: ${failed.join(', ')}`);
+        const friendlyMessages = failed.map((k) => this.VALIDATION_LABELS[k] || k);
+        motivos.push(...friendlyMessages);
       }
       if (confianza < umbralRechazo) {
-        motivos.push(`Confianza muy baja: ${(confianza * 100).toFixed(0)}%`);
+        motivos.push('La calidad o claridad de la imagen es insuficiente');
+      }
+
+      // Delete S3 file on auto-rejection so user must re-upload
+      const doc = await this.prisma.documento.findUnique({
+        where: { id: documentoId },
+        select: { s3Bucket: true, s3Key: true },
+      });
+      if (doc) {
+        await this.storage.deleteFile(doc.s3Bucket, doc.s3Key).catch(() => {});
       }
 
       await this.prisma.documento.update({
         where: { id: documentoId },
         data: {
           estado: 'rechazado',
-          motivoRechazo: `[Auto-IA] ${motivos.join('. ')}`,
+          motivoRechazo: motivos.join('. '),
+          s3Key: doc ? '' : undefined,
           fechaRevision: new Date(),
         },
       });

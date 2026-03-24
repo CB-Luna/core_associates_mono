@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -15,6 +15,15 @@ const PROTECTED_EMAILS = ['admin@coreassociates.com'];
 @Injectable()
 export class AuthService {
   private readonly AVATAR_BUCKET = 'core-associates-avatars';
+  private readonly logger = new Logger(AuthService.name);
+
+  /** Default demo phone numbers (for QA and presentations) */
+  private readonly DEFAULT_DEMO_PHONES = [
+    '+525512345678',
+    '+525510000001', '+525510000002', '+525510000003',
+    '+525520000001', '+525520000002', '+525520000003', '+525520000004', '+525520000005',
+    '+525530000001', '+525530000002', '+525530000003', '+525530000004', '+525530000005',
+  ].join(',');
 
   constructor(
     private readonly prisma: PrismaService,
@@ -25,9 +34,24 @@ export class AuthService {
     private readonly storageService: StorageService,
   ) {}
 
+  private getDemoNumbers(): string[] {
+    return (
+      this.configService.get<string>('DEMO_PHONES') || this.DEFAULT_DEMO_PHONES
+    ).split(',').map((n) => n.trim());
+  }
+
   // ── OTP para App Móvil ──
 
   async sendOtp(telefono: string): Promise<{ message: string }> {
+    const demoNumbers = this.getDemoNumbers();
+    const isDemo = demoNumbers.includes(telefono);
+
+    if (isDemo) {
+      // Demo phones: skip SMS entirely, OTP bypass uses 000000
+      this.logger.log(`Demo phone detected (${telefono}), skipping SMS send`);
+      return { message: 'OTP enviado correctamente' };
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Almacenar OTP en Redis con expiración de 5 minutos
@@ -43,19 +67,15 @@ export class AuthService {
     otp: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
     // DEMO bypass: números de demo aceptan 000000 (para presentaciones y QA)
-    const defaultDemoPhones = [
-      '+525512345678',
-      '+525510000001', '+525510000002', '+525510000003',
-      '+525520000001', '+525520000002', '+525520000003', '+525520000004', '+525520000005',
-      '+525530000001', '+525530000002', '+525530000003', '+525530000004', '+525530000005',
-    ].join(',');
-    const demoNumbers = (
-      this.configService.get<string>('DEMO_PHONES') || defaultDemoPhones
-    ).split(',').map((n) => n.trim());
+    const demoNumbers = this.getDemoNumbers();
     const isDemoBypass = demoNumbers.includes(telefono) && otp === '000000';
     // DEV bypass: cualquier teléfono acepta 000000 en entorno no-producción
     const isDev = this.configService.get<string>('NODE_ENV') !== 'production';
     const isDevBypass = isDev && otp === '000000';
+
+    if (isDemoBypass) {
+      this.logger.log(`Demo OTP bypass accepted for ${telefono}`);
+    }
 
     if (!isDemoBypass && !isDevBypass) {
       // Verificar OTP desde Redis

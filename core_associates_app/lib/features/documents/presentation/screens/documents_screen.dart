@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -34,6 +35,26 @@ class DocumentsScreen extends ConsumerStatefulWidget {
 class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
   final _picker = ImagePicker();
   String? _uploadingTipo;
+  Timer? _pollTimer;
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Start or stop polling depending on whether any document has analysis in 'procesando'.
+  void _updatePolling(List<Documento> docs) {
+    final hasProcessing = docs.any((d) => d.analisis?.isProcessing == true);
+    if (hasProcessing && _pollTimer == null) {
+      _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+        ref.read(documentsProvider.notifier).refresh();
+      });
+    } else if (!hasProcessing && _pollTimer != null) {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    }
+  }
 
   Future<void> _pickAndUpload(String tipo) async {
     // Selfie siempre abre cámara directa
@@ -297,6 +318,11 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
       appBar: AppBar(title: const Text('Mis Documentos')),
       body: docsAsync.when(
         data: (docs) {
+          // Schedule polling check after build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _updatePolling(docs);
+          });
+
           final allUploaded = _requiredDocs.every(
             (req) => docs.any((d) => d.tipo == req['tipo']),
           );
@@ -564,11 +590,13 @@ class _DocumentTile extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.visibility, size: 20),
-                      onPressed: () => onPreview(document!.id),
-                      tooltip: 'Ver',
-                    ),
+                    // Hide preview for rejected docs (image may have been deleted by AI)
+                    if (document!.estado != 'rechazado')
+                      IconButton(
+                        icon: const Icon(Icons.visibility, size: 20),
+                        onPressed: () => onPreview(document!.id),
+                        tooltip: 'Ver',
+                      ),
                     if (document!.estado != 'aprobado')
                       IconButton(
                         icon: const Icon(Icons.upload, size: 20),

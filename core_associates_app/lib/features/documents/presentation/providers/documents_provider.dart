@@ -20,4 +20,9 @@ class DocumentsNotifier extends AsyncNotifier<List<Documento>> {
     await repo.uploadDocument(filePath, tipo);
     ref.invalidateSelf();
   }
+
+  /// Force-refresh documents (used by polling timer).
+  Future<void> refresh() async {
+    ref.invalidateSelf();
+  }
 }

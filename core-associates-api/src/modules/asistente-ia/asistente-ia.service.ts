@@ -75,7 +75,8 @@ export class AsistenteIaService {
     }
 
     try {
-      const systemPrompt = buildSystemPrompt(userPermisos);
+      const dataContext = await this.buildDataContext(pregunta);
+      const systemPrompt = buildSystemPrompt(userPermisos, dataContext);
       const { text } = await this.aiService.chat(pregunta, systemPrompt, 'chatbot_assistant');
 
       if (!text.trim()) {
@@ -90,6 +91,139 @@ export class AsistenteIaService {
         fuente: 'clasico',
       };
     }
+  }
+
+  /**
+   * Build real-time data context from the DB based on the user's question.
+   * Detects entity references (IDs, phones, names) and fetches relevant records.
+   */
+  private async buildDataContext(pregunta: string): Promise<string | undefined> {
+    const sections: string[] = [];
+    const normalized = pregunta.toLowerCase();
+
+    // Always include summary metrics for context
+    try {
+      const metrics = await this.reportes.getDashboardMetrics();
+      sections.push(
+        `### Resumen general:\n` +
+        `- Asociados: ${metrics.asociados.total} total (${metrics.asociados.activos} activos, ${metrics.asociados.pendientes} pendientes)\n` +
+        `- Proveedores: ${metrics.proveedores.total} total (${metrics.proveedores.activos} activos)\n` +
+        `- Cupones este mes: ${metrics.cupones.delMes}\n` +
+        `- Casos legales abiertos: ${metrics.casosLegales.abiertos}\n` +
+        `- Documentos pendientes: ${metrics.documentos.pendientes}`,
+      );
+    } catch {
+      // non-critical
+    }
+
+    // Detect asociado ID pattern (ASC-0001, ASC-17, etc.)
+    const ascMatch = pregunta.match(/ASC-?\s*(\d{1,5})/i);
+    if (ascMatch) {
+      const num = ascMatch[1].padStart(4, '0');
+      const idUnico = `ASC-${num}`;
+      try {
+        const asociado = await this.prisma.asociado.findFirst({
+          where: { idUnico },
+          include: {
+            vehiculos: { select: { marca: true, modelo: true, anio: true, placas: true, color: true } },
+            documentos: { select: { tipo: true, estado: true, motivoRechazo: true, createdAt: true } },
+            casosLegales: { select: { id: true, tipoPercance: true, estado: true, createdAt: true }, take: 5, orderBy: { createdAt: 'desc' } },
+          },
+        });
+        if (asociado) {
+          let info = `### Asociado ${asociado.idUnico}:\n` +
+            `- Nombre: ${asociado.nombre} ${asociado.apellidoPat} ${asociado.apellidoMat || ''}\n` +
+            `- Teléfono: ${asociado.telefono}\n` +
+            `- Email: ${asociado.email || 'No registrado'}\n` +
+            `- Estado: ${asociado.estado}\n` +
+            `- Fecha registro: ${asociado.fechaRegistro?.toISOString().split('T')[0] || 'N/A'}`;
+          if (asociado.vehiculos?.length) {
+            info += `\n- Vehículos: ${asociado.vehiculos.map((v) => `${v.marca} ${v.modelo} ${v.anio} (${v.placas})`).join(', ')}`;
+          }
+          if (asociado.documentos?.length) {
+            info += `\n- Documentos: ${asociado.documentos.map((d) => `${d.tipo}: ${d.estado}`).join(', ')}`;
+          }
+          if (asociado.casosLegales?.length) {
+            info += `\n- Casos legales recientes: ${asociado.casosLegales.map((c) => `${c.tipoPercance} (${c.estado})`).join(', ')}`;
+          }
+          sections.push(info);
+        } else {
+          sections.push(`### Asociado ${idUnico}: No encontrado en la base de datos.`);
+        }
+      } catch {
+        // non-critical
+      }
+    }
+
+    // Detect phone number patterns (+52..., 55...)
+    const phoneMatch = pregunta.match(/(?:\+52)?(\d{10})/);
+    if (phoneMatch && !ascMatch) {
+      const telefono = `+52${phoneMatch[1]}`;
+      try {
+        const asociado = await this.prisma.asociado.findUnique({
+          where: { telefono },
+          select: { idUnico: true, nombre: true, apellidoPat: true, estado: true, telefono: true },
+        });
+        if (asociado) {
+          sections.push(
+            `### Búsqueda por teléfono ${telefono}:\n` +
+            `- ${asociado.idUnico}: ${asociado.nombre} ${asociado.apellidoPat} (${asociado.estado})`,
+          );
+        }
+      } catch {
+        // non-critical
+      }
+    }
+
+    // Detect proveedor/provider queries
+    if (/proveedor|proveedores|negocio|comercio|taller|restaurante/i.test(normalized)) {
+      try {
+        const report = await this.reportes.getReporteAvanzado();
+        if (report.topProveedores?.length) {
+          const top5 = report.topProveedores.slice(0, 5);
+          sections.push(
+            `### Top proveedores:\n` +
+            top5.map((p: { razonSocial: string; cuponesEmitidos: number; cuponesCanjeados: number }, i: number) => `${i + 1}. ${p.razonSocial} — ${p.cuponesEmitidos} cupones emitidos, ${p.cuponesCanjeados} canjeados`).join('\n'),
+          );
+        }
+      } catch {
+        // non-critical
+      }
+    }
+
+    // Detect caso/legal queries
+    if (/caso|legal|percance|accidente|asalto|abogado/i.test(normalized)) {
+      try {
+        const report = await this.reportes.getReporteAvanzado();
+        const porEstado = Object.entries(report.casosLegales.porEstado);
+        const porTipo = Object.entries(report.casosLegales.porTipo);
+        if (porEstado.length || porTipo.length) {
+          let info = '### Casos legales:';
+          if (porEstado.length) info += `\n- Por estado: ${porEstado.map(([e, c]) => `${e}: ${c}`).join(', ')}`;
+          if (porTipo.length) info += `\n- Por tipo: ${porTipo.map(([t, c]) => `${t}: ${c}`).join(', ')}`;
+          sections.push(info);
+        }
+      } catch {
+        // non-critical
+      }
+    }
+
+    // Detect cupon/coupon queries
+    if (/cup[oó]n|cupones|canje|promoci[oó]n/i.test(normalized)) {
+      try {
+        const report = await this.reportes.getReporteAvanzado();
+        const porEstado = report.cupones?.porEstado;
+        if (porEstado) {
+          sections.push(
+            `### Cupones:\n- Por estado: ${Object.entries(porEstado).map(([e, c]) => `${e}: ${c}`).join(', ')}`,
+          );
+        }
+      } catch {
+        // non-critical
+      }
+    }
+
+    return sections.length > 0 ? sections.join('\n\n') : undefined;
   }
 
   private async checkRateLimit(userId: string): Promise<{ allowed: boolean; limit: number }> {
