@@ -509,13 +509,13 @@ export class AsistenteIaService {
       if (wantsListAssociates || /todos|activo|inactivo/i.test(normalized)) {
         try {
           const proveedores = await this.prisma.proveedor.findMany({
-            select: { razonSocial: true, giro: true, estado: true, telefono: true },
+            select: { razonSocial: true, tipo: true, estado: true, telefono: true },
             orderBy: { razonSocial: 'asc' },
             take: 25,
           });
           if (proveedores.length > 0) {
             const lines = proveedores.map((p, i) =>
-              `${i + 1}. ${p.razonSocial} — ${p.giro} (${p.estado}) — Tel: ${p.telefono}`
+              `${i + 1}. ${p.razonSocial} — ${p.tipo} (${p.estado}) — Tel: ${p.telefono}`
             );
             sections.push(`### Proveedores registrados (${proveedores.length}):\n${lines.join('\n')}`);
           }
@@ -755,7 +755,7 @@ export class AsistenteIaService {
           `• Teléfono de Ana García (buscar teléfono por nombre)\n` +
           `• ¿Cuántos carros tiene X asociado?\n` +
           `• ¿Cuántos proveedores hay? / proveedores por tipo\n` +
-          `• Lista de proveedores (con giro y estado)\n` +
+          `• Lista de proveedores (con tipo y estado)\n` +
           `• Promociones activas\n` +
           `• ¿Cuántos cupones este mes? / cupones canjeados\n` +
           `• Casos abiertos / desglose por estado / por tipo\n` +
@@ -874,13 +874,13 @@ export class AsistenteIaService {
   private async resolveListarProveedores(): Promise<string> {
     try {
       const proveedores = await this.prisma.proveedor.findMany({
-        select: { razonSocial: true, giro: true, estado: true, telefono: true },
+        select: { razonSocial: true, tipo: true, estado: true, telefono: true },
         orderBy: { razonSocial: 'asc' },
         take: 25,
       });
       if (!proveedores.length) return 'No hay proveedores registrados.';
       const lines = proveedores.map((p, i) =>
-        `${i + 1}. **${p.razonSocial}** — ${p.giro} (${p.estado}) — Tel: ${p.telefono}`
+        `${i + 1}. **${p.razonSocial}** \u2014 ${p.tipo} (${p.estado}) \u2014 Tel: ${p.telefono}`
       );
       return `🏪 **Proveedores registrados** (${proveedores.length}):\n${lines.join('\n')}`;
     } catch {
