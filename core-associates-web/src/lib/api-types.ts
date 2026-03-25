@@ -89,6 +89,7 @@ export interface Documento {
   fileSize: number;
   motivoRechazo: string | null;
   createdAt: string;
+  analisis?: AnalisisDocumento | null;
 }
 
 // Proveedor

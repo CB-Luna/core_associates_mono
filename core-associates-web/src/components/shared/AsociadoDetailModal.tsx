@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Car, FileText, Ticket, Phone, Mail, Calendar, CheckCircle, XCircle, AlertTriangle, Eye, Clock, MessageSquare, Send, CreditCard, Camera, ScanLine, RotateCcw } from 'lucide-react';
+import { X, Car, FileText, Ticket, Phone, Mail, Calendar, CheckCircle, XCircle, AlertTriangle, Eye, Clock, MessageSquare, Send, CreditCard, Camera, ScanLine, RotateCcw, Bot, RefreshCw } from 'lucide-react';
 
 const DOC_ICONS: Record<string, React.ReactNode> = {
   ine_frente: <CreditCard className="h-4 w-4 text-blue-500" />,
@@ -117,12 +117,8 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
         method: 'PUT',
         body: JSON.stringify({ estado: 'aprobado' }),
       });
-      setAsociado({
-        ...asociado,
-        documentos: asociado.documentos?.map((d) =>
-          d.id === doc.id ? { ...d, estado: 'aprobado' as const } : d
-        ),
-      });
+      refreshAsociado();
+      onUpdated?.();
     } catch {
       alert('Error al aprobar');
     } finally {
@@ -138,12 +134,8 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
         method: 'PUT',
         body: JSON.stringify({ estado: 'pendiente' }),
       });
-      setAsociado({
-        ...asociado,
-        documentos: asociado.documentos?.map((d) =>
-          d.id === doc.id ? { ...d, estado: 'pendiente' as const, motivoRechazo: null } : d
-        ),
-      });
+      refreshAsociado();
+      onUpdated?.();
     } catch {
       alert('Error al revertir');
     } finally {
@@ -161,16 +153,12 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
         method: 'PUT',
         body: JSON.stringify({ estado: 'rechazado', motivoRechazo: motivo }),
       });
-      setAsociado({
-        ...asociado,
-        documentos: asociado.documentos?.map((d) =>
-          d.id === doc.id ? { ...d, estado: 'rechazado' as const, motivoRechazo: motivo } : d
-        ),
-      });
       // Si se rechazó la selfie, limpiar avatar (el backend ya limpió fotoUrl)
       if (doc.tipo === 'selfie') {
         setFotoUrl(null);
       }
+      refreshAsociado();
+      onUpdated?.();
     } catch {
       alert('Error al rechazar');
     } finally {
@@ -196,7 +184,10 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
   };
 
   const refreshAsociado = () => {
-    apiClient<Asociado>(`/asociados/${asociadoId}`).then(setAsociado).catch(console.error);
+    apiClient<Asociado>(`/asociados/${asociadoId}`).then((data) => {
+      setAsociado(data);
+      apiImageUrl(`/asociados/${asociadoId}/foto`).then(setFotoUrl).catch(() => setFotoUrl(null));
+    }).catch(console.error);
   };
 
   const fullName = asociado
@@ -322,6 +313,43 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
                       </div>
                       {d.estado === 'rechazado' && d.motivoRechazo && (
                         <p className="mt-1 text-xs text-red-600 dark:text-red-400">Motivo: {d.motivoRechazo}</p>
+                      )}
+                      {/* AI Analysis info */}
+                      {d.analisis && d.analisis.estado === 'completado' && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          {d.analisis.confianza != null && (
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                              d.analisis.confianza >= 0.8 ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                              d.analisis.confianza >= 0.5 ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                              'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                            }`}>
+                              <Bot className="h-3 w-3" />
+                              IA: {(d.analisis.confianza * 100).toFixed(0)}%
+                            </span>
+                          )}
+                          {d.analisis.validaciones && Object.entries(d.analisis.validaciones).some(([k, v]) => v === false && !k.startsWith('_')) && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                              <AlertTriangle className="h-3 w-3" />
+                              {Object.entries(d.analisis.validaciones).filter(([k, v]) => v === false && !k.startsWith('_')).map(([k]) => {
+                                const labels: Record<string, string> = {
+                                  coincide_nombre: 'Nombre no coincide',
+                                  coincide_apellido_paterno: 'Ap. paterno no coincide',
+                                  coincide_apellido_materno: 'Ap. materno no coincide',
+                                  coincide_placas: 'Placas no coinciden',
+                                  coincide_marca: 'Marca no coincide',
+                                  coincide_anio: 'Año no coincide',
+                                  coincide_propietario: 'Propietario no coincide',
+                                };
+                                return labels[k] || k.replace(/_/g, ' ');
+                              }).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {d.analisis && d.analisis.estado === 'procesando' && (
+                        <p className="mt-1 flex items-center gap-1 text-xs text-blue-500">
+                          <RefreshCw className="h-3 w-3 animate-spin" /> Analizando...
+                        </p>
                       )}
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button

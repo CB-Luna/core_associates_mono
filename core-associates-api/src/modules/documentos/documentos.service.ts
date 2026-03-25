@@ -143,8 +143,15 @@ export class DocumentosService {
       await this.storage.deleteFile(doc.s3Bucket, doc.s3Key).catch(() => {});
     }
 
-    // Si se rechaza la selfie, limpiar fotoUrl del asociado (el avatar usa selfie como fallback)
+    // Si se rechaza la selfie, limpiar fotoUrl del asociado y borrar foto de MinIO
     if (estado === 'rechazado' && doc.tipo === 'selfie' && doc.asociadoId) {
+      const asociado = await this.prisma.asociado.findUnique({
+        where: { id: doc.asociadoId },
+        select: { fotoUrl: true },
+      });
+      if (asociado?.fotoUrl) {
+        await this.storage.deleteFile('core-associates-fotos', asociado.fotoUrl).catch(() => {});
+      }
       await this.prisma.asociado.update({
         where: { id: doc.asociadoId },
         data: { fotoUrl: null },

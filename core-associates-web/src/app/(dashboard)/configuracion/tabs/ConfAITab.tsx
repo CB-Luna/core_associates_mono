@@ -13,6 +13,8 @@ import {
   RefreshCw,
   CheckCircle,
   AlertTriangle,
+  FileText,
+  MessageSquare,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import type { ConfiguracionIA } from '@/lib/api-types';
@@ -29,6 +31,7 @@ export function ConfAITab() {
   const [saving, setSaving] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const [form, setForm] = useState({
     nombre: '',
@@ -136,25 +139,38 @@ export function ConfAITab() {
     }
   };
 
-  const handleCreate = async () => {
-    const clave = `config_${Date.now()}`;
+  const handleCreate = async (purpose: 'document_analyzer' | 'chatbot_assistant') => {
+    const purposeConfig = {
+      document_analyzer: { clave: 'document_analyzer', nombre: 'Análisis de Documentos' },
+      chatbot_assistant: { clave: 'chatbot_assistant', nombre: 'Asistente IA / Chatbot CRM' },
+    };
+    const { clave, nombre } = purposeConfig[purpose];
+
+    // Check if this purpose already exists
+    if (configs.some((c) => c.clave === clave)) {
+      showToast('error', `Ya existe una configuración para "${nombre}". Edítala en lugar de crear una nueva.`);
+      setShowCreateDialog(false);
+      return;
+    }
+
     try {
       const created = await apiClient<ConfiguracionIA>('/ai/config', {
         method: 'POST',
         body: JSON.stringify({
           clave,
-          nombre: 'Nueva Configuracion',
-          provider: 'anthropic',
-          modelo: 'claude-sonnet-4-5-20250929',
+          nombre,
+          provider: 'google',
+          modelo: 'gemini-2.5-flash',
           temperatura: 0.2,
           maxTokens: 4096,
         }),
       });
       fetchConfigs(created.id);
-      showToast('success', 'Configuracion creada');
+      showToast('success', `Configuración "${nombre}" creada`);
     } catch (err: any) {
       showToast('error', err.message || 'Error al crear');
     }
+    setShowCreateDialog(false);
   };
 
   const handleDelete = async () => {
@@ -193,7 +209,7 @@ export function ConfAITab() {
           <p className="mt-1 text-sm text-gray-500">Gestionar proveedores, modelos y API keys para validacion documental</p>
         </div>
         <button
-          onClick={handleCreate}
+          onClick={() => setShowCreateDialog(true)}
           className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
         >
           <Plus className="h-4 w-4" />
@@ -239,7 +255,11 @@ export function ConfAITab() {
                   <span className={`h-2 w-2 rounded-full ${c.activo ? 'bg-green-500' : 'bg-gray-300'}`} />
                 </div>
                 <p className="mt-1 text-xs text-gray-500">{c.provider} / {c.modelo}</p>
-                <p className="text-xs text-gray-400">Clave: {c.clave}</p>
+                <p className="text-xs text-gray-400">
+                  {c.clave === 'document_analyzer' ? '📄 Validación Documental' :
+                   c.clave === 'chatbot_assistant' ? '💬 Chatbot CRM' :
+                   `Clave: ${c.clave}`}
+                </p>
               </button>
             ))
           )}
@@ -474,6 +494,52 @@ export function ConfAITab() {
           </div>
         )}
       </div>
+
+      {/* Purpose selection dialog */}
+      {showCreateDialog && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={() => setShowCreateDialog(false)}>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Nueva Configuración de IA</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Selecciona el propósito de esta configuración:
+            </p>
+            <div className="mt-4 space-y-3">
+              <button
+                onClick={() => handleCreate('document_analyzer')}
+                className="flex w-full items-start gap-3 rounded-lg border-2 border-gray-200 p-4 text-left transition-all hover:border-indigo-400 hover:bg-indigo-50 dark:border-gray-600 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/30"
+              >
+                <FileText className="mt-0.5 h-5 w-5 text-blue-500" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Análisis de Documentos</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Controla la validación automática de INE, selfie y tarjeta de circulación. Define umbrales de confianza y límites anti-abuso.
+                  </p>
+                </div>
+              </button>
+              <button
+                onClick={() => handleCreate('chatbot_assistant')}
+                className="flex w-full items-start gap-3 rounded-lg border-2 border-gray-200 p-4 text-left transition-all hover:border-indigo-400 hover:bg-indigo-50 dark:border-gray-600 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/30"
+              >
+                <MessageSquare className="mt-0.5 h-5 w-5 text-violet-500" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Asistente IA / Chatbot CRM</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Controla el chatbot del CRM. Define proveedor, modelo, rate limiting y disponibilidad del modo avanzado.
+                  </p>
+                </div>
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setShowCreateDialog(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

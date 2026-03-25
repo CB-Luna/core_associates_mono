@@ -383,6 +383,55 @@ export class AsistenteIaService {
       // non-critical
     }
 
+    // Detect list/detail queries for associates by state
+    const wantsListAssociates = /list|lista|listar|muestra|mostrar|cu[aá]les|qui[eé]nes|nombres|detalle/i.test(normalized);
+    const stateKeywords: Record<string, string> = {
+      pendiente: 'pendiente',
+      activo: 'activo',
+      rechazado: 'rechazado',
+      suspendido: 'suspendido',
+    };
+
+    if (wantsListAssociates && /asociado|conductor|membresia|registro/i.test(normalized)) {
+      const targetState = Object.entries(stateKeywords).find(([kw]) => normalized.includes(kw));
+      try {
+        const where = targetState ? { estado: targetState[1] as any } : {};
+        const asociados = await this.prisma.asociado.findMany({
+          where,
+          select: { idUnico: true, nombre: true, apellidoPat: true, apellidoMat: true, estado: true, telefono: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          take: 25,
+        });
+        if (asociados.length > 0) {
+          const label = targetState ? `con estado "${targetState[1]}"` : '';
+          const lines = asociados.map((a, i) =>
+            `${i + 1}. ${a.idUnico} — ${a.nombre} ${a.apellidoPat} ${a.apellidoMat || ''} (${a.estado}) — Tel: ${a.telefono} — Registro: ${a.createdAt.toISOString().split('T')[0]}`
+          );
+          sections.push(`### Asociados ${label} (${asociados.length}):\n${lines.join('\n')}`);
+        }
+      } catch { /* non-critical */ }
+    }
+
+    // Detect vehicle-related queries (vehicles per associate, brand search, etc.)
+    if (/vehiculo|carro|auto|coche|placa|cuantos.*carros|carros.*tiene/i.test(normalized)) {
+      try {
+        const vehiculos = await this.prisma.vehiculo.findMany({
+          select: {
+            marca: true, modelo: true, anio: true, placas: true, color: true,
+            asociado: { select: { idUnico: true, nombre: true, apellidoPat: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 30,
+        });
+        if (vehiculos.length > 0) {
+          const lines = vehiculos.map((v, i) =>
+            `${i + 1}. ${v.marca} ${v.modelo} ${v.anio} (${v.placas}, ${v.color}) — Dueño: ${v.asociado.idUnico} ${v.asociado.nombre} ${v.asociado.apellidoPat}`
+          );
+          sections.push(`### Vehículos registrados (${vehiculos.length}):\n${lines.join('\n')}`);
+        }
+      } catch { /* non-critical */ }
+    }
+
     // Detect asociado ID pattern (ASC-0001, ASC-17, etc.)
     const ascMatch = pregunta.match(/ASC-?\s*(\d{1,5})/i);
     if (ascMatch) {
@@ -456,6 +505,22 @@ export class AsistenteIaService {
       } catch {
         // non-critical
       }
+      // Inject full provider list for listing queries
+      if (wantsListAssociates || /todos|activo|inactivo/i.test(normalized)) {
+        try {
+          const proveedores = await this.prisma.proveedor.findMany({
+            select: { razonSocial: true, giro: true, estado: true, telefono: true },
+            orderBy: { razonSocial: 'asc' },
+            take: 25,
+          });
+          if (proveedores.length > 0) {
+            const lines = proveedores.map((p, i) =>
+              `${i + 1}. ${p.razonSocial} — ${p.giro} (${p.estado}) — Tel: ${p.telefono}`
+            );
+            sections.push(`### Proveedores registrados (${proveedores.length}):\n${lines.join('\n')}`);
+          }
+        } catch { /* non-critical */ }
+      }
     }
 
     // Detect caso/legal queries
@@ -472,6 +537,25 @@ export class AsistenteIaService {
         }
       } catch {
         // non-critical
+      }
+      // Inject actual case list for listing queries
+      if (wantsListAssociates || /reciente|abierto|ultimo|últim/i.test(normalized)) {
+        try {
+          const casos = await this.prisma.casoLegal.findMany({
+            select: {
+              id: true, tipoPercance: true, estado: true, createdAt: true,
+              asociado: { select: { idUnico: true, nombre: true, apellidoPat: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+          });
+          if (casos.length > 0) {
+            const lines = casos.map((c, i) =>
+              `${i + 1}. Caso #${c.id.slice(0, 8)} — ${c.tipoPercance} (${c.estado}) — ${c.asociado.idUnico} ${c.asociado.nombre} ${c.asociado.apellidoPat} — ${c.createdAt.toISOString().split('T')[0]}`
+            );
+            sections.push(`### Casos recientes (${casos.length}):\n${lines.join('\n')}`);
+          }
+        } catch { /* non-critical */ }
       }
     }
 
@@ -587,6 +671,22 @@ export class AsistenteIaService {
       case 'vehiculos_marca': {
         return this.resolveVehiculosMarca();
       }
+      case 'vehiculos_por_asociado': {
+        return this.resolveVehiculosPorAsociado();
+      }
+      case 'listar_asociados_estado': {
+        return this.resolveListarAsociadosEstado();
+      }
+      case 'listar_proveedores': {
+        return this.resolveListarProveedores();
+      }
+      case 'casos_recientes': {
+        return this.resolveCasosRecientes();
+      }
+      case 'asociados_suspendidos': {
+        const count = await this.prisma.asociado.count({ where: { estado: 'suspendido' } });
+        return `Hay **${count}** asociados suspendidos.`;
+      }
       case 'asociados_rechazados': {
         const count = await this.prisma.asociado.count({ where: { estado: 'rechazado' } });
         return `Hay **${count}** asociados rechazados.`;
@@ -647,15 +747,19 @@ export class AsistenteIaService {
         return '¡Hola! 👋 Soy el asistente de Core Associates. Puedo ayudarte con información sobre asociados, proveedores, cupones, casos legales y más. ¿Qué necesitas saber?';
       case 'ayuda':
         return `Puedo responder preguntas como:\n` +
-          `• ¿Cuántos asociados hay? / asociados activos / pendientes / rechazados\n` +
+          `• ¿Cuántos asociados hay? / activos / pendientes / rechazados / suspendidos\n` +
           `• Últimos asociados registrados\n` +
+          `• Lista de asociados pendientes / activos / rechazados (con nombres)\n` +
           `• ¿Quién es ASC-0017? (buscar por ID)\n` +
           `• Buscar asociado Abraham Domínguez (buscar por nombre)\n` +
           `• Teléfono de Ana García (buscar teléfono por nombre)\n` +
+          `• ¿Cuántos carros tiene X asociado?\n` +
           `• ¿Cuántos proveedores hay? / proveedores por tipo\n` +
+          `• Lista de proveedores (con giro y estado)\n` +
           `• Promociones activas\n` +
           `• ¿Cuántos cupones este mes? / cupones canjeados\n` +
           `• Casos abiertos / desglose por estado / por tipo\n` +
+          `• Últimos casos legales (lista reciente)\n` +
           `• Abogados disponibles\n` +
           `• Documentos pendientes / faltantes\n` +
           `• ¿Quiénes no han subido la INE? / ¿sin selfie?\n` +
@@ -720,6 +824,87 @@ export class AsistenteIaService {
       return `🚘 **Vehículos por marca** (${total} total):\n${lines.join('\n')}`;
     } catch {
       return 'No pude obtener la información de vehículos por marca.';
+    }
+  }
+
+  private async resolveVehiculosPorAsociado(): Promise<string> {
+    try {
+      const asociados = await this.prisma.asociado.findMany({
+        where: { estado: { in: ['activo', 'pendiente'] } },
+        select: {
+          idUnico: true, nombre: true, apellidoPat: true,
+          _count: { select: { vehiculos: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      });
+      if (!asociados.length) return 'No hay asociados registrados.';
+      const lines = asociados.map((a, i) =>
+        `${i + 1}. **${a.idUnico}** — ${a.nombre} ${a.apellidoPat}: ${a._count.vehiculos} vehículo(s)`
+      );
+      return `🚗 **Vehículos por asociado** (${asociados.length}):\n${lines.join('\n')}`;
+    } catch {
+      return 'No pude obtener la información de vehículos por asociado.';
+    }
+  }
+
+  private async resolveListarAsociadosEstado(): Promise<string> {
+    try {
+      const results: string[] = [];
+      for (const estado of ['pendiente', 'activo', 'rechazado', 'suspendido'] as const) {
+        const asociados = await this.prisma.asociado.findMany({
+          where: { estado },
+          select: { idUnico: true, nombre: true, apellidoPat: true, telefono: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          take: 15,
+        });
+        if (asociados.length > 0) {
+          const lines = asociados.map((a, i) =>
+            `${i + 1}. ${a.idUnico} — ${a.nombre} ${a.apellidoPat} — Tel: ${a.telefono} — ${a.createdAt.toISOString().split('T')[0]}`
+          );
+          results.push(`**${estado.charAt(0).toUpperCase() + estado.slice(1)}** (${asociados.length}):\n${lines.join('\n')}`);
+        }
+      }
+      return results.length ? `📋 **Asociados por estado:**\n\n${results.join('\n\n')}` : 'No hay asociados registrados.';
+    } catch {
+      return 'No pude obtener la lista de asociados.';
+    }
+  }
+
+  private async resolveListarProveedores(): Promise<string> {
+    try {
+      const proveedores = await this.prisma.proveedor.findMany({
+        select: { razonSocial: true, giro: true, estado: true, telefono: true },
+        orderBy: { razonSocial: 'asc' },
+        take: 25,
+      });
+      if (!proveedores.length) return 'No hay proveedores registrados.';
+      const lines = proveedores.map((p, i) =>
+        `${i + 1}. **${p.razonSocial}** — ${p.giro} (${p.estado}) — Tel: ${p.telefono}`
+      );
+      return `🏪 **Proveedores registrados** (${proveedores.length}):\n${lines.join('\n')}`;
+    } catch {
+      return 'No pude obtener la lista de proveedores.';
+    }
+  }
+
+  private async resolveCasosRecientes(): Promise<string> {
+    try {
+      const casos = await this.prisma.casoLegal.findMany({
+        select: {
+          id: true, tipoPercance: true, estado: true, createdAt: true,
+          asociado: { select: { idUnico: true, nombre: true, apellidoPat: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 15,
+      });
+      if (!casos.length) return 'No hay casos legales registrados.';
+      const lines = casos.map((c, i) =>
+        `${i + 1}. Caso #${c.id.slice(0, 8)} — **${c.tipoPercance}** (${c.estado}) — ${c.asociado.idUnico} ${c.asociado.nombre} ${c.asociado.apellidoPat} — ${c.createdAt.toISOString().split('T')[0]}`
+      );
+      return `⚖️ **Casos legales recientes** (${casos.length}):\n${lines.join('\n')}`;
+    } catch {
+      return 'No pude obtener la lista de casos legales.';
     }
   }
 }

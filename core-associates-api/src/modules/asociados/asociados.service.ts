@@ -147,7 +147,20 @@ export class AsociadosService {
       where: { id },
       include: {
         vehiculos: true,
-        documentos: true,
+        documentos: {
+          include: {
+            analisis: {
+              select: {
+                id: true,
+                estado: true,
+                confianza: true,
+                datosExtraidos: true,
+                validaciones: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
         cupones: {
           include: { promocion: true, proveedor: true },
           orderBy: { createdAt: 'desc' },

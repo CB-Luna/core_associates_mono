@@ -123,6 +123,9 @@ export class AiAnalysisService {
 
       this.logger.log(`Analysis ${analisisId} completed: confidence=${data.confianza_global}`);
 
+      // Cross-validate extracted data against registered associate/vehicle info
+      await this.crossValidateData(analisis.documentoId, tipo, data);
+
       // Auto-approve/reject the document based on thresholds
       await this.autoDecideDocumento(analisis.documentoId, data);
     } catch (err) {
@@ -177,6 +180,169 @@ export class AiAnalysisService {
   }
 
   /**
+   * Normalize a name string for fuzzy comparison: lowercase, strip accents, collapse spaces.
+   */
+  private normalizeName(name: string): string {
+    return name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Check if two name strings match (fuzzy: checks if all words from the shorter name
+   * appear in the longer one, allowing partial matches).
+   */
+  private namesMatch(extracted: string, registered: string): boolean {
+    const a = this.normalizeName(extracted);
+    const b = this.normalizeName(registered);
+    if (!a || !b) return true; // can't compare empty
+    const wordsA = a.split(' ').filter(Boolean);
+    const wordsB = b.split(' ').filter(Boolean);
+    const shorter = wordsA.length <= wordsB.length ? wordsA : wordsB;
+    const longer = wordsA.length <= wordsB.length ? wordsB : wordsA;
+    const matched = shorter.filter((w) => longer.some((l) => l.includes(w) || w.includes(l)));
+    return matched.length >= Math.ceil(shorter.length * 0.6);
+  }
+
+  /**
+   * Cross-validate AI-extracted data against the associate's registered info.
+   * Updates the analisis record with cross-validation results (warns, doesn't block).
+   */
+  private async crossValidateData(documentoId: string, tipo: string, aiData: any) {
+    const campos = aiData.campos || {};
+    const validaciones: Record<string, boolean> = aiData.validaciones || {};
+    const warnings: string[] = [];
+
+    try {
+      const doc = await this.prisma.documento.findUnique({
+        where: { id: documentoId },
+        select: { asociadoId: true },
+      });
+      if (!doc?.asociadoId) return;
+
+      // INE front: compare name fields with associate
+      if (tipo === 'ine_frente') {
+        const asociado = await this.prisma.asociado.findUnique({
+          where: { id: doc.asociadoId },
+          select: { nombre: true, apellidoPat: true, apellidoMat: true },
+        });
+        if (asociado) {
+          const ineNombre = campos.nombre?.valor || campos.nombre_completo?.valor || '';
+          const ineApPat = campos.apellido_paterno?.valor || '';
+          const ineApMat = campos.apellido_materno?.valor || '';
+
+          if (ineApPat && asociado.apellidoPat && !this.namesMatch(ineApPat, asociado.apellidoPat)) {
+            warnings.push(`Apellido paterno INE "${ineApPat}" no coincide con el registrado "${asociado.apellidoPat}"`);
+            validaciones['coincide_apellido_paterno'] = false;
+          } else if (ineApPat) {
+            validaciones['coincide_apellido_paterno'] = true;
+          }
+
+          if (ineApMat && asociado.apellidoMat && !this.namesMatch(ineApMat, asociado.apellidoMat)) {
+            warnings.push(`Apellido materno INE "${ineApMat}" no coincide con el registrado "${asociado.apellidoMat}"`);
+            validaciones['coincide_apellido_materno'] = false;
+          } else if (ineApMat && asociado.apellidoMat) {
+            validaciones['coincide_apellido_materno'] = true;
+          }
+
+          if (ineNombre && asociado.nombre && !this.namesMatch(ineNombre, asociado.nombre)) {
+            warnings.push(`Nombre INE "${ineNombre}" no coincide con el registrado "${asociado.nombre}"`);
+            validaciones['coincide_nombre'] = false;
+          } else if (ineNombre) {
+            validaciones['coincide_nombre'] = true;
+          }
+        }
+      }
+
+      // Tarjeta de circulación: compare vehicle data
+      if (tipo === 'tarjeta_circulacion') {
+        const vehiculos = await this.prisma.vehiculo.findMany({
+          where: { asociadoId: doc.asociadoId },
+          select: { marca: true, modelo: true, anio: true, placas: true, color: true },
+        });
+        if (vehiculos.length > 0) {
+          const tcPlacas = (campos.placas?.valor || '').replace(/[-\s]/g, '').toUpperCase();
+          const tcMarca = this.normalizeName(campos.marca?.valor || '');
+          const tcModelo = this.normalizeName(campos.modelo?.valor || '');
+          const tcAnio = parseInt(campos.anio_modelo?.valor || '0', 10);
+
+          // Try to find a matching registered vehicle
+          const matchedVehicle = vehiculos.find((v) => {
+            const regPlacas = (v.placas || '').replace(/[-\s]/g, '').toUpperCase();
+            return tcPlacas && regPlacas && regPlacas === tcPlacas;
+          });
+
+          if (tcPlacas && !matchedVehicle) {
+            const regPlacas = vehiculos.map((v) => v.placas).join(', ');
+            warnings.push(`Placas en tarjeta "${campos.placas?.valor}" no coinciden con las registradas (${regPlacas})`);
+            validaciones['coincide_placas'] = false;
+          } else if (tcPlacas) {
+            validaciones['coincide_placas'] = true;
+          }
+
+          // If matched by plates, also check marca/modelo/año
+          const refVehicle = matchedVehicle || vehiculos[0];
+          if (tcMarca && refVehicle.marca && !this.namesMatch(tcMarca, refVehicle.marca)) {
+            warnings.push(`Marca en tarjeta "${campos.marca?.valor}" no coincide con la registrada "${refVehicle.marca}"`);
+            validaciones['coincide_marca'] = false;
+          } else if (tcMarca) {
+            validaciones['coincide_marca'] = true;
+          }
+
+          if (tcAnio && refVehicle.anio && tcAnio !== refVehicle.anio) {
+            warnings.push(`Año modelo en tarjeta "${tcAnio}" no coincide con el registrado "${refVehicle.anio}"`);
+            validaciones['coincide_anio'] = false;
+          } else if (tcAnio) {
+            validaciones['coincide_anio'] = true;
+          }
+        }
+
+        // Also compare propietario name if available
+        const propietario = campos.nombre_propietario?.valor || '';
+        if (propietario) {
+          const asociado = await this.prisma.asociado.findUnique({
+            where: { id: doc.asociadoId },
+            select: { nombre: true, apellidoPat: true, apellidoMat: true },
+          });
+          if (asociado) {
+            const fullName = `${asociado.nombre} ${asociado.apellidoPat} ${asociado.apellidoMat || ''}`;
+            if (!this.namesMatch(propietario, fullName)) {
+              warnings.push(`Propietario en tarjeta "${propietario}" no coincide con el asociado "${fullName.trim()}"`);
+              validaciones['coincide_propietario'] = false;
+            } else {
+              validaciones['coincide_propietario'] = true;
+            }
+          }
+        }
+      }
+
+      // Update analysis with cross-validation data
+      if (warnings.length > 0) {
+        this.logger.warn(`Cross-validation warnings for doc ${documentoId}: ${warnings.join('; ')}`);
+        // Store warnings in validaciones JSON (no separate observaciones field, avoid migration)
+        (validaciones as any)['_cross_validation_warnings'] = warnings;
+        await this.prisma.analisisDocumento.update({
+          where: { documentoId },
+          data: { validaciones },
+        });
+        aiData.validaciones = validaciones;
+      } else if (Object.keys(validaciones).some((k) => k.startsWith('coincide_'))) {
+        // All cross-checks passed — update validaciones
+        await this.prisma.analisisDocumento.update({
+          where: { documentoId },
+          data: { validaciones },
+        });
+        aiData.validaciones = validaciones;
+      }
+    } catch (err) {
+      this.logger.error(`Cross-validation error for doc ${documentoId}: ${err.message}`);
+    }
+  }
+
+  /**
    * Human-readable labels for critical validation keys.
    */
   private readonly VALIDATION_LABELS: Record<string, string> = {
@@ -185,6 +351,13 @@ export class AiAnalysisService {
     es_selfie_valida: 'La selfie no cumple con los requisitos (rostro visible, buena iluminación)',
     es_tarjeta_circulacion: 'El documento no parece ser una tarjeta de circulación',
     imagen_legible: 'La imagen no es legible, por favor sube una foto más clara',
+    coincide_nombre: 'El nombre en el documento no coincide con el registrado',
+    coincide_apellido_paterno: 'El apellido paterno en el documento no coincide con el registrado',
+    coincide_apellido_materno: 'El apellido materno en el documento no coincide con el registrado',
+    coincide_placas: 'Las placas en la tarjeta no coinciden con las del vehículo registrado',
+    coincide_marca: 'La marca en la tarjeta no coincide con la del vehículo registrado',
+    coincide_anio: 'El año modelo en la tarjeta no coincide con el del vehículo registrado',
+    coincide_propietario: 'El nombre del propietario en la tarjeta no coincide con el del asociado',
   };
 
   /**
@@ -226,10 +399,25 @@ export class AiAnalysisService {
       // Delete S3 file on auto-rejection so user must re-upload
       const doc = await this.prisma.documento.findUnique({
         where: { id: documentoId },
-        select: { s3Bucket: true, s3Key: true },
+        select: { s3Bucket: true, s3Key: true, tipo: true, asociadoId: true },
       });
       if (doc) {
         await this.storage.deleteFile(doc.s3Bucket, doc.s3Key).catch(() => {});
+
+        // Si se rechaza la selfie, limpiar fotoUrl del asociado y borrar foto de MinIO
+        if (doc.tipo === 'selfie' && doc.asociadoId) {
+          const asociado = await this.prisma.asociado.findUnique({
+            where: { id: doc.asociadoId },
+            select: { fotoUrl: true },
+          });
+          if (asociado?.fotoUrl) {
+            await this.storage.deleteFile('core-associates-fotos', asociado.fotoUrl).catch(() => {});
+          }
+          await this.prisma.asociado.update({
+            where: { id: doc.asociadoId },
+            data: { fotoUrl: null },
+          });
+        }
       }
 
       await this.prisma.documento.update({

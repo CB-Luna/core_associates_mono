@@ -149,6 +149,59 @@ export const INTENTS: IntentDef[] = [
     resolverKey: 'vehiculos_marca',
   },
 
+  // ── Vehículos: conteo por asociado ────────────────
+  {
+    id: 'vehiculos_por_asociado',
+    keywords: [
+      ['cuantos', 'carros'], ['cuantos', 'vehiculos'], ['cuantos', 'autos'],
+      ['vehiculos', 'tiene'], ['carros', 'tiene'], ['autos', 'tiene'],
+    ],
+    resolverKey: 'vehiculos_por_asociado',
+  },
+
+  // ── Listar asociados por estado ───────────────────
+  {
+    id: 'listar_asociados_estado',
+    keywords: [
+      ['lista', 'asociados', 'pendientes'], ['listar', 'asociados', 'pendientes'],
+      ['lista', 'asociados', 'activos'], ['listar', 'asociados', 'activos'],
+      ['lista', 'asociados', 'rechazados'], ['listar', 'asociados', 'rechazados'],
+      ['quienes', 'pendientes'], ['quienes', 'activos'], ['quienes', 'rechazados'],
+      ['cuales', 'pendientes'], ['cuales', 'activos'], ['cuales', 'rechazados'],
+      ['nombres', 'asociados', 'pendientes'], ['nombres', 'asociados', 'activos'],
+      ['mostrar', 'asociados', 'pendientes'], ['mostrar', 'asociados', 'activos'],
+    ],
+    resolverKey: 'listar_asociados_estado',
+  },
+
+  // ── Listar proveedores ────────────────────────────
+  {
+    id: 'listar_proveedores',
+    keywords: [
+      ['lista', 'proveedores'], ['listar', 'proveedores'],
+      ['todos', 'proveedores'], ['mostrar', 'proveedores'],
+      ['nombres', 'proveedores'],
+    ],
+    resolverKey: 'listar_proveedores',
+  },
+
+  // ── Casos legales recientes ───────────────────────
+  {
+    id: 'casos_recientes',
+    keywords: [
+      ['casos', 'recientes'], ['ultimos', 'casos'], ['lista', 'casos'],
+      ['listar', 'casos'], ['mostrar', 'casos'],
+    ],
+    resolverKey: 'casos_recientes',
+  },
+
+  // ── Asociados suspendidos ─────────────────────────
+  {
+    id: 'asociados_suspendidos',
+    keywords: [['asociados', 'suspendidos'], ['cuenta', 'suspendida']],
+    resolverKey: 'asociados_suspendidos',
+  },
+
   // ── Resumen general ───────────────────────────────
   {
     id: 'resumen_general',
