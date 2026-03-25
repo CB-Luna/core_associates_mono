@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "390807820929",
+    "project_id": "core-associates",
+    "storage_bucket": "core-associates.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:390807820929:android:5bb3c68aef0956b8be4b80",
+        "android_client_info": {
+          "package_name": "mx.coreassociates.core_associates_app_abogados"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCJi0YN8bhdkV_SIuQAY8N0zdASo5Mk1k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

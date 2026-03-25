@@ -14,7 +14,7 @@ El CRM web (admin/operador/abogado) y la API están funcionales al ~98%. La App 
 |--------|-------------|-----------|
 | **F** | Flujo abogado — F.1/F.2/F.3 ✅ completados; F.4/F.5 pendientes | Media |
 | **K** | Asistente IA (chatbot CRM) — ✅ COMPLETADO | — |
-| **C** | App Móvil Abogados — app separada `core_associates_app_abogados/` | **Alta** |
+| **C** | App Móvil Abogados — Fases 3.1-3.6 ✅ COMPLETADAS | — |
 | **J** | Verificación vehicular | Media |
 | **D** | RBAC — eliminar enum legacy `RolUsuario` | Baja |
 | **E** | Mejoras menores (App + CRM) | Baja |
@@ -97,45 +97,22 @@ Completado: módulo NestJS `asistente-ia` con controller (`POST /asistente/pregu
 
 ---
 
-## C. App Móvil Abogados — App Separada
+## C. App Móvil Abogados — ✅ COMPLETADA
 
 > **Plan detallado**: ver [APP_ABOGADOS.md](APP_ABOGADOS.md)
 
-App Flutter independiente (`core_associates_app_abogados/`) para abogados como operadores de campo. Conectada al mismo backend `core-associates-api`. El abogado deja de ser "usuario de CRM" y pasa a ser "agente en tiempo real".
+App Flutter independiente (`core_associates_app_abogados/`) para abogados como operadores de campo. **Todas las fases (3.1-3.6) completadas**, incluyendo:
 
-**Login**: Email/password (reutiliza `POST /auth/login`).  
-**Bottom Nav**: Inicio | Casos | Mapa | Perfil.
+- ✅ Scaffold + Auth (email/password) + GoRouter shell + 4 tabs
+- ✅ Flujo operativo completo: mis casos, disponibles, detalle, notas, documentos, acciones
+- ✅ Dashboard con stats reales + badge notificaciones no leídas (polling 30s)
+- ✅ Ubicación (tap-to-call, abrir Maps) + upload docs (cámara/galería/archivo)
+- ✅ Push FCM: caso nuevo → todos los abogados, caso asignado → abogado específico
+- ✅ Perfil con avatar editable (upload al servidor via `POST /auth/me/avatar`)
+- ✅ Filtros de fecha en Mis Casos (DateRangePicker → `fechaDesde`/`fechaHasta`)
+- ✅ APK producción compilado (18.7MB), flutter analyze 0 errores
 
-### C.1 — Scaffold + Auth (Fase 3.1)
-
-- Proyecto Flutter nuevo, core infrastructure (ApiClient, SecureStorage, Theme)
-- LoginScreen email/password, GoRouter + shell con BottomNav
-
-### C.2 — Casos: feature principal (Fase 3.2)
-
-- Dashboard con stats, Mis Casos (lista + detalle), Casos Disponibles + postularse
-- Notas (timeline + agregar + privadas), documentos (subir foto/archivo)
-- Acciones: aceptar, rechazar, en_atención, escalar, resolver
-
-### C.3 — Mapa + Navegación (Fase 3.3)
-
-- Mapa SOS con markers por tipo/prioridad
-- Deeplink a Google Maps/Waze
-- Filtros en mapa
-
-### C.4 — Push Notifications FCM (Fase 3.4)
-
-- Registro token FCM, notificaciones foreground/background
-- Deep link desde push → detalle del caso
-
-### C.5 — Extras (Fase 3.5)
-
-- Toggle disponibilidad (migración backend)
-- Chat interno básico + deeplink WhatsApp
-- Perfil completo
-
-**Esfuerzo**: Alto  
-**Prioridad**: Media-Alta
+**Pendientes opcionales (post-v1)**: Chat/WhatsApp (sin scope), mapa embebido (requiere API key), toggle disponibilidad (migración BD).
 
 ---
 
@@ -218,13 +195,13 @@ Fase 2 — Asistente IA (chatbot CRM):
   ├─ ✅ K.6 Backend módulo asistente-ia
   └─ ✅ K.3 Modo avanzado (IA por API + guard contenido)
 
-Fase 3 — App Móvil Abogados (app separada → core_associates_app_abogados/):
-  ├─ C.1 Scaffold + Auth (email/password, GoRouter shell)
-  ├─ C.2 Casos: dashboard, mis casos, disponibles, detalle, notas, docs, acciones
-  ├─ C.3 Mapa SOS + navegación GPS
-  ├─ C.4 Push notifications (FCM)
-  ├─ C.5 Extras: disponibilidad, chat básico, perfil
-  └─ D   Eliminar enum RolUsuario (coordinar con nuevo routing)
+Fase 3 — App Móvil Abogados (app separada → core_associates_app_abogados/): ✅ COMPLETADA
+  ├─ ✅ C.1 Scaffold + Auth (email/password, GoRouter shell)
+  ├─ ✅ C.2 Casos: dashboard, mis casos, disponibles, detalle, notas, docs, acciones
+  ├─ ✅ C.3 Mapa + ubicación + docs (tap-to-call, Maps, upload)
+  ├─ ✅ C.4 Push notifications (FCM) + badge no leídas
+  ├─ ✅ C.5 Extras: avatar upload, filtros fecha, APK producción
+  └─ D   Eliminar enum RolUsuario (pendiente, sin bloqueo funcional)
 
 Fase 4 — Notificaciones y Documentos Bidireccionales:
   ├─ F.5 Push al asociado sobre cambios en su caso

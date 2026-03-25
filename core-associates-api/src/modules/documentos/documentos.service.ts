@@ -143,6 +143,14 @@ export class DocumentosService {
       await this.storage.deleteFile(doc.s3Bucket, doc.s3Key).catch(() => {});
     }
 
+    // Si se rechaza la selfie, limpiar fotoUrl del asociado (el avatar usa selfie como fallback)
+    if (estado === 'rechazado' && doc.tipo === 'selfie' && doc.asociadoId) {
+      await this.prisma.asociado.update({
+        where: { id: doc.asociadoId },
+        data: { fotoUrl: null },
+      });
+    }
+
     const updated = await this.prisma.documento.update({
       where: { id },
       data: {

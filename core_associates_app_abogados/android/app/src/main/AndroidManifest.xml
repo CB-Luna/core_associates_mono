@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Firebase Cloud Messaging — Android 13+ requiere permiso explícito -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <application
         android:label="core_associates_app_abogados"
         android:name="${applicationName}"

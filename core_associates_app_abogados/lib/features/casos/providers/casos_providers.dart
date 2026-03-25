@@ -14,6 +14,8 @@ final misCasosProvider =
 
 class MisCasosNotifier extends Notifier<AsyncValue<PaginatedCasos>> {
   String? _estadoFiltro;
+  String? _fechaDesde;
+  String? _fechaHasta;
 
   CasosRepository get _repo => ref.read(casosRepositoryProvider);
 
@@ -26,7 +28,12 @@ class MisCasosNotifier extends Notifier<AsyncValue<PaginatedCasos>> {
   Future<void> load({int page = 1}) async {
     if (page == 1) state = const AsyncValue.loading();
     try {
-      final result = await _repo.getMisCasos(page: page, estado: _estadoFiltro);
+      final result = await _repo.getMisCasos(
+        page: page,
+        estado: _estadoFiltro,
+        fechaDesde: _fechaDesde,
+        fechaHasta: _fechaHasta,
+      );
       if (page > 1 && state.hasValue) {
         final prev = state.value!;
         state = AsyncValue.data(
@@ -49,6 +56,15 @@ class MisCasosNotifier extends Notifier<AsyncValue<PaginatedCasos>> {
     _estadoFiltro = estado;
     load();
   }
+
+  void setDateRange(String? desde, String? hasta) {
+    _fechaDesde = desde;
+    _fechaHasta = hasta;
+    load();
+  }
+
+  String? get fechaDesde => _fechaDesde;
+  String? get fechaHasta => _fechaHasta;
 
   Future<void> refresh() => load();
 }

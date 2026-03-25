@@ -183,6 +183,20 @@ export class AuthController {
 
   // ── Avatar de Usuario ──
 
+  @Post('me/avatar')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Subir mi propio avatar (autenticado)' })
+  @ApiResponse({ status: 200, description: 'Avatar subido' })
+  uploadMyAvatar(
+    @CurrentUser('id') userId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.authService.uploadAvatar(userId, file);
+  }
+
   @Post('users/:id/avatar')
   @UseGuards(JwtAuthGuard, PermisosGuard)
   @Permisos('usuarios:editar')

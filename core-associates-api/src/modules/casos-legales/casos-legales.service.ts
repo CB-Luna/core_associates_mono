@@ -2,11 +2,14 @@ import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenEx
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificacionesCrmService } from '../notificaciones-crm/notificaciones-crm.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateCasoLegalDto } from './dto/create-caso-legal.dto';
 import { TipoPercance } from '@prisma/client';
 
 const BUCKET_LEGAL = 'core-associates-legal';
+const BUCKET_FOTOS = 'core-associates-fotos';
+const BUCKET_VEHICULOS = 'core-associates-vehiculos';
 
 @Injectable()
 export class CasosLegalesService {
@@ -15,6 +18,7 @@ export class CasosLegalesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificacionesCrm: NotificacionesCrmService,
+    private readonly notificaciones: NotificacionesService,
     private readonly storage: StorageService,
   ) {}
 
@@ -22,7 +26,7 @@ export class CasosLegalesService {
     const count = await this.prisma.casoLegal.count();
     const codigo = `CAS-${String(count + 1).padStart(5, '0')}`;
 
-    return this.prisma.casoLegal.create({
+    const caso = await this.prisma.casoLegal.create({
       data: {
         codigo,
         asociadoId,
@@ -38,6 +42,13 @@ export class CasosLegalesService {
         notas: true,
       },
     });
+
+    // Notificar a todos los abogados activos vía push + notificación CRM
+    this.notificarAbogadosNuevoCaso(caso).catch((err) =>
+      this.logger.error('Error notificando abogados de nuevo caso', err),
+    );
+
+    return caso;
   }
 
   async getMisCasos(asociadoId: string) {
@@ -215,7 +226,7 @@ export class CasosLegalesService {
       },
     });
 
-    // Notificar al abogado
+    // Notificar al abogado (CRM + push)
     await this.notificacionesCrm.crear({
       usuarioId: abogadoUsuarioId,
       titulo: 'Caso asignado',
@@ -224,6 +235,12 @@ export class CasosLegalesService {
       referenciaId: caso.id,
       referenciaTipo: 'caso_legal',
     });
+    this.notificaciones.sendPushUsuario(
+      abogadoUsuarioId,
+      'Caso asignado',
+      `Se te asignó el caso ${caso.codigo} (${caso.tipoPercance})`,
+      { casoId: caso.id, tipo: 'caso_asignado' },
+    ).catch((err) => this.logger.error('Error enviando push al abogado', err));
 
     return caso;
   }
@@ -248,12 +265,21 @@ export class CasosLegalesService {
 
   // ── Endpoints del Abogado ──
 
-  async getMisCasosAbogado(abogadoUsuarioId: string, query: { page?: number; limit?: number; estado?: string }) {
-    const { page = 1, limit = 10, estado } = query;
+  async getMisCasosAbogado(abogadoUsuarioId: string, query: { page?: number; limit?: number; estado?: string; fechaDesde?: string; fechaHasta?: string }) {
+    const { page = 1, limit = 10, estado, fechaDesde, fechaHasta } = query;
     const skip = (page - 1) * limit;
 
     const where: any = { abogadoUsuarioId };
     if (estado) where.estado = estado;
+    if (fechaDesde || fechaHasta) {
+      where.fechaApertura = {};
+      if (fechaDesde) where.fechaApertura.gte = new Date(fechaDesde);
+      if (fechaHasta) {
+        const hasta = new Date(fechaHasta);
+        hasta.setHours(23, 59, 59, 999);
+        where.fechaApertura.lte = hasta;
+      }
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.casoLegal.findMany({
@@ -399,19 +425,25 @@ export class CasosLegalesService {
       throw new BadRequestException('Este caso no está disponible para postulación');
     }
 
+    const abogado = await this.prisma.usuario.findUnique({
+      where: { id: abogadoUsuarioId },
+      select: { nombre: true },
+    });
+    const nombreAbogado = abogado?.nombre ?? 'Un abogado';
+
     // Crear nota de postulación y notificar operadores
     await this.prisma.notaCaso.create({
       data: {
         casoId,
         autorId: abogadoUsuarioId,
-        contenido: 'Abogado se postuló para este caso',
+        contenido: `${nombreAbogado} se postuló para este caso`,
         esPrivada: true,
       },
     });
 
     await this.notificarOperadores(
       'Postulación de abogado',
-      `Un abogado se postuló para el caso ${caso.codigo}`,
+      `${nombreAbogado} se postuló para el caso ${caso.codigo}`,
       'caso_asignado',
       caso.id,
     );
@@ -438,10 +470,16 @@ export class CasosLegalesService {
       data,
     });
 
+    const abogado = await this.prisma.usuario.findUnique({
+      where: { id: abogadoUsuarioId },
+      select: { nombre: true },
+    });
+    const nombreAbogado = abogado?.nombre ?? 'El abogado';
+
     if (estado === 'escalado') {
       await this.notificarOperadores(
         'Caso escalado',
-        `El abogado escaló el caso ${caso.codigo}`,
+        `${nombreAbogado} escaló el caso ${caso.codigo}`,
         'estado_cambio',
         caso.id,
       );
@@ -450,7 +488,7 @@ export class CasosLegalesService {
     if (estado === 'resuelto') {
       await this.notificarOperadores(
         'Caso resuelto por abogado',
-        `El abogado marcó el caso ${caso.codigo} como resuelto. Pendiente cierre administrativo.`,
+        `${nombreAbogado} marcó el caso ${caso.codigo} como resuelto. Pendiente cierre administrativo.`,
         'estado_cambio',
         caso.id,
       );
@@ -528,6 +566,65 @@ export class CasosLegalesService {
     return { message: 'Documento eliminado' };
   }
 
+  // ── Proxy foto endpoints para abogados ──
+
+  async getAsociadoFotoForAbogado(
+    abogadoUsuarioId: string,
+    casoId: string,
+  ): Promise<{ buffer: Buffer; contentType: string } | null> {
+    const caso = await this.prisma.casoLegal.findFirst({
+      where: { id: casoId, abogadoUsuarioId },
+      select: { asociadoId: true },
+    });
+    if (!caso) throw new NotFoundException('Caso no encontrado o no asignado a ti');
+
+    const asociado = await this.prisma.asociado.findUnique({ where: { id: caso.asociadoId } });
+    if (!asociado) throw new NotFoundException('Asociado no encontrado');
+
+    // Intentar fotoUrl explícita
+    if (asociado.fotoUrl) {
+      const buffer = await this.storage.getFile(BUCKET_FOTOS, asociado.fotoUrl);
+      const ext = asociado.fotoUrl.split('.').pop()?.toLowerCase() || 'jpg';
+      const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+      return { buffer, contentType: mimeMap[ext] || 'image/jpeg' };
+    }
+
+    // Fallback: selfie del KYC
+    const selfie = await this.prisma.documento.findFirst({
+      where: { asociadoId: caso.asociadoId, tipo: 'selfie', s3Key: { not: '' } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (selfie) {
+      const buffer = await this.storage.getFile(selfie.s3Bucket, selfie.s3Key);
+      return { buffer, contentType: selfie.contentType };
+    }
+
+    return null;
+  }
+
+  async getVehiculoFotoForAbogado(
+    abogadoUsuarioId: string,
+    casoId: string,
+    vehiculoId: string,
+  ): Promise<{ buffer: Buffer; contentType: string } | null> {
+    const caso = await this.prisma.casoLegal.findFirst({
+      where: { id: casoId, abogadoUsuarioId },
+      select: { asociadoId: true },
+    });
+    if (!caso) throw new NotFoundException('Caso no encontrado o no asignado a ti');
+
+    const vehiculo = await this.prisma.vehiculo.findFirst({
+      where: { id: vehiculoId, asociadoId: caso.asociadoId },
+    });
+    if (!vehiculo) throw new NotFoundException('Vehículo no encontrado');
+    if (!vehiculo.fotoUrl) return null;
+
+    const buffer = await this.storage.getFile(BUCKET_VEHICULOS, vehiculo.fotoUrl);
+    const ext = vehiculo.fotoUrl.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+    return { buffer, contentType: mimeMap[ext] || 'image/jpeg' };
+  }
+
   private async notificarOperadores(titulo: string, mensaje: string, tipo: string, referenciaId: string) {
     const operadores = await this.prisma.usuario.findMany({
       where: { rol: { in: ['admin', 'operador'] }, estado: 'activo' },
@@ -541,6 +638,34 @@ export class CasosLegalesService {
         tipo,
         referenciaId,
         referenciaTipo: 'caso_legal',
+      });
+    }
+  }
+
+  private async notificarAbogadosNuevoCaso(caso: { id: string; codigo: string; tipoPercance: string; prioridad: string }) {
+    const abogados = await this.prisma.usuario.findMany({
+      where: { rol: 'abogado', estado: 'activo' },
+      select: { id: true },
+    });
+
+    const titulo = 'Nuevo caso disponible';
+    const prioridadLabel = caso.prioridad === 'alta' ? '🔴 Alta' : caso.prioridad === 'media' ? '🟡 Media' : '🟢 Baja';
+    const mensaje = `${caso.codigo} — ${caso.tipoPercance} (${prioridadLabel})`;
+
+    for (const ab of abogados) {
+      // Notificación CRM (persistente en BD)
+      await this.notificacionesCrm.crear({
+        usuarioId: ab.id,
+        titulo,
+        mensaje,
+        tipo: 'caso_disponible',
+        referenciaId: caso.id,
+        referenciaTipo: 'caso_legal',
+      });
+      // Push FCM (instantáneo al dispositivo)
+      await this.notificaciones.sendPushUsuario(ab.id, titulo, mensaje, {
+        casoId: caso.id,
+        tipo: 'caso_disponible',
       });
     }
   }

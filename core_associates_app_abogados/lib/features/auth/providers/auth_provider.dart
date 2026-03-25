@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/notifications/push_notification_service.dart';
 import '../models/usuario.dart';
 import '../repository/auth_repository.dart';
 
@@ -46,6 +47,8 @@ class AuthNotifier extends Notifier<AuthState> {
     final cached = await _repo.getCachedUser();
     if (cached != null) {
       state = state.copyWith(status: AuthStatus.authenticated, usuario: cached);
+      // Registrar/actualizar token FCM silenciosamente
+      ref.read(pushNotificationServiceProvider).registerTokenInBackend();
     } else {
       state = state.copyWith(status: AuthStatus.unauthenticated);
     }
@@ -59,6 +62,8 @@ class AuthNotifier extends Notifier<AuthState> {
         status: AuthStatus.authenticated,
         usuario: usuario,
       );
+      // Registrar token FCM en el backend
+      ref.read(pushNotificationServiceProvider).registerTokenInBackend();
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,

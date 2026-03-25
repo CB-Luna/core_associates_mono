@@ -119,12 +119,41 @@ class ApiClient {
     return _dio.post(path, data: formData);
   }
 
-  // ── Image URL helper ─────────────────────────────
+  // ── Image URL helpers ────────────────────────────
   String imageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http')) return path;
     return '${AppConstants.apiBaseUrl}$path';
   }
+
+  /// URL para foto de perfil de asociado via caso (abogado, requiere auth header).
+  String asociadoFotoUrl(String casoId) {
+    return '${AppConstants.apiBaseUrl}${AppConstants.apiPrefix}/casos-legales/abogado/mis-casos/$casoId/asociado-foto';
+  }
+
+  /// URL para foto de vehículo via caso (abogado, requiere auth header).
+  String vehiculoFotoUrl(String casoId, String vehiculoId) {
+    return '${AppConstants.apiBaseUrl}${AppConstants.apiPrefix}/casos-legales/abogado/mis-casos/$casoId/vehiculo-foto/$vehiculoId';
+  }
+
+  /// URL para avatar de usuario/abogado (requiere auth header).
+  String userAvatarUrl(String userId) {
+    return '${AppConstants.apiBaseUrl}${AppConstants.apiPrefix}/auth/users/$userId/avatar';
+  }
+
+  /// Obtiene presigned URL para un documento de caso legal (no requiere auth).
+  Future<String?> getDocumentoPresignedUrl(String casoId, String docId) async {
+    try {
+      final res = await get('/casos-legales/$casoId/documentos/$docId/url');
+      final data = res.data as Map<String, dynamic>;
+      return data['url'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Obtiene el access token actual (para headers de imagen autenticada).
+  Future<String?> getAccessToken() => storage.getAccessToken();
 
   // ── Error presentation ───────────────────────────
   void _showGlobalError(DioException error) {

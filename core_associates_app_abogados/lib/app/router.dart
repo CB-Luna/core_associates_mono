@@ -17,15 +17,16 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/home',
+    initialLocation: '/login',
     refreshListenable: authNotifier,
     redirect: (context, state) {
       final auth = ref.read(authStateProvider);
       final isLogin = state.matchedLocation == '/login';
 
+      // Mientras se verifica la sesión, mantener en login
       if (auth.status == AuthStatus.initial ||
           auth.status == AuthStatus.loading) {
-        return null; // esperar
+        return isLogin ? null : '/login';
       }
 
       if (!auth.isAuthenticated) {

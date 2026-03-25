@@ -2,6 +2,7 @@ import {
   Controller, Post, Get, Put, Delete, Param, Query, Body,
   UseGuards, UseInterceptors, UploadedFile, ParseFilePipe,
   MaxFileSizeValidator, FileTypeValidator, StreamableFile, Res,
+  NotFoundException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -106,6 +107,43 @@ export class CasosLegalesController {
   @ApiResponse({ status: 200, description: 'Lista de casos disponibles' })
   getCasosDisponibles(@Query() query: CasosLegalesQueryDto) {
     return this.casosLegalesService.getCasosDisponibles(query);
+  }
+
+  @Get('abogado/mis-casos/:id/asociado-foto')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver-propios')
+  @ApiOperation({ summary: 'Obtener foto del asociado del caso (abogado)' })
+  @ApiResponse({ status: 200, description: 'Imagen binaria' })
+  @ApiResponse({ status: 404, description: 'Sin foto o caso no asignado' })
+  async getAsociadoFoto(
+    @CurrentUser('id') abogadoUsuarioId: string,
+    @Param('id') casoId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.casosLegalesService.getAsociadoFotoForAbogado(abogadoUsuarioId, casoId);
+    if (!result) throw new NotFoundException('El asociado no tiene foto');
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Cache-Control', 'private, max-age=900');
+    return new StreamableFile(result.buffer);
+  }
+
+  @Get('abogado/mis-casos/:id/vehiculo-foto/:vehiculoId')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver-propios')
+  @ApiOperation({ summary: 'Obtener foto del vehículo del caso (abogado)' })
+  @ApiResponse({ status: 200, description: 'Imagen binaria' })
+  @ApiResponse({ status: 404, description: 'Sin foto o caso no asignado' })
+  async getVehiculoFoto(
+    @CurrentUser('id') abogadoUsuarioId: string,
+    @Param('id') casoId: string,
+    @Param('vehiculoId') vehiculoId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.casosLegalesService.getVehiculoFotoForAbogado(abogadoUsuarioId, casoId, vehiculoId);
+    if (!result) throw new NotFoundException('El vehículo no tiene foto');
+    res.setHeader('Content-Type', result.contentType);
+    res.setHeader('Cache-Control', 'private, max-age=900');
+    return new StreamableFile(result.buffer);
   }
 
   @Get(':id')

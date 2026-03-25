@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # State management
   flutter_riverpod: ^3.2.1
@@ -40,6 +42,7 @@ dependencies:
 
   # Media
   image_picker: ^1.2.1
+  file_picker: ^8.0.0
 
   # Notifications
   flutter_local_notifications: ^19.2.1

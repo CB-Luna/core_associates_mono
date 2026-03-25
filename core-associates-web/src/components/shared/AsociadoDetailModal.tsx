@@ -14,7 +14,6 @@ import type { Asociado, Documento, NotaAsociado } from '@/lib/api-types';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
 import { DocumentViewer } from '@/components/documentos/DocumentViewer';
 import { RejectDocumentDialog } from '@/components/documentos/RejectDocumentDialog';
-import { AIAnalysisPanel } from '@/components/documentos/AIAnalysisPanel';
 import { usePermisos } from '@/lib/permisos';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import { VehiclePhoto } from '@/components/shared/VehiclePhoto';
@@ -168,6 +167,10 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
           d.id === doc.id ? { ...d, estado: 'rechazado' as const, motivoRechazo: motivo } : d
         ),
       });
+      // Si se rechazó la selfie, limpiar avatar (el backend ya limpió fotoUrl)
+      if (doc.tipo === 'selfie') {
+        setFotoUrl(null);
+      }
     } catch {
       alert('Error al rechazar');
     } finally {
@@ -359,15 +362,6 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
                           </button>
                         )}
                       </div>
-                      {/* AI Analysis - solo si no está aprobado */}
-                      {d.estado !== 'aprobado' && (
-                        <AIAnalysisPanel
-                          analisis={(d as any).analisis}
-                          documentoId={d.id}
-                          documentoTipo={d.tipo}
-                          onAnalysisUpdated={refreshAsociado}
-                        />
-                      )}
                     </div>
                   ))}
                 </div>

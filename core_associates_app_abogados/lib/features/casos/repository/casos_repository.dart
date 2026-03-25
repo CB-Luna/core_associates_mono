@@ -21,9 +21,13 @@ class CasosRepository {
     int page = 1,
     int limit = 20,
     String? estado,
+    String? fechaDesde,
+    String? fechaHasta,
   }) async {
     final params = <String, dynamic>{'page': page, 'limit': limit};
     if (estado != null) params['estado'] = estado;
+    if (fechaDesde != null) params['fechaDesde'] = fechaDesde;
+    if (fechaHasta != null) params['fechaHasta'] = fechaHasta;
 
     final res = await _api.get(
       '/casos-legales/abogado/mis-casos',
@@ -31,13 +35,15 @@ class CasosRepository {
     );
     final data = res.data as Map<String, dynamic>;
 
+    final meta = data['meta'] as Map<String, dynamic>? ?? {};
+
     return PaginatedCasos(
       casos: (data['data'] as List)
           .map((e) => CasoLegal.fromJson(e as Map<String, dynamic>))
           .toList(),
-      total: data['total'] as int? ?? 0,
-      page: data['page'] as int? ?? page,
-      limit: data['limit'] as int? ?? limit,
+      total: meta['total'] as int? ?? 0,
+      page: meta['page'] as int? ?? page,
+      limit: meta['limit'] as int? ?? limit,
     );
   }
 
@@ -57,14 +63,15 @@ class CasosRepository {
       queryParameters: {'page': page, 'limit': limit},
     );
     final data = res.data as Map<String, dynamic>;
+    final meta = data['meta'] as Map<String, dynamic>? ?? {};
 
     return PaginatedCasos(
       casos: (data['data'] as List)
           .map((e) => CasoLegal.fromJson(e as Map<String, dynamic>))
           .toList(),
-      total: data['total'] as int? ?? 0,
-      page: data['page'] as int? ?? page,
-      limit: data['limit'] as int? ?? limit,
+      total: meta['total'] as int? ?? 0,
+      page: meta['page'] as int? ?? page,
+      limit: meta['limit'] as int? ?? limit,
     );
   }
 
