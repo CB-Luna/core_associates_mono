@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Car, FileText, Ticket, Eye, CheckCircle, XCircle, MessageSquare, Clock, Send, User, Brain, Upload } from 'lucide-react';
+import { ArrowLeft, Car, FileText, Ticket, Eye, CheckCircle, XCircle, MessageSquare, Clock, Send, User, Brain, Upload, AlertTriangle } from 'lucide-react';
 import { apiClient, apiImageUrl } from '@/lib/api-client';
 import { formatFechaLegible, formatFechaConHora } from '@/lib/utils';
 import type { Asociado, Documento, NotaAsociado } from '@/lib/api-types';
@@ -89,7 +89,7 @@ export default function AsociadoDetailPage() {
         .then(setNotas)
         .catch(console.error);
     } catch (err) {
-      console.error(err);
+      alert(err instanceof Error ? err.message : 'Error al cambiar estado');
     } finally {
       setUpdating(false);
     }
@@ -234,6 +234,27 @@ export default function AsociadoDetailPage() {
           <span className="font-semibold">Motivo:</span> {asociado.motivoRechazo}
         </div>
       )}
+
+      {/* KYC completeness warnings */}
+      {asociado.estado === 'pendiente' && (() => {
+        const faltantes: string[] = [];
+        if (!asociado.vehiculos?.length) faltantes.push('Sin vehículo registrado');
+        const tarjeta = asociado.documentos?.find(d => d.tipo === 'tarjeta_circulacion');
+        if (!tarjeta) faltantes.push('Sin tarjeta de circulación');
+        else if (tarjeta.estado !== 'aprobado') faltantes.push('Tarjeta de circulación no aprobada');
+        if (!faltantes.length) return null;
+        return (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+            <p className="font-semibold flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4" />
+              No se puede aprobar:
+            </p>
+            <ul className="mt-1 list-disc pl-5">
+              {faltantes.map((f) => <li key={f}>{f}</li>)}
+            </ul>
+          </div>
+        );
+      })()}
 
       {/* Action buttons */}
       {puede('aprobar:asociados') && asociado.estado === 'pendiente' && (

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { StorageService } from '../storage/storage.service';
@@ -64,12 +64,12 @@ export class AsociadosService {
   }
 
   async addVehiculo(asociadoId: string, dto: CreateVehiculoDto) {
-    // If this is the first vehicle or marked as principal, unmark others
-    if (dto.esPrincipal !== false) {
-      await this.prisma.vehiculo.updateMany({
-        where: { asociadoId, esPrincipal: true },
-        data: { esPrincipal: false },
-      });
+    // Limit: máximo 1 vehículo por asociado
+    const count = await this.prisma.vehiculo.count({ where: { asociadoId } });
+    if (count >= 1) {
+      throw new BadRequestException(
+        'Solo puedes tener un vehículo registrado. Elimina el actual para agregar otro.',
+      );
     }
 
     return this.prisma.vehiculo.create({
@@ -184,6 +184,27 @@ export class AsociadosService {
     const asociado = await this.prisma.asociado.findUnique({ where: { id } });
     if (!asociado) {
       throw new NotFoundException('Asociado no encontrado');
+    }
+
+    // Validar requisitos KYC antes de aprobar
+    if (estado === 'activo') {
+      const [vehiculoCount, tarjeta] = await Promise.all([
+        this.prisma.vehiculo.count({ where: { asociadoId: id } }),
+        this.prisma.documento.findFirst({
+          where: { asociadoId: id, tipo: 'tarjeta_circulacion' },
+        }),
+      ]);
+
+      const faltantes: string[] = [];
+      if (vehiculoCount === 0) faltantes.push('vehículo registrado');
+      if (!tarjeta) faltantes.push('tarjeta de circulación');
+      else if (tarjeta.estado !== 'aprobado') faltantes.push('tarjeta de circulación aprobada (actualmente: ' + tarjeta.estado + ')');
+
+      if (faltantes.length > 0) {
+        throw new BadRequestException(
+          `No se puede aprobar: falta ${faltantes.join(' y ')}`,
+        );
+      }
     }
 
     const estadoAnterior = asociado.estado;

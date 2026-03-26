@@ -506,7 +506,29 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
 
         {/* Footer */}
         {asociado && (
-          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4 dark:border-gray-700">
+          <div className="border-t border-gray-100 px-5 py-4 dark:border-gray-700">
+            {/* KYC completeness warnings */}
+            {asociado.estado === 'pendiente' && (() => {
+              const faltantes: string[] = [];
+              if (!asociado.vehiculos?.length) faltantes.push('Sin vehículo registrado');
+              const tarjeta = asociado.documentos?.find(d => d.tipo === 'tarjeta_circulacion');
+              if (!tarjeta) faltantes.push('Sin tarjeta de circulación');
+              else if (tarjeta.estado !== 'aprobado') faltantes.push('Tarjeta de circulación no aprobada');
+              if (!faltantes.length) return null;
+              return (
+                <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                  <p className="font-semibold flex items-center gap-1.5">
+                    <AlertTriangle className="h-4 w-4" />
+                    No se puede aprobar:
+                  </p>
+                  <ul className="mt-1 list-disc pl-5">
+                    {faltantes.map((f) => <li key={f}>{f}</li>)}
+                  </ul>
+                </div>
+              );
+            })()}
+
+            <div className="flex items-center justify-between">
             <div className="flex gap-2">
               {puede('aprobar:asociados') && asociado.estado === 'pendiente' && (
                 <>
@@ -545,6 +567,7 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
             >
               Cerrar
             </button>
+            </div>
           </div>
         )}
 

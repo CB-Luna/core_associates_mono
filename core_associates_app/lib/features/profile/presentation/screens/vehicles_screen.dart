@@ -20,10 +20,16 @@ class VehiclesScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mis Vehículos'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Agregar vehículo',
-            onPressed: () => context.push('/vehicles/add'),
+          // Solo mostrar botón "+" si no tiene vehículos aún
+          vehiculosAsync.maybeWhen(
+            data: (v) => v.isEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.add),
+                    tooltip: 'Agregar vehículo',
+                    onPressed: () => context.push('/vehicles/add'),
+                  )
+                : const SizedBox.shrink(),
+            orElse: () => const SizedBox.shrink(),
           ),
         ],
       ),
