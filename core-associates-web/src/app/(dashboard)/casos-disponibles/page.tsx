@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/Badge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { formatFechaLegible } from '@/lib/utils';
-import { Car, Gavel, ShieldAlert, AlertTriangle, HelpCircle, Calendar, Hand, MapPin, X, User } from 'lucide-react';
+import { Car, Gavel, ShieldAlert, AlertTriangle, HelpCircle, Calendar, Hand, MapPin, X } from 'lucide-react';
+import { AsociadoPhoto } from '@/components/shared/AsociadoPhoto';
 import type { CasoLegal } from '@/lib/api-types';
 import dynamic from 'next/dynamic';
 
@@ -97,13 +98,7 @@ export default function CasosDisponiblesPage() {
         if (!a) return <span className="text-gray-300">—</span>;
         return (
           <div className="flex items-center gap-2">
-            {a.fotoUrl ? (
-              <img src={a.fotoUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
-            ) : (
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-400">
-                <User className="h-3.5 w-3.5" />
-              </div>
-            )}
+            <AsociadoPhoto asociado={a} size="sm" />
             <span className="truncate text-sm font-medium text-gray-800">{a.nombre} {a.apellidoPat}</span>
           </div>
         );

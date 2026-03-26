@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { type ColumnDef } from '@tanstack/react-table';
-import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
+import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { AsociadoPhoto } from '@/components/shared/AsociadoPhoto';
 import { useToast } from '@/components/ui/Toast';
 import type { Asociado } from '@/lib/api-types';
 import { DataTable } from '@/components/ui/DataTable';
@@ -15,28 +16,7 @@ import { AsociadoDetailModal } from '@/components/shared/AsociadoDetailModal';
 import { Eye, Phone, Calendar, Car, CreditCard, ScanLine, Camera, FileText } from 'lucide-react';
 import { usePermisos } from '@/lib/permisos';
 
-function AsociadoPhoto({ asociado }: { asociado: Asociado }) {
-  const [src, setSrc] = useState<string | null>(null);
-  const initials = `${asociado.nombre?.[0] || ''}${asociado.apellidoPat?.[0] || ''}`.toUpperCase();
 
-  useEffect(() => {
-    if (!asociado.fotoUrl) return;
-    let revoked = false;
-    apiImageUrl(`/asociados/${asociado.id}/foto`)
-      .then((url) => { if (!revoked) setSrc(url); })
-      .catch(() => {});
-    return () => { revoked = true; if (src) URL.revokeObjectURL(src); };
-  }, [asociado.id, asociado.fotoUrl]);
-
-  if (src) {
-    return <img src={src} alt={initials} className="h-9 w-9 rounded-full object-cover ring-2 ring-white shadow-sm" />;
-  }
-  return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-xs font-bold text-white shadow-sm">
-      {initials}
-    </div>
-  );
-}
 
 const estadoOptions = [
   { label: 'Activo', value: 'activo' },

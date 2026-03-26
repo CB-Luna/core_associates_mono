@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
+import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { AsociadoPhoto } from '@/components/shared/AsociadoPhoto';
 import { useToast } from '@/components/ui/Toast';
 import { usePermisos } from '@/lib/permisos';
 import { useAuthStore } from '@/stores/auth-store';
@@ -390,30 +391,7 @@ export default function MapaSosPage() {
 
 /* Panel sub-components */
 
-function AsociadoPhoto({ asociado }: { asociado: { id?: string; nombre?: string; apellidoPat?: string; fotoUrl?: string | null; _count?: { documentos: number } } }) {
-  const [src, setSrc] = useState<string | null>(null);
-  const initials = `${asociado.nombre?.[0] || ''}${asociado.apellidoPat?.[0] || ''}`.toUpperCase();
 
-  useEffect(() => {
-    if (!asociado.id) return;
-    const puedeCargar = asociado.fotoUrl || (asociado._count?.documentos ?? 0) > 0;
-    if (!puedeCargar) return;
-    let revoked = false;
-    apiImageUrl(`/asociados/${asociado.id}/foto`)
-      .then((url) => { if (!revoked) setSrc(url); })
-      .catch(() => {});
-    return () => { revoked = true; if (src) URL.revokeObjectURL(src); };
-  }, [asociado.id, asociado.fotoUrl, asociado._count?.documentos]);
-
-  if (src) {
-    return <img src={src} alt={initials} className="h-9 w-9 rounded-full object-cover ring-2 ring-white shadow-sm" />;
-  }
-  return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-xs font-bold text-white shadow-sm">
-      {initials}
-    </div>
-  );
-}
 
 function PanelSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (

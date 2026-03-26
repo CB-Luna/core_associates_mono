@@ -298,7 +298,7 @@ export class AsociadosService {
     }
     // Fallback: usar selfie del KYC como avatar
     const selfie = await this.prisma.documento.findFirst({
-      where: { asociadoId, tipo: 'selfie', s3Key: { not: '' } },
+      where: { asociadoId, tipo: 'selfie', s3Key: { not: '' }, estado: { not: 'rechazado' } },
       orderBy: { createdAt: 'desc' },
     });
     if (selfie) {

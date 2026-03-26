@@ -10,7 +10,7 @@ import { StatsCards } from '@/components/ui/StatsCards';
 import { Badge } from '@/components/ui/Badge';
 import { formatFechaLegible } from '@/lib/utils';
 import { Eye, Car, Gavel, ShieldAlert, AlertTriangle, HelpCircle, Calendar } from 'lucide-react';
-import { apiImageUrl } from '@/lib/api-client';
+import { AsociadoPhoto } from '@/components/shared/AsociadoPhoto';
 
 const tipoIcon: Record<string, typeof AlertTriangle> = {
   accidente: Car, infraccion: Gavel, robo: ShieldAlert, asalto: AlertTriangle, otro: HelpCircle,
@@ -51,28 +51,7 @@ const prioridadVariant: Record<string, any> = {
   baja: 'info',
 };
 
-function AsociadoPhoto({ asociado }: { asociado: { id?: string; nombre?: string; apellidoPat?: string; fotoUrl?: string | null } }) {
-  const [src, setSrc] = useState<string | null>(null);
-  const initials = `${asociado.nombre?.[0] || ''}${asociado.apellidoPat?.[0] || ''}`.toUpperCase();
 
-  useEffect(() => {
-    if (!asociado.id || !asociado.fotoUrl) return;
-    let revoked = false;
-    apiImageUrl(`/asociados/${asociado.id}/foto`)
-      .then((url) => { if (!revoked) setSrc(url); })
-      .catch(() => {});
-    return () => { revoked = true; if (src) URL.revokeObjectURL(src); };
-  }, [asociado.id, asociado.fotoUrl]);
-
-  if (src) {
-    return <img src={src} alt={initials} className="h-7 w-7 rounded-full object-cover ring-2 ring-white shadow-sm" />;
-  }
-  return (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-[10px] font-bold text-white shadow-sm">
-      {initials}
-    </div>
-  );
-}
 
 export default function CasosLegalesPage() {
   const router = useRouter();
@@ -159,7 +138,7 @@ export default function CasosLegalesPage() {
         if (!a) return <span className="text-gray-300">—</span>;
         return (
           <div className="flex items-center gap-2.5">
-            <AsociadoPhoto asociado={{ id: row.original.asociadoId, ...a }} />
+            <AsociadoPhoto asociado={{ id: row.original.asociadoId, ...a }} size="sm" />
             <span className="truncate font-medium text-gray-800">{`${a.nombre} ${a.apellidoPat}`}</span>
           </div>
         );
