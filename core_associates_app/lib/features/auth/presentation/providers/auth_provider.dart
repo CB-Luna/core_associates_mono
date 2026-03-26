@@ -56,8 +56,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     try {
       final profileRepo = ref.read(profileRepositoryProvider);
       final asociado = await profileRepo.getMyProfile();
-      final incomplete =
+      final missingBasicProfile =
           asociado.nombre.isEmpty || asociado.apellidoPat.isEmpty;
+      // Onboarding requires selfie (fotoUrl) + at least 1 vehicle
+      final missingSelfie =
+          asociado.fotoUrl == null || asociado.fotoUrl!.isEmpty;
+      final missingVehicle = asociado.vehiculos.isEmpty;
+      final incomplete = missingBasicProfile || missingSelfie || missingVehicle;
       return AuthState(
         isAuthenticated: true,
         asociadoEstado: asociado.estado,
@@ -86,7 +91,12 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         final profileRepo = ref.read(profileRepositoryProvider);
         final asociado = await profileRepo.getMyProfile();
         estado = asociado.estado;
-        incomplete = asociado.nombre.isEmpty || asociado.apellidoPat.isEmpty;
+        final missingBasicProfile =
+            asociado.nombre.isEmpty || asociado.apellidoPat.isEmpty;
+        final missingSelfie =
+            asociado.fotoUrl == null || asociado.fotoUrl!.isEmpty;
+        final missingVehicle = asociado.vehiculos.isEmpty;
+        incomplete = missingBasicProfile || missingSelfie || missingVehicle;
       } catch (_) {
         // Profile fetch failed — allow entry, estado will be checked later
       }

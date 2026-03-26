@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/theme/app_theme.dart';
+import '../../../documents/presentation/providers/documents_provider.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../promotions/presentation/providers/promotions_provider.dart';
 import '../../../promotions/data/models/promocion.dart';
@@ -19,6 +20,9 @@ class HomeScreen extends ConsumerWidget {
     final promosAsync = ref.watch(promocionesProvider);
     final imgHeaders = ref.watch(authHeadersProvider).value ?? {};
 
+    final asociado = profileAsync.value;
+    final isActive = asociado?.estado == 'activo';
+
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -26,44 +30,21 @@ class HomeScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 8),
+            // Greeting
             profileAsync.when(
-              data: (asociado) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    asociado != null && asociado.nombre.isNotEmpty
-                        ? 'Hola, ${asociado.nombre}'
-                        : 'Bienvenido',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Core Associates',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
+              data: (a) => Text(
+                a != null && a.nombre.isNotEmpty
+                    ? 'Hola, ${a.nombre}'
+                    : 'Bienvenido',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              loading: () => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Bienvenido',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Core Associates',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
+              loading: () => Text(
+                'Bienvenido',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               error: (_, _) => Text(
                 'Bienvenido',
@@ -72,15 +53,28 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              'Core Associates',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+            ),
             const SizedBox(height: 24),
 
             // Membership card
             _MembershipCard(),
 
-            const SizedBox(height: 16),
+            // Verification checklist (only shows when not active)
+            if (!isActive && asociado != null) ...[
+              const SizedBox(height: 16),
+              _VerificationChecklist(),
+            ],
 
-            // KYC banner
-            _KycBanner(),
+            const SizedBox(height: 24),
+
+            // SOS Legal — always prominent
+            _SosLegalBanner(),
 
             const SizedBox(height: 24),
 
@@ -99,7 +93,8 @@ class HomeScreen extends ConsumerWidget {
                     icon: Icons.local_offer_outlined,
                     label: 'Mis Cupones',
                     color: AppColors.primary,
-                    onTap: () => context.push('/my-coupons'),
+                    onTap: isActive ? () => context.push('/my-coupons') : null,
+                    locked: !isActive,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -127,10 +122,10 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _QuickAction(
-                    icon: Icons.warning_amber_rounded,
-                    label: 'SOS Legal',
-                    color: AppColors.error,
-                    onTap: () => context.go('/legal'),
+                    icon: Icons.person_outline,
+                    label: 'Mi Perfil',
+                    color: AppColors.accent,
+                    onTap: () => context.go('/profile'),
                   ),
                 ),
               ],
@@ -158,6 +153,7 @@ class HomeScreen extends ConsumerWidget {
                           child: _PromocionCard(
                             promocion: p,
                             httpHeaders: imgHeaders,
+                            isActive: isActive,
                             onTap: () => context.go('/promotions'),
                           ),
                         ),
@@ -189,6 +185,8 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
+// ─── Membership Card ─────────────────────────────────────────────────────────
+
 class _MembershipCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -199,20 +197,17 @@ class _MembershipCard extends ConsumerWidget {
     final nombre = asociado?.nombreCompleto ?? 'Asociado';
     final estado = asociado?.estado ?? '---';
     final telefono = asociado?.telefono ?? '';
-    final estadoLabel = estado == 'activo'
-        ? 'Membresía Activa'
-        : estado == 'pendiente'
-        ? 'Pendiente de aprobación'
-        : 'Membresía: $estado';
     final vehiculoPrincipal = asociado?.vehiculos
         .where((v) => v.esPrincipal)
         .firstOrNull;
+
+    final isActive = estado == 'activo';
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: estado == 'activo'
+        gradient: isActive
             ? AppGradients.primary
             : const LinearGradient(
                 colors: [Color(0xFF64748B), Color(0xFF475569)],
@@ -220,7 +215,7 @@ class _MembershipCard extends ConsumerWidget {
                 end: Alignment.bottomRight,
               ),
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        boxShadow: estado == 'activo'
+        boxShadow: isActive
             ? AppShadows.colored(AppColors.primary)
             : AppShadows.md,
       ),
@@ -233,13 +228,13 @@ class _MembershipCard extends ConsumerWidget {
               Row(
                 children: [
                   Icon(
-                    estado == 'activo' ? Icons.verified : Icons.pending,
+                    isActive ? Icons.verified : Icons.hourglass_top_rounded,
                     color: Colors.white,
                     size: 16,
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    estadoLabel,
+                    isActive ? 'Membresía Activa' : _estadoLabel(estado),
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: Colors.white70),
@@ -302,87 +297,271 @@ class _MembershipCard extends ConsumerWidget {
               ],
             ],
           ),
+          if (!isActive) ...[
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    color: Colors.white70,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _estadoMessage(estado),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String _estadoLabel(String estado) {
+    switch (estado) {
+      case 'pendiente':
+        return 'En proceso de verificación';
+      case 'rechazado':
+        return 'Verificación con observaciones';
+      case 'suspendido':
+        return 'Membresía suspendida';
+      default:
+        return 'Membresía: $estado';
+    }
+  }
+
+  static String _estadoMessage(String estado) {
+    switch (estado) {
+      case 'pendiente':
+        return 'Tu membresía está en proceso de activación. Completa tus documentos y espera la revisión.';
+      case 'rechazado':
+        return 'Algunos documentos necesitan corrección. Revisa los detalles y vuelve a subirlos.';
+      case 'suspendido':
+        return 'Tu membresía ha sido suspendida. Contacta a soporte para más información.';
+      default:
+        return '';
+    }
+  }
+}
+
+// ─── Verification Checklist ──────────────────────────────────────────────────
+
+class _VerificationChecklist extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
+    final docsAsync = ref.watch(documentsProvider);
+    final asociado = profileAsync.value;
+    final docs = docsAsync.value ?? [];
+
+    if (asociado == null) return const SizedBox.shrink();
+
+    final hasSelfie = asociado.fotoUrl != null && asociado.fotoUrl!.isNotEmpty;
+    final hasVehicle = asociado.vehiculos.isNotEmpty;
+    final hasTarjeta = docs.any((d) => d.tipo == 'tarjeta_circulacion');
+    final hasIneFront = docs.any((d) => d.tipo == 'ine_frente');
+    final hasIneReverso = docs.any((d) => d.tipo == 'ine_reverso');
+
+    final items = [
+      _CheckItem('Datos personales', true, Icons.person_outline),
+      _CheckItem(
+        'Selfie de verificación',
+        hasSelfie,
+        Icons.camera_alt_outlined,
+      ),
+      _CheckItem(
+        'Vehículo registrado',
+        hasVehicle,
+        Icons.directions_car_outlined,
+      ),
+      _CheckItem(
+        'Tarjeta de circulación',
+        hasTarjeta,
+        Icons.credit_card_outlined,
+      ),
+      _CheckItem('INE Frente', hasIneFront, Icons.badge_outlined),
+      _CheckItem('INE Reverso', hasIneReverso, Icons.badge_outlined),
+    ];
+
+    final completedCount = items.where((i) => i.completed).length;
+    final progress = completedCount / items.length;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.checklist_rounded,
+                size: 20,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Verificación de expediente',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const Spacer(),
+              Text(
+                '$completedCount/${items.length}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: AppColors.border,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                progress == 1.0 ? AppColors.secondary : AppColors.primary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    item.completed
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked,
+                    size: 18,
+                    color: item.completed
+                        ? AppColors.secondary
+                        : AppColors.textTertiary,
+                  ),
+                  const SizedBox(width: 10),
+                  Icon(item.icon, size: 16, color: AppColors.textSecondary),
+                  const SizedBox(width: 6),
+                  Text(
+                    item.label,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: item.completed
+                          ? AppColors.textSecondary
+                          : AppColors.textPrimary,
+                      decoration: item.completed
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (completedCount < items.length) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push('/documents'),
+                icon: const Icon(Icons.upload_file, size: 18),
+                label: const Text('Completar documentos'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _KycBanner extends ConsumerWidget {
+class _CheckItem {
+  final String label;
+  final bool completed;
+  final IconData icon;
+  const _CheckItem(this.label, this.completed, this.icon);
+}
+
+// ─── SOS Legal Banner ────────────────────────────────────────────────────────
+
+class _SosLegalBanner extends StatelessWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(profileProvider);
-    final asociado = profileAsync.value;
-
-    if (asociado == null || asociado.estado == 'activo') {
-      return const SizedBox.shrink();
-    }
-
-    final IconData icon;
-    final String title;
-    final String subtitle;
-    final Color color;
-
-    switch (asociado.estado) {
-      case 'pendiente':
-        icon = Icons.upload_file;
-        title = 'Completa tu expediente';
-        subtitle = 'Sube tus documentos para activar tu membresía';
-        color = AppColors.warning;
-      case 'rechazado':
-        icon = Icons.error_outline;
-        title = 'Documentos rechazados';
-        subtitle = 'Revisa y vuelve a subir los documentos indicados';
-        color = AppColors.error;
-      case 'suspendido':
-        icon = Icons.pause_circle_outline;
-        title = 'Membresía suspendida';
-        subtitle = 'Contacta a soporte para más información';
-        color = const Color(0xFF64748B);
-      default:
-        return const SizedBox.shrink();
-    }
-
-    return GestureDetector(
-      onTap: asociado.estado == 'pendiente' || asociado.estado == 'rechazado'
-          ? () => context.push('/documents')
-          : null,
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => GoRouter.of(context).go('/legal'),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          gradient: AppGradients.danger,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.colored(AppColors.error),
         ),
         child: Row(
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(width: 12),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: color,
+                    'SOS Legal',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                    '¿Accidente, asalto o infracción? Reporta aquí.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.white70),
                   ),
                 ],
               ),
             ),
-            if (asociado.estado == 'pendiente' ||
-                asociado.estado == 'rechazado')
-              Icon(Icons.chevron_right, color: color, size: 20),
+            const Icon(Icons.chevron_right, color: Colors.white70),
           ],
         ),
       ),
@@ -390,21 +569,26 @@ class _KycBanner extends ConsumerWidget {
   }
 }
 
+// ─── Quick Action ────────────────────────────────────────────────────────────
+
 class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool locked;
 
   const _QuickAction({
     required this.icon,
     required this.label,
     required this.color,
-    required this.onTap,
+    this.onTap,
+    this.locked = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveColor = locked ? AppColors.textTertiary : color;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -417,21 +601,44 @@ class _QuickAction extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 22),
+            Stack(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: effectiveColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: effectiveColor, size: 22),
+                ),
+                if (locked)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: AppColors.textTertiary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                      child: const Icon(
+                        Icons.lock,
+                        size: 9,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 10),
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: locked ? AppColors.textTertiary : AppColors.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -442,14 +649,18 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
+// ─── Promotion Card ──────────────────────────────────────────────────────────
+
 class _PromocionCard extends StatelessWidget {
   final Promocion promocion;
   final Map<String, String> httpHeaders;
+  final bool isActive;
   final VoidCallback onTap;
 
   const _PromocionCard({
     required this.promocion,
     required this.httpHeaders,
+    required this.isActive,
     required this.onTap,
   });
 
@@ -502,19 +713,31 @@ class _PromocionCard extends StatelessWidget {
                       color: AppColors.textSecondary,
                     ),
                   ),
+                  if (!isActive) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Activa tu membresía para acceder',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.warning,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.secondary50,
+                color: isActive ? AppColors.secondary50 : AppColors.border,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Text(
                 promocion.descuentoFormateado,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.secondary700,
+                  color: isActive
+                      ? AppColors.secondary700
+                      : AppColors.textTertiary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -546,6 +769,8 @@ class _PromocionCard extends StatelessWidget {
   }
 }
 
+// ─── Promotion Placeholder ───────────────────────────────────────────────────
+
 class _PromotionPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -562,7 +787,7 @@ class _PromotionPlaceholder extends StatelessWidget {
           Container(
             width: 56,
             height: 56,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.primary50,
               shape: BoxShape.circle,
             ),

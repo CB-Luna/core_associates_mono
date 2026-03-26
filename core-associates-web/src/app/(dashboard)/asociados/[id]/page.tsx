@@ -40,7 +40,17 @@ export default function AsociadoDetailPage() {
 
   useEffect(() => {
     apiClient<Asociado>(`/asociados/${id}`)
-      .then(setAsociado)
+      .then((data) => {
+        setAsociado(data);
+        const hasFoto = data.fotoUrl || data.documentos?.some(
+          (d: any) => d.tipo === 'selfie' && d.estado !== 'rechazado',
+        );
+        if (hasFoto) {
+          apiImageUrl(`/asociados/${id}/foto`)
+            .then(setFotoUrl)
+            .catch(() => {});
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
@@ -51,9 +61,6 @@ export default function AsociadoDetailPage() {
       .then(setNotas)
       .catch(console.error)
       .finally(() => setNotasLoading(false));
-    apiImageUrl(`/asociados/${id}/foto`)
-      .then(setFotoUrl)
-      .catch(() => {});
   }, [id]);
 
   const handleCrearNota = async () => {

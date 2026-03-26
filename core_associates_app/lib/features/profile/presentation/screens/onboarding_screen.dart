@@ -219,8 +219,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       source: source,
       imageQuality: 85,
       maxWidth: 1200,
-      preferredCameraDevice:
-          tipo == 'selfie' ? CameraDevice.front : CameraDevice.rear,
+      preferredCameraDevice: tipo == 'selfie'
+          ? CameraDevice.front
+          : CameraDevice.rear,
     );
     if (picked == null || !mounted) return;
 
@@ -644,60 +645,60 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       ),
                     )
                   : tipo == 'selfie'
-                    // ── Oval face guide for selfie ──
-                    ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 140,
-                            height: 180,
-                            child: CustomPaint(
-                              painter: _OvalGuidePainter(
-                                color: AppColors.primary.withValues(alpha: 0.6),
-                              ),
+                  // ── Oval face guide for selfie ──
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 140,
+                          height: 180,
+                          child: CustomPaint(
+                            painter: _OvalGuidePainter(
+                              color: AppColors.primary.withValues(alpha: 0.6),
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Centra tu rostro en el óvalo',
-                            style: TextStyle(
-                              color: AppColors.primary.withValues(alpha: 0.7),
-                              fontWeight: FontWeight.w500,
-                            ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Centra tu rostro en el óvalo',
+                          style: TextStyle(
+                            color: AppColors.primary.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w500,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Toca para abrir la cámara',
-                            style: TextStyle(
-                              color: AppColors.primary.withValues(alpha: 0.5),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      )
-                    // ── Default empty state for non-selfie docs ──
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            cameraOnly
-                                ? Icons.camera_alt_outlined
-                                : Icons.add_photo_alternate_outlined,
-                            size: 56,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Toca para abrir la cámara',
+                          style: TextStyle(
                             color: AppColors.primary.withValues(alpha: 0.5),
+                            fontSize: 12,
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            cameraOnly
-                                ? 'Toca para abrir la cámara'
-                                : 'Toca para capturar o seleccionar',
-                            style: TextStyle(
-                              color: AppColors.primary.withValues(alpha: 0.7),
-                              fontWeight: FontWeight.w500,
-                            ),
+                        ),
+                      ],
+                    )
+                  // ── Default empty state for non-selfie docs ──
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          cameraOnly
+                              ? Icons.camera_alt_outlined
+                              : Icons.add_photo_alternate_outlined,
+                          size: 56,
+                          color: AppColors.primary.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          cameraOnly
+                              ? 'Toca para abrir la cámara'
+                              : 'Toca para capturar o seleccionar',
+                          style: TextStyle(
+                            color: AppColors.primary.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w500,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
             ),
           ),
 
@@ -1047,5 +1048,6 @@ class _OvalGuidePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_OvalGuidePainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(_OvalGuidePainter oldDelegate) =>
+      oldDelegate.color != color;
 }

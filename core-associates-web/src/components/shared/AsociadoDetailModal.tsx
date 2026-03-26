@@ -55,10 +55,14 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
     apiClient<Asociado>(`/asociados/${asociadoId}`)
       .then((data) => {
         setAsociado(data);
-        // Siempre intentar: el backend hace fallback a selfie si no hay fotoUrl
-        apiImageUrl(`/asociados/${asociadoId}/foto`)
-          .then(setFotoUrl)
-          .catch(() => {});
+        const hasFoto = data.fotoUrl || data.documentos?.some(
+          (d: any) => d.tipo === 'selfie' && d.estado !== 'rechazado',
+        );
+        if (hasFoto) {
+          apiImageUrl(`/asociados/${asociadoId}/foto`)
+            .then(setFotoUrl)
+            .catch(() => setFotoUrl(null));
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -193,7 +197,14 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
   const refreshAsociado = () => {
     apiClient<Asociado>(`/asociados/${asociadoId}`).then((data) => {
       setAsociado(data);
-      apiImageUrl(`/asociados/${asociadoId}/foto`).then(setFotoUrl).catch(() => setFotoUrl(null));
+      const hasFoto = data.fotoUrl || data.documentos?.some(
+        (d: any) => d.tipo === 'selfie' && d.estado !== 'rechazado',
+      );
+      if (hasFoto) {
+        apiImageUrl(`/asociados/${asociadoId}/foto`).then(setFotoUrl).catch(() => setFotoUrl(null));
+      } else {
+        setFotoUrl(null);
+      }
     }).catch(console.error);
   };
 

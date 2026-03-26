@@ -16,6 +16,8 @@ interface Props {
     id?: string;
     nombre?: string;
     apellidoPat?: string;
+    fotoUrl?: string | null;
+    documentos?: Array<{ tipo: string; estado?: string }>;
   };
   size?: Size;
   className?: string;
@@ -45,6 +47,18 @@ export function AsociadoPhoto({ asociado, size = 'md', className }: Props) {
       setSrc(photoCache.get(id) ?? null);
       return;
     }
+
+    // Skip fetch if we know there's no photo: fotoUrl is explicitly null
+    // and no selfie document exists (avoids flooding the console with 404s).
+    if (asociado.fotoUrl === null) {
+      const hasSelfie = Array.isArray(asociado.documentos) &&
+        asociado.documentos.some(d => d.tipo === 'selfie' && d.estado !== 'rechazado');
+      if (!hasSelfie) {
+        photoCache.set(id, null);
+        return;
+      }
+    }
+
     const ctrl = new AbortController();
     apiImageUrl(`/asociados/${id}/foto`, { signal: ctrl.signal })
       .then((url) => {
