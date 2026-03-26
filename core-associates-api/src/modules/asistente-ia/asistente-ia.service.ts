@@ -58,7 +58,7 @@ export class AsistenteIaService {
     // 3. Classic mode: intent matching (always tried first)
     const match = matchIntent(pregunta);
     if (match) {
-      const respuesta = await this.resolveIntent(match.resolverKey);
+      const respuesta = await this.resolveIntent(match.resolverKey, pregunta);
       this.addToHistory(userId, 'assistant', respuesta);
       return { respuesta, fuente: 'clasico', intent: match.id };
     }
@@ -603,7 +603,7 @@ export class AsistenteIaService {
 
   // ── Intent resolvers (use ReportesService directly) ──
 
-  private async resolveIntent(key: string): Promise<string> {
+  private async resolveIntent(key: string, pregunta?: string): Promise<string> {
     switch (key) {
       case 'count_asociados': {
         const d = await this.reportes.getDashboardMetrics();
@@ -857,7 +857,8 @@ export class AsistenteIaService {
     }
   }
 
-  private async resolveVehiculoPorPlaca(pregunta: string): Promise<string> {
+  private async resolveVehiculoPorPlaca(pregunta?: string): Promise<string> {
+    if (!pregunta) return 'Proporciona un número de placa para buscar. Ejemplo: *placa ABC-123*';
     // Extract plate-like pattern from the question
     const placaMatch = pregunta.match(/\b([A-Za-z0-9]{2,4}[-\s]?[A-Za-z0-9]{2,4}[-\s]?[A-Za-z0-9]{0,3})\b/i);
     const searchTerm = placaMatch ? placaMatch[1].replace(/[-\s]/g, '').toUpperCase() : null;
