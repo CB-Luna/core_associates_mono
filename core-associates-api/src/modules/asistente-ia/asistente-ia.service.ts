@@ -674,6 +674,13 @@ export class AsistenteIaService {
       case 'vehiculos_por_asociado': {
         return this.resolveVehiculosPorAsociado();
       }
+      case 'total_vehiculos': {
+        const count = await this.prisma.vehiculo.count();
+        return `Hay **${count}** vehículos registrados en total.`;
+      }
+      case 'vehiculo_placa': {
+        return this.resolveVehiculoPorPlaca(pregunta);
+      }
       case 'listar_asociados_estado': {
         return this.resolveListarAsociadosEstado();
       }
@@ -764,6 +771,8 @@ export class AsistenteIaService {
           `• Documentos pendientes / faltantes\n` +
           `• ¿Quiénes no han subido la INE? / ¿sin selfie?\n` +
           `• Asociados con Toyota / Nissan (vehículos por marca)\n` +
+          `• Total de vehículos registrados\n` +
+          `• Buscar placa ABC-123\n` +
           `• Resumen general / dashboard\n\n` +
           `Escribe tu pregunta en lenguaje natural, o usa un ID como **ASC-0017** o **PRV-0001** para consultar directamente.`;
       default:
@@ -845,6 +854,32 @@ export class AsistenteIaService {
       return `🚗 **Vehículos por asociado** (${asociados.length}):\n${lines.join('\n')}`;
     } catch {
       return 'No pude obtener la información de vehículos por asociado.';
+    }
+  }
+
+  private async resolveVehiculoPorPlaca(pregunta: string): Promise<string> {
+    // Extract plate-like pattern from the question
+    const placaMatch = pregunta.match(/\b([A-Za-z0-9]{2,4}[-\s]?[A-Za-z0-9]{2,4}[-\s]?[A-Za-z0-9]{0,3})\b/i);
+    const searchTerm = placaMatch ? placaMatch[1].replace(/[-\s]/g, '').toUpperCase() : null;
+    if (!searchTerm || searchTerm.length < 3) {
+      return 'Proporciona un número de placa para buscar. Ejemplo: *placa ABC-123*';
+    }
+    try {
+      const vehiculos = await this.prisma.vehiculo.findMany({
+        where: { placas: { contains: searchTerm, mode: 'insensitive' } },
+        select: {
+          marca: true, modelo: true, anio: true, color: true, placas: true,
+          asociado: { select: { idUnico: true, nombre: true, apellidoPat: true } },
+        },
+        take: 5,
+      });
+      if (!vehiculos.length) return `No encontré vehículos con placas que contengan **${searchTerm}**.`;
+      const lines = vehiculos.map((v, i) =>
+        `${i + 1}. **${v.placas}** — ${v.marca} ${v.modelo} ${v.anio} (${v.color}) — ${v.asociado.idUnico} ${v.asociado.nombre} ${v.asociado.apellidoPat}`
+      );
+      return `🔍 Vehículos encontrados con placas "${searchTerm}":\n${lines.join('\n')}`;
+    } catch {
+      return 'No pude buscar por placa en este momento.';
     }
   }
 

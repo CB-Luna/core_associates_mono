@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../shared/theme/app_theme.dart';
+import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../data/documents_repository.dart';
 import '../../data/models/documento.dart';
 import '../providers/documents_provider.dart';
@@ -76,6 +77,37 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen>
   }
 
   Future<void> _pickAndUpload(String tipo) async {
+    // Requiere vehículo registrado antes de subir tarjeta de circulación
+    if (tipo == 'tarjeta_circulacion') {
+      final vehiculos = ref.read(vehiculosProvider).value ?? [];
+      if (vehiculos.isEmpty) {
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Registra tu vehículo primero'),
+            content: const Text(
+              'Para subir la Tarjeta de Circulación necesitas '
+              'tener un vehículo registrado.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.push('/vehicles/add');
+                },
+                child: const Text('Agregar vehículo'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
+
     // Selfie siempre abre cámara directa
     ImageSource? source;
     if (tipo == 'selfie') {

@@ -119,7 +119,7 @@ class HomeScreen extends ConsumerWidget {
                 Expanded(
                   child: _QuickAction(
                     icon: Icons.directions_car_outlined,
-                    label: 'Vehículos',
+                    label: 'Mi Vehículo',
                     color: AppColors.warning,
                     onTap: () => context.push('/vehicles'),
                   ),

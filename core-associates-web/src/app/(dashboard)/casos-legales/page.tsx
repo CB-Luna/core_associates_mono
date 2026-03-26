@@ -51,20 +51,18 @@ const prioridadVariant: Record<string, any> = {
   baja: 'info',
 };
 
-function AsociadoPhoto({ asociado }: { asociado: { id?: string; nombre?: string; apellidoPat?: string; fotoUrl?: string | null; _count?: { documentos: number } } }) {
+function AsociadoPhoto({ asociado }: { asociado: { id?: string; nombre?: string; apellidoPat?: string; fotoUrl?: string | null } }) {
   const [src, setSrc] = useState<string | null>(null);
   const initials = `${asociado.nombre?.[0] || ''}${asociado.apellidoPat?.[0] || ''}`.toUpperCase();
 
   useEffect(() => {
-    if (!asociado.id) return;
-    const puedeCargar = asociado.fotoUrl || (asociado._count?.documentos ?? 0) > 0;
-    if (!puedeCargar) return;
+    if (!asociado.id || !asociado.fotoUrl) return;
     let revoked = false;
     apiImageUrl(`/asociados/${asociado.id}/foto`)
       .then((url) => { if (!revoked) setSrc(url); })
       .catch(() => {});
     return () => { revoked = true; if (src) URL.revokeObjectURL(src); };
-  }, [asociado.id, asociado.fotoUrl, asociado._count?.documentos]);
+  }, [asociado.id, asociado.fotoUrl]);
 
   if (src) {
     return <img src={src} alt={initials} className="h-7 w-7 rounded-full object-cover ring-2 ring-white shadow-sm" />;

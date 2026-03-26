@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../documents/presentation/providers/documents_provider.dart';
+import '../../../legal_support/presentation/providers/legal_provider.dart';
 import '../../../profile/data/profile_repository.dart';
+import '../../../profile/presentation/providers/profile_provider.dart';
+import '../../../promotions/presentation/providers/promotions_provider.dart';
 import '../../data/auth_repository.dart';
 
 class AuthState {
@@ -112,6 +116,16 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<void> logout() async {
     final repo = ref.read(authRepositoryProvider);
     await repo.logout();
+
+    // Limpiar todo el estado de la sesión anterior
+    ref.invalidate(profileProvider);
+    ref.invalidate(fotoUrlProvider);
+    ref.invalidate(vehiculosProvider);
+    ref.invalidate(documentsProvider);
+    ref.invalidate(promocionesProvider);
+    ref.invalidate(misCuponesProvider);
+    ref.invalidate(misCasosProvider);
+
     state = const AsyncData(AuthState(isAuthenticated: false));
   }
 }

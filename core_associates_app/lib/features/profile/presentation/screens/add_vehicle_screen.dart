@@ -30,7 +30,6 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
   late TextEditingController _colorCtrl;
   late TextEditingController _placasCtrl;
   late TextEditingController _serieCtrl;
-  late bool _esPrincipal;
   bool _saving = false;
   String? _pickedPhotoPath;
 
@@ -46,7 +45,6 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
     _colorCtrl = TextEditingController(text: v?.color ?? '');
     _placasCtrl = TextEditingController(text: v?.placas ?? '');
     _serieCtrl = TextEditingController(text: v?.numeroSerie ?? '');
-    _esPrincipal = v?.esPrincipal ?? true;
   }
 
   @override
@@ -103,7 +101,7 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
         'anio': int.parse(_anioCtrl.text.trim()),
         'color': _colorCtrl.text.trim(),
         'placas': _placasCtrl.text.trim(),
-        'esPrincipal': _esPrincipal,
+        'esPrincipal': true,
       };
       if (_serieCtrl.text.trim().isNotEmpty) {
         data['numeroSerie'] = _serieCtrl.text.trim();
@@ -377,14 +375,6 @@ class _AddVehicleScreenState extends ConsumerState<AddVehicleScreen> {
                 textCapitalization: TextCapitalization.characters,
               ),
               const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Vehículo principal'),
-                subtitle: const Text('Se usará como vehículo predeterminado'),
-                value: _esPrincipal,
-                onChanged: (v) => setState(() => _esPrincipal = v),
-                activeThumbColor: AppColors.primary,
-                contentPadding: EdgeInsets.zero,
-              ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _saving ? null : _save,

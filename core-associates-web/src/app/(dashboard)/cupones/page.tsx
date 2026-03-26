@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { type ColumnDef } from '@tanstack/react-table';
-import { apiClient, type PaginatedResponse } from '@/lib/api-client';
+import { apiClient, apiImageUrl, type PaginatedResponse } from '@/lib/api-client';
 import { usePermisos } from '@/lib/permisos';
 import { useToast } from '@/components/ui/Toast';
 import { DataTable } from '@/components/ui/DataTable';
@@ -27,6 +27,29 @@ const estadoVariant: Record<string, any> = {
   vencido: 'default',
   cancelado: 'danger',
 };
+
+function AsociadoPhoto({ asociado }: { asociado: { id?: string; nombre?: string; apellidoPat?: string; fotoUrl?: string | null } }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const initials = `${asociado.nombre?.[0] || ''}${asociado.apellidoPat?.[0] || ''}`.toUpperCase();
+
+  useEffect(() => {
+    if (!asociado.id || !asociado.fotoUrl) return;
+    let revoked = false;
+    apiImageUrl(`/asociados/${asociado.id}/foto`)
+      .then((url) => { if (!revoked) setSrc(url); })
+      .catch(() => {});
+    return () => { revoked = true; if (src) URL.revokeObjectURL(src); };
+  }, [asociado.id, asociado.fotoUrl]);
+
+  if (src) {
+    return <img src={src} alt={initials} className="h-7 w-7 rounded-full object-cover ring-2 ring-white shadow-sm" />;
+  }
+  return (
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-[10px] font-bold text-white shadow-sm">
+      {initials}
+    </div>
+  );
+}
 
 export default function CuponesPage() {
   const { toast } = useToast();
@@ -126,12 +149,9 @@ export default function CuponesPage() {
       cell: ({ row }) => {
         const a = row.original.asociado;
         if (!a) return <span className="text-gray-300">—</span>;
-        const initials = `${a.nombre?.[0] || ''}${a.apellidoPat?.[0] || ''}`.toUpperCase();
         return (
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-500">
-              {initials}
-            </div>
+            <AsociadoPhoto asociado={a} />
             <span className="truncate font-medium text-gray-800">{`${a.nombre} ${a.apellidoPat}`}</span>
           </div>
         );

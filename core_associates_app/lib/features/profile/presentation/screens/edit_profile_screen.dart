@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../shared/theme/app_theme.dart';
@@ -22,7 +21,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _emailCtrl;
   late TextEditingController _fechaNacCtrl;
   bool _saving = false;
-  bool _uploadingFoto = false;
 
   @override
   void initState() {
@@ -61,38 +59,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     if (picked != null) {
       _fechaNacCtrl.text =
           '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-    }
-  }
-
-  Future<void> _pickAndUploadFoto() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      imageQuality: 85,
-    );
-    if (image == null) return;
-
-    setState(() => _uploadingFoto = true);
-    try {
-      await ref.read(profileProvider.notifier).uploadFoto(image.path);
-      // Evict the cached photo so CachedNetworkImage re-fetches
-      final url = ref.read(fotoUrlProvider);
-      await CachedNetworkImage.evictFromCache(url);
-      ref.invalidate(fotoUrlProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Foto actualizada')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error al subir foto: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _uploadingFoto = false);
     }
   }
 
@@ -143,59 +109,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Foto de perfil
+              // Foto de perfil (solo lectura — avatar = selfie)
               Center(
-                child: GestureDetector(
-                  onTap: _uploadingFoto ? null : _pickAndUploadFoto,
-                  child: Stack(
-                    children: [
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final fotoUrl = ref.watch(fotoUrlProvider);
-                          final imgHeaders =
-                              ref.watch(authHeadersProvider).value ?? {};
-                          return CircleAvatar(
-                            radius: 48,
-                            backgroundColor: AppColors.primary.withValues(
-                              alpha: 0.1,
-                            ),
-                            backgroundImage: CachedNetworkImageProvider(
-                              fotoUrl,
-                              headers: imgHeaders,
-                            ),
-                            onBackgroundImageError: (_, _) {},
-                            child: null,
-                          );
-                        },
+                child: Consumer(
+                  builder: (context, ref, _) {
+                    final fotoUrl = ref.watch(fotoUrlProvider);
+                    final imgHeaders =
+                        ref.watch(authHeadersProvider).value ?? {};
+                    return CircleAvatar(
+                      radius: 48,
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      backgroundImage: CachedNetworkImageProvider(
+                        fotoUrl,
+                        headers: imgHeaders,
                       ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: _uploadingFoto
-                              ? const SizedBox(
-                                  height: 16,
-                                  width: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.camera_alt,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
+                      onBackgroundImageError: (_, _) {},
+                      child: null,
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 24),

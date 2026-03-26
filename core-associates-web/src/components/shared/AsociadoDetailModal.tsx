@@ -9,6 +9,13 @@ const DOC_ICONS: Record<string, React.ReactNode> = {
   selfie: <Camera className="h-4 w-4 text-violet-500" />,
   tarjeta_circulacion: <Car className="h-4 w-4 text-teal-500" />,
 };
+
+const REQUIRED_DOC_TYPES = [
+  { tipo: 'ine_frente', label: 'INE Frente' },
+  { tipo: 'ine_reverso', label: 'INE Reverso' },
+  { tipo: 'selfie', label: 'Selfie' },
+  { tipo: 'tarjeta_circulacion', label: 'Tarjeta de Circulación' },
+];
 import { apiClient, apiImageUrl } from '@/lib/api-client';
 import type { Asociado, Documento, NotaAsociado } from '@/lib/api-types';
 import { Badge, estadoAsociadoVariant } from '@/components/ui/Badge';
@@ -296,106 +303,117 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
             <div className="mt-5">
               <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
                 <FileText className="h-4 w-4 text-gray-500" />
-                Documentos ({asociado.documentos?.length || 0})
+                Documentos ({asociado.documentos?.length || 0} / {REQUIRED_DOC_TYPES.length})
               </h4>
-              {asociado.documentos && asociado.documentos.length > 0 ? (
-                <div className="mt-2 space-y-2">
-                  {asociado.documentos.map((d) => (
-                    <div key={d.id} className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
+              <div className="mt-2 space-y-2">
+                {REQUIRED_DOC_TYPES.map(({ tipo, label }) => {
+                  const d = asociado.documentos?.find((doc) => doc.tipo === tipo);
+                  return (
+                    <div key={tipo} className="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50">
                       <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 font-medium capitalize text-gray-900 dark:text-gray-100">
-                          {DOC_ICONS[d.tipo] ?? <FileText className="h-4 w-4 text-gray-400" />}
-                          {d.tipo.replace(/_/g, ' ')}
+                        <span className="flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-100">
+                          {DOC_ICONS[tipo] ?? <FileText className="h-4 w-4 text-gray-400" />}
+                          {label}
                         </span>
-                        <Badge variant={d.estado === 'aprobado' ? 'success' : d.estado === 'rechazado' ? 'danger' : 'warning'}>
-                          {d.estado}
-                        </Badge>
-                      </div>
-                      {d.estado === 'rechazado' && d.motivoRechazo && (
-                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">Motivo: {d.motivoRechazo}</p>
-                      )}
-                      {/* AI Analysis info */}
-                      {d.analisis && d.analisis.estado === 'completado' && (
-                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                          {d.analisis.confianza != null && (
-                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                              d.analisis.confianza >= 0.8 ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
-                              d.analisis.confianza >= 0.5 ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
-                              'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                            }`}>
-                              <Bot className="h-3 w-3" />
-                              IA: {(d.analisis.confianza * 100).toFixed(0)}%
-                            </span>
-                          )}
-                          {d.analisis.validaciones && Object.entries(d.analisis.validaciones).some(([k, v]) => v === false && !k.startsWith('_')) && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                              <AlertTriangle className="h-3 w-3" />
-                              {Object.entries(d.analisis.validaciones).filter(([k, v]) => v === false && !k.startsWith('_')).map(([k]) => {
-                                const labels: Record<string, string> = {
-                                  coincide_nombre: 'Nombre no coincide',
-                                  coincide_apellido_paterno: 'Ap. paterno no coincide',
-                                  coincide_apellido_materno: 'Ap. materno no coincide',
-                                  coincide_placas: 'Placas no coinciden',
-                                  coincide_marca: 'Marca no coincide',
-                                  coincide_anio: 'Año no coincide',
-                                  coincide_propietario: 'Propietario no coincide',
-                                };
-                                return labels[k] || k.replace(/_/g, ' ');
-                              }).join(', ')}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {d.analisis && d.analisis.estado === 'procesando' && (
-                        <p className="mt-1 flex items-center gap-1 text-xs text-blue-500">
-                          <RefreshCw className="h-3 w-3 animate-spin" /> Analizando...
-                        </p>
-                      )}
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <button
-                          onClick={() => handleViewDocument(d)}
-                          className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                        >
-                          <Eye className="h-3 w-3" />
-                          Ver
-                        </button>
-                        {d.estado === 'pendiente' && puede('aprobar:asociados') && (
-                          <>
-                            <button
-                              onClick={() => handleApproveDocument(d)}
-                              disabled={docUpdating === d.id}
-                              className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100 disabled:opacity-50 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
-                            >
-                              <CheckCircle className="h-3 w-3" />
-                              Aprobar
-                            </button>
-                            <button
-                              onClick={() => setRejectDialog({ open: true, doc: d })}
-                              disabled={docUpdating === d.id}
-                              className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
-                            >
-                              <XCircle className="h-3 w-3" />
-                              Rechazar
-                            </button>
-                          </>
-                        )}
-                        {d.estado === 'aprobado' && puede('aprobar:asociados') && (
-                          <button
-                            onClick={() => handleRevertDocument(d)}
-                            disabled={docUpdating === d.id}
-                            className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                            Revertir
-                          </button>
+                        {d ? (
+                          <Badge variant={d.estado === 'aprobado' ? 'success' : d.estado === 'rechazado' ? 'danger' : 'warning'}>
+                            {d.estado}
+                          </Badge>
+                        ) : (
+                          <Badge variant="default">Sin enviar</Badge>
                         )}
                       </div>
+                      {d ? (
+                        <>
+                          {d.estado === 'rechazado' && d.motivoRechazo && (
+                            <p className="mt-1 text-xs text-red-600 dark:text-red-400">Motivo: {d.motivoRechazo}</p>
+                          )}
+                          {/* AI Analysis info */}
+                          {d.analisis && d.analisis.estado === 'completado' && (
+                            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                              {d.analisis.confianza != null && (
+                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  d.analisis.confianza >= 0.8 ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                                  d.analisis.confianza >= 0.5 ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                                  'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                }`}>
+                                  <Bot className="h-3 w-3" />
+                                  IA: {(d.analisis.confianza * 100).toFixed(0)}%
+                                </span>
+                              )}
+                              {d.analisis.validaciones && Object.entries(d.analisis.validaciones).some(([k, v]) => v === false && !k.startsWith('_')) && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  {Object.entries(d.analisis.validaciones).filter(([k, v]) => v === false && !k.startsWith('_')).map(([k]) => {
+                                    const labels: Record<string, string> = {
+                                      coincide_nombre: 'Nombre no coincide',
+                                      coincide_apellido_paterno: 'Ap. paterno no coincide',
+                                      coincide_apellido_materno: 'Ap. materno no coincide',
+                                      coincide_placas: 'Placas no coinciden',
+                                      coincide_marca: 'Marca no coincide',
+                                      coincide_anio: 'Año no coincide',
+                                      coincide_propietario: 'Propietario no coincide',
+                                    };
+                                    return labels[k] || k.replace(/_/g, ' ');
+                                  }).join(', ')}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {d.analisis && d.analisis.estado === 'procesando' && (
+                            <p className="mt-1 flex items-center gap-1 text-xs text-blue-500">
+                              <RefreshCw className="h-3 w-3 animate-spin" /> Analizando...
+                            </p>
+                          )}
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {d.estado !== 'rechazado' && (
+                              <button
+                                onClick={() => handleViewDocument(d)}
+                                className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                              >
+                                <Eye className="h-3 w-3" />
+                                Ver
+                              </button>
+                            )}
+                            {d.estado === 'pendiente' && puede('aprobar:asociados') && (
+                              <>
+                                <button
+                                  onClick={() => handleApproveDocument(d)}
+                                  disabled={docUpdating === d.id}
+                                  className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100 disabled:opacity-50 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50"
+                                >
+                                  <CheckCircle className="h-3 w-3" />
+                                  Aprobar
+                                </button>
+                                <button
+                                  onClick={() => setRejectDialog({ open: true, doc: d })}
+                                  disabled={docUpdating === d.id}
+                                  className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                                >
+                                  <XCircle className="h-3 w-3" />
+                                  Rechazar
+                                </button>
+                              </>
+                            )}
+                            {d.estado === 'aprobado' && puede('aprobar:asociados') && (
+                              <button
+                                onClick={() => handleRevertDocument(d)}
+                                disabled={docUpdating === d.id}
+                                className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                Revertir
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-xs text-gray-400 italic">El asociado aún no ha enviado este documento</p>
+                      )}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-2 text-sm text-gray-400 dark:text-gray-500 italic">Aún no ha enviado documentos</p>
-              )}
+                  );
+                })}
+              </div>
             </div>
 
             {/* Coupons summary */}

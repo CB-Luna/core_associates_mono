@@ -19,7 +19,7 @@ const allTabs: ConfigTab[] = [
   { key: 'temas', label: 'Temas', icon: Palette, color: 'pink', component: <TemasTab />, permiso: 'configuracion:temas' },
   { key: 'sistema', label: 'Info del Sistema', icon: Server, color: 'gray', component: <SistemaInfoTab />, permiso: 'configuracion:info' },
   { key: 'auditoria', label: 'Auditoria', icon: ShieldCheck, color: 'purple', component: <AuditoriaTab />, permiso: 'configuracion:auditoria' },
-  { key: 'ai', label: 'Conf AI', icon: Bot, color: 'indigo', component: <ConfAITab />, permiso: 'configuracion:ai' },
+  { key: 'ai', label: 'IA del sistema', icon: Bot, color: 'indigo', component: <ConfAITab />, permiso: 'configuracion:ai' },
 ];
 
 export default function ConfiguracionPage() {

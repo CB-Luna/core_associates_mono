@@ -228,7 +228,7 @@ export class CuponesService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          asociado: { select: { idUnico: true, nombre: true, apellidoPat: true } },
+          asociado: { select: { id: true, idUnico: true, nombre: true, apellidoPat: true, fotoUrl: true } },
           promocion: { select: { titulo: true } },
           proveedor: { select: { razonSocial: true } },
         },
@@ -291,7 +291,7 @@ export class CuponesService {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          asociado: { select: { idUnico: true, nombre: true, apellidoPat: true } },
+          asociado: { select: { id: true, idUnico: true, nombre: true, apellidoPat: true, fotoUrl: true } },
           promocion: { select: { titulo: true } },
           proveedor: { select: { razonSocial: true } },
         },

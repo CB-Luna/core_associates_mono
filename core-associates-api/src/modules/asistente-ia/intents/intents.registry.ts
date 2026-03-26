@@ -159,6 +159,25 @@ export const INTENTS: IntentDef[] = [
     resolverKey: 'vehiculos_por_asociado',
   },
 
+  // ── Vehículos: conteo total ───────────────────────
+  {
+    id: 'total_vehiculos',
+    keywords: [
+      ['total', 'vehiculos'], ['total', 'carros'], ['total', 'autos'],
+      ['vehiculos', 'registrados'],
+    ],
+    resolverKey: 'total_vehiculos',
+  },
+
+  // ── Vehículos: buscar por placa ───────────────────
+  {
+    id: 'vehiculo_placa',
+    keywords: [
+      ['placa'], ['placas'],
+    ],
+    resolverKey: 'vehiculo_placa',
+  },
+
   // ── Listar asociados por estado ───────────────────
   {
     id: 'listar_asociados_estado',
