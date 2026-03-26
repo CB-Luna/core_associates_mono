@@ -88,13 +88,14 @@ export async function apiClient<T>(
 
 /**
  * Fetch an image endpoint as a blob and return an object URL for <img src>.
+ * Accepts an AbortSignal to cancel in-flight requests on unmount.
  */
-export async function apiImageUrl(endpoint: string): Promise<string> {
+export async function apiImageUrl(endpoint: string, options?: { signal?: AbortSignal }): Promise<string> {
   const token = localStorage.getItem('accessToken');
   const headers: Record<string, string> = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}/api/v1${endpoint}`, { headers });
+  const res = await fetch(`${API_URL}/api/v1${endpoint}`, { headers, signal: options?.signal });
   if (!res.ok) throw new Error(`Error ${res.status}`);
   const blob = await res.blob();
   return URL.createObjectURL(blob);

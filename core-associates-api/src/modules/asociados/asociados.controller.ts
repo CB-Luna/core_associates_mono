@@ -53,7 +53,6 @@ export class AsociadosController {
   }
 
   @Post('me/vehiculos')
-  @RequireActivo()
   @ApiOperation({ summary: 'Agregar vehículo' })
   @ApiResponse({ status: 201, description: 'Vehículo agregado' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })

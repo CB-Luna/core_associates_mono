@@ -21,7 +21,13 @@ export const PRE_VALIDACION_PROMPT = (tipoEsperado: string): string => {
 
   const desc = descripciones[tipoEsperado] || 'un documento de identificación válido';
 
-  return `Eres un clasificador rápido de documentos. Tu ÚNICO trabajo es determinar si esta imagen es ${desc}
+  // Reglas estrictas adicionales por tipo de documento
+  const reglaEstricta =
+    tipoEsperado === 'selfie'
+      ? `\nREGLA ESTRICTA PARA SELFIE: Si la imagen NO muestra un rostro humano claramente visible (por ejemplo: es una foto de un objeto, teclado, animal, paisaje, papel, pantalla, etc.), debes responder SIEMPRE con "valida": false. No hay excepciones. La presencia de un rostro humano es el criterio mínimo obligatorio.`
+      : '';
+
+  return `Eres un clasificador rápido de documentos. Tu ÚNICO trabajo es determinar si esta imagen es ${desc}${reglaEstricta}
 
 Evalúa SOLO estos criterios:
 1. ¿La imagen corresponde al tipo de documento esperado? (no es un meme, paisaje, captura de pantalla, etc.)
@@ -49,5 +55,5 @@ Si es válida pero tiene problemas menores (algo borrosa, iluminación pobre per
   "advertencia": "Descripción breve de la advertencia en español mexicano"
 }
 
-IMPORTANTE: Sé tolerante. Si la imagen parece ser el documento correcto aunque no sea perfecta, marca como válida con advertencia. Solo rechaza si claramente NO es el tipo de documento esperado o si es completamente ilegible.`;
+IMPORTANTE: Sé tolerante con la calidad de imagen (brillo, enfoque), pero sé ESTRICTO con el tipo de contenido. Solo rechaza si claramente NO es el tipo de documento esperado o si es completamente ilegible.`;
 };

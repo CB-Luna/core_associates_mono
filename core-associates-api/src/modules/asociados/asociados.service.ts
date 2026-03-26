@@ -279,10 +279,52 @@ export class AsociadosService {
     const s3Key = `${asociadoId}/foto/${Date.now()}.${ext}`;
     await this.storage.uploadFile(BUCKET_FOTOS, s3Key, file.buffer, file.mimetype);
 
-    return this.prisma.asociado.update({
+    // Actualizar fotoUrl en el asociado
+    const updated = await this.prisma.asociado.update({
       where: { id: asociadoId },
       data: { fotoUrl: s3Key },
     });
+
+    // Crear / actualizar registro Documento tipo 'selfie' para que el CRM
+    // pueda mostrarlo, aprobarlo o rechazarlo.
+    const existingSelfie = await this.prisma.documento.findFirst({
+      where: { asociadoId, tipo: 'selfie' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (existingSelfie) {
+      // Eliminar archivo S3 anterior del documento si difiere
+      if (existingSelfie.s3Key !== s3Key) {
+        await this.storage.deleteFile(existingSelfie.s3Bucket, existingSelfie.s3Key).catch(() => {});
+      }
+      await this.prisma.documento.update({
+        where: { id: existingSelfie.id },
+        data: {
+          s3Key,
+          s3Bucket: BUCKET_FOTOS,
+          contentType: file.mimetype,
+          fileSize: file.size,
+          estado: 'pendiente',
+          motivoRechazo: null,
+          fechaRevision: null,
+          revisadoPorId: null,
+        },
+      });
+    } else {
+      await this.prisma.documento.create({
+        data: {
+          asociadoId,
+          tipo: 'selfie',
+          s3Key,
+          s3Bucket: BUCKET_FOTOS,
+          contentType: file.mimetype,
+          fileSize: file.size,
+          estado: 'pendiente',
+        },
+      });
+    }
+
+    return updated;
   }
 
   async getFotoBuffer(asociadoId: string): Promise<{ buffer: Buffer; contentType: string } | null> {

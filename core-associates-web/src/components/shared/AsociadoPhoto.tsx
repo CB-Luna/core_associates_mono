@@ -21,26 +21,41 @@ interface Props {
   className?: string;
 }
 
+// Module-level cache to avoid hammering the API with duplicate requests.
+// string → blob URL (photo exists), null → confirmed no photo.
+const photoCache = new Map<string, string | null>();
+
 /**
- * Shared avatar for asociados. Always attempts to fetch the image from the
- * backend (which falls back to the approved selfie when there is no explicit
- * fotoUrl). Shows initials when the fetch fails or the id is missing.
+ * Shared avatar for asociados. Fetches the image once per asociado ID (cached
+ * in memory) so rendering 20 rows doesn't fire 20 simultaneous requests.
+ * Shows initials when there is no photo or the id is missing.
  */
 export function AsociadoPhoto({ asociado, size = 'md', className }: Props) {
-  const [src, setSrc] = useState<string | null>(null);
+  const [src, setSrc] = useState<string | null>(() => {
+    const cached = photoCache.get(asociado.id ?? '');
+    return cached !== undefined ? (cached ?? null) : null;
+  });
   const initials = `${asociado.nombre?.[0] || ''}${asociado.apellidoPat?.[0] || ''}`.toUpperCase();
   const s = SIZE_CLASSES[size];
 
   useEffect(() => {
-    if (!asociado.id) return;
-    let revoked = false;
-    apiImageUrl(`/asociados/${asociado.id}/foto`)
-      .then((url) => { if (!revoked) setSrc(url); })
-      .catch(() => {});
-    return () => {
-      revoked = true;
-      setSrc((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
-    };
+    const id = asociado.id;
+    if (!id) return;
+    if (photoCache.has(id)) {
+      setSrc(photoCache.get(id) ?? null);
+      return;
+    }
+    const ctrl = new AbortController();
+    apiImageUrl(`/asociados/${id}/foto`, { signal: ctrl.signal })
+      .then((url) => {
+        photoCache.set(id, url);
+        setSrc(url);
+      })
+      .catch(() => {
+        // Only cache the 404 result — not an abort (component unmounted)
+        if (!ctrl.signal.aborted) photoCache.set(id, null);
+      });
+    return () => ctrl.abort();
   }, [asociado.id]);
 
   if (src) {
