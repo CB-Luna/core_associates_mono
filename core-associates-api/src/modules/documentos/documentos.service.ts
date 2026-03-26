@@ -240,8 +240,17 @@ export class DocumentosService {
     const config = await this.getAiConfig();
     await this.checkAntiTroll(asociadoId, tipo, config.maxRechazosPreval, config.horasBloqueoPreval);
 
-    // 2) Llamar IA con prompt ligero
-    const prompt = PRE_VALIDACION_PROMPT(tipo);
+    // 2) Llamar IA con prompt ligero (para tarjeta_circulacion: enriquecer con datos del vehículo)
+    let datosVehiculo: { marca?: string; modelo?: string; anio?: number; color?: string; placas?: string; numeroSerie?: string } | undefined;
+    if (tipo === 'tarjeta_circulacion') {
+      const vehiculo = await this.prisma.vehiculo.findFirst({
+        where: { asociadoId, esPrincipal: true },
+        select: { marca: true, modelo: true, anio: true, color: true, placas: true, numeroSerie: true },
+      });
+      if (vehiculo) datosVehiculo = vehiculo;
+    }
+
+    const prompt = PRE_VALIDACION_PROMPT(tipo, datosVehiculo);
     let resultado: { valida: boolean; motivo?: string; advertencia?: string };
 
     try {

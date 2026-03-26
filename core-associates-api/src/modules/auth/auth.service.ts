@@ -6,6 +6,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { SmsService } from '../../common/sms/sms.service';
 import { StorageService } from '../storage/storage.service';
+import { NotificacionesCrmService } from '../notificaciones-crm/notificaciones-crm.service';
 import { RolUsuario, EstadoUsuario } from '@prisma/client';
 
 const OTP_TTL_SECONDS = 300; // 5 minutos
@@ -32,6 +33,7 @@ export class AuthService {
     private readonly redis: RedisService,
     private readonly smsService: SmsService,
     private readonly storageService: StorageService,
+    private readonly notificacionesCrm: NotificacionesCrmService,
   ) {}
 
   private getDemoNumbers(): string[] {
@@ -111,6 +113,24 @@ export class AuthService {
           estado: 'pendiente',
         },
       });
+
+      // Notificar a admins y operadores sobre el nuevo registro (fire-and-forget)
+      this.prisma.usuario.findMany({
+        where: { estado: 'activo', rol: { in: ['admin', 'operador'] as any[] } },
+        select: { id: true },
+      }).then((staffUsers) => {
+        const notifs = staffUsers.map((u) =>
+          this.notificacionesCrm.crear({
+            usuarioId: u.id,
+            titulo: 'Nuevo asociado registrado',
+            mensaje: `El asociado ${idUnico} se registró y está pendiente de revisión.`,
+            tipo: 'nuevo_asociado',
+            referenciaId: asociado.id,
+            referenciaTipo: 'asociado',
+          }).catch(() => {}),
+        );
+        return Promise.all(notifs);
+      }).catch(() => {});
     }
 
     const payload = {

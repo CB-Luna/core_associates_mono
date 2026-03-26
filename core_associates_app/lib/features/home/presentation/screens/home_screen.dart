@@ -371,31 +371,26 @@ class _VerificationChecklist extends ConsumerWidget {
 
     if (asociado == null) return const SizedBox.shrink();
 
+    // Obtener el estado del tipo de documento más reciente
+    String? docEstado(String tipo) {
+      final match = docs.where((d) => d.tipo == tipo);
+      return match.isEmpty ? null : match.first.estado;
+    }
+
     final hasSelfie = asociado.fotoUrl != null && asociado.fotoUrl!.isNotEmpty;
     final hasVehicle = asociado.vehiculos.isNotEmpty;
-    final hasTarjeta = docs.any((d) => d.tipo == 'tarjeta_circulacion');
-    final hasIneFront = docs.any((d) => d.tipo == 'ine_frente');
-    final hasIneReverso = docs.any((d) => d.tipo == 'ine_reverso');
+
+    // Para selfie, priorizar el estado del documento; si no hay doc pero hay foto, es aprobado
+    final selfieEstado = docEstado('selfie') ?? (hasSelfie ? 'aprobado' : null);
+    final vehiculoEstado = hasVehicle ? 'aprobado' : null;
 
     final items = [
-      _CheckItem('Datos personales', true, Icons.person_outline),
-      _CheckItem(
-        'Selfie de verificación',
-        hasSelfie,
-        Icons.camera_alt_outlined,
-      ),
-      _CheckItem(
-        'Vehículo registrado',
-        hasVehicle,
-        Icons.directions_car_outlined,
-      ),
-      _CheckItem(
-        'Tarjeta de circulación',
-        hasTarjeta,
-        Icons.credit_card_outlined,
-      ),
-      _CheckItem('INE Frente', hasIneFront, Icons.badge_outlined),
-      _CheckItem('INE Reverso', hasIneReverso, Icons.badge_outlined),
+      _CheckItem('Datos personales', 'aprobado', Icons.person_outline),
+      _CheckItem('Selfie de verificación', selfieEstado, Icons.camera_alt_outlined),
+      _CheckItem('Vehículo registrado', vehiculoEstado, Icons.directions_car_outlined),
+      _CheckItem('Tarjeta de circulación', docEstado('tarjeta_circulacion'), Icons.credit_card_outlined),
+      _CheckItem('INE Frente', docEstado('ine_frente'), Icons.badge_outlined),
+      _CheckItem('INE Reverso', docEstado('ine_reverso'), Icons.badge_outlined),
     ];
 
     final completedCount = items.where((i) => i.completed).length;
@@ -455,13 +450,9 @@ class _VerificationChecklist extends ConsumerWidget {
               child: Row(
                 children: [
                   Icon(
-                    item.completed
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked,
+                    _CheckItem.iconForEstado(item.estado),
                     size: 18,
-                    color: item.completed
-                        ? AppColors.secondary
-                        : AppColors.textTertiary,
+                    color: _CheckItem.colorForEstado(item.estado),
                   ),
                   const SizedBox(width: 10),
                   Icon(item.icon, size: 16, color: AppColors.textSecondary),
@@ -469,12 +460,8 @@ class _VerificationChecklist extends ConsumerWidget {
                   Text(
                     item.label,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: item.completed
-                          ? AppColors.textSecondary
-                          : AppColors.textPrimary,
-                      decoration: item.completed
-                          ? TextDecoration.lineThrough
-                          : null,
+                      color: _CheckItem.labelColorForEstado(item.estado),
+                      decoration: item.completed ? TextDecoration.lineThrough : null,
                     ),
                   ),
                 ],
@@ -503,9 +490,31 @@ class _VerificationChecklist extends ConsumerWidget {
 
 class _CheckItem {
   final String label;
-  final bool completed;
+  final String? estado; // null=no subido, 'pendiente', 'aprobado', 'rechazado'
   final IconData icon;
-  const _CheckItem(this.label, this.completed, this.icon);
+  const _CheckItem(this.label, this.estado, this.icon);
+  bool get completed => estado == 'aprobado';
+
+  static IconData iconForEstado(String? estado) => switch (estado) {
+    'aprobado' => Icons.check_circle_rounded,
+    'rechazado' => Icons.cancel_rounded,
+    'pendiente' => Icons.access_time_rounded,
+    _ => Icons.radio_button_unchecked,
+  };
+
+  static Color colorForEstado(String? estado) => switch (estado) {
+    'aprobado' => AppColors.secondary,
+    'rechazado' => AppColors.error,
+    'pendiente' => Colors.amber,
+    _ => AppColors.textTertiary,
+  };
+
+  static Color labelColorForEstado(String? estado) => switch (estado) {
+    'aprobado' => AppColors.textSecondary,
+    'rechazado' => AppColors.error,
+    'pendiente' => Colors.amber,
+    _ => AppColors.textPrimary,
+  };
 }
 
 // ─── SOS Legal Banner ────────────────────────────────────────────────────────

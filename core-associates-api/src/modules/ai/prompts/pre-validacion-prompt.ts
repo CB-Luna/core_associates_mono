@@ -3,7 +3,10 @@
  * Objetivo: clasificar rápidamente si la imagen es del tipo esperado
  * y tiene calidad mínima aceptable. NO extrae datos — solo valida.
  */
-export const PRE_VALIDACION_PROMPT = (tipoEsperado: string): string => {
+export const PRE_VALIDACION_PROMPT = (
+  tipoEsperado: string,
+  datosVehiculo?: { marca?: string; modelo?: string; anio?: number; color?: string; placas?: string; numeroSerie?: string },
+): string => {
   const descripciones: Record<string, string> = {
     ine_frente:
       'la parte FRONTAL de una credencial INE/IFE mexicana (credencial para votar). ' +
@@ -27,7 +30,22 @@ export const PRE_VALIDACION_PROMPT = (tipoEsperado: string): string => {
       ? `\nREGLA ESTRICTA PARA SELFIE: Si la imagen NO muestra un rostro humano claramente visible (por ejemplo: es una foto de un objeto, teclado, animal, paisaje, papel, pantalla, etc.), debes responder SIEMPRE con "valida": false. No hay excepciones. La presencia de un rostro humano es el criterio mínimo obligatorio.`
       : '';
 
-  return `Eres un clasificador rápido de documentos. Tu ÚNICO trabajo es determinar si esta imagen es ${desc}${reglaEstricta}
+  // Contexto de datos del vehículo para tarjeta_circulacion
+  let contextVehiculo = '';
+  if (tipoEsperado === 'tarjeta_circulacion' && datosVehiculo) {
+    const partes: string[] = [];
+    if (datosVehiculo.marca) partes.push(`Marca: ${datosVehiculo.marca}`);
+    if (datosVehiculo.modelo) partes.push(`Modelo: ${datosVehiculo.modelo}`);
+    if (datosVehiculo.anio) partes.push(`Año: ${datosVehiculo.anio}`);
+    if (datosVehiculo.color) partes.push(`Color: ${datosVehiculo.color}`);
+    if (datosVehiculo.placas) partes.push(`Placas: ${datosVehiculo.placas}`);
+    if (datosVehiculo.numeroSerie) partes.push(`No. de serie: ${datosVehiculo.numeroSerie}`);
+    if (partes.length > 0) {
+      contextVehiculo = `\n\nDAtos del vehículo ya registrado:\n${partes.join(', ')}\n\nREGLA ADICIONAL PARA TARJETA DE CIRCULACIÓN: Verifica que la tarjeta corresponde a este vehículo. Si las placas o la marca/modelo visibles en la tarjeta NO coinciden con los datos del vehículo registrado, rechaza con "valida": false indicando la discrepancia. Si la imagen es borrosa y no se pueden leer los datos para comparar, acepta como advertencia (valida: true, advertencia explicando la baja legibilidad).`;
+    }
+  }
+
+  return `Eres un clasificador rápido de documentos. Tu ÚNICO trabajo es determinar si esta imagen es ${desc}${reglaEstricta}${contextVehiculo}
 
 Evalúa SOLO estos criterios:
 1. ¿La imagen corresponde al tipo de documento esperado? (no es un meme, paisaje, captura de pantalla, etc.)

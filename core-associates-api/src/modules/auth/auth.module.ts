@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { StorageModule } from '../storage/storage.module';
+import { NotificacionesCrmModule } from '../notificaciones-crm/notificaciones-crm.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { StorageModule } from '../storage/storage.module';
       inject: [ConfigService],
     }),
     StorageModule,
+    NotificacionesCrmModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

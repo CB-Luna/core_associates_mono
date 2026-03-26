@@ -45,6 +45,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _isPreValidating = false;
   String? _preValidationError;
 
+  // --- Vehicle photo (optional) ---
+  String? _vehicleImagePath;
+
   @override
   void initState() {
     super.initState();
@@ -319,7 +322,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         data['numeroSerie'] = _serieCtrl.text.trim();
       }
 
-      await ref.read(vehiculosProvider.notifier).addVehiculo(data);
+      final vehiculo = await ref.read(vehiculosProvider.notifier).addVehiculo(data);
+
+      // Subir foto del vehículo (opcional, no bloquea el avance)
+      if (_vehicleImagePath != null) {
+        try {
+          await ref
+              .read(profileRepositoryProvider)
+              .uploadVehiculoFoto(vehiculo.id, _vehicleImagePath!);
+        } catch (_) {}
+        if (mounted) setState(() => _vehicleImagePath = null);
+      }
+
       notifier.nextStep();
     } catch (e) {
       if (mounted) {
@@ -763,14 +777,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 : const Text('Subir y continuar'),
           ),
 
-          // Retry with warning — allow upload even if pre-validation reported issues
+          // Reintentar — re-open camera when AI rejected the document
           if (_preValidationError != null && !isSaving) ...[
             const SizedBox(height: 8),
-            TextButton(
+            OutlinedButton.icon(
               onPressed: () {
-                setState(() => _preValidationError = null);
+                setState(() {
+                  _capturedImagePath = null;
+                  _preValidationError = null;
+                });
+                _captureDocument(tipo, cameraOnly: cameraOnly);
               },
-              child: const Text('Ignorar advertencia y subir de todos modos'),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
             ),
           ],
 
@@ -936,6 +955,88 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 prefixIcon: Icon(Icons.tag_outlined),
               ),
               textCapitalization: TextCapitalization.characters,
+            ),
+            const SizedBox(height: 20),
+
+            // Foto del vehículo (opcional)
+            Text(
+              'Foto del vehículo (opcional)',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: obState.isSaving
+                  ? null
+                  : () async {
+                      final picked = await _picker.pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 85,
+                      );
+                      if (picked != null && mounted) {
+                        setState(() => _vehicleImagePath = picked.path);
+                      }
+                    },
+              child: Container(
+                height: 140,
+                decoration: BoxDecoration(
+                  color: AppColors.primary50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.primary200, width: 1.5),
+                ),
+                child: _vehicleImagePath != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(11),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.file(
+                              File(_vehicleImagePath!),
+                              fit: BoxFit.cover,
+                            ),
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: Material(
+                                color: Colors.black54,
+                                shape: const CircleBorder(),
+                                child: IconButton(
+                                  iconSize: 18,
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                  onPressed: obState.isSaving
+                                      ? null
+                                      : () => setState(() => _vehicleImagePath = null),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_photo_alternate_outlined,
+                            size: 40,
+                            color: AppColors.primary.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Toca para agregar foto',
+                            style: TextStyle(
+                              color: AppColors.primary.withValues(alpha: 0.7),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
             ),
             const SizedBox(height: 32),
             ElevatedButton(
