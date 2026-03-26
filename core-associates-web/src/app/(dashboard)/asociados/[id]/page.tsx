@@ -193,6 +193,11 @@ export default function AsociadoDetailPage() {
     return <p className="text-gray-500">Asociado no encontrado</p>;
   }
 
+  const kycReady = !!asociado.vehiculos?.length &&
+    ['ine_frente', 'ine_reverso', 'selfie', 'tarjeta_circulacion'].every(
+      (tipo) => asociado.documentos?.find((d) => d.tipo === tipo)?.estado === 'aprobado',
+    );
+
   return (
     <div>
       <button
@@ -239,9 +244,17 @@ export default function AsociadoDetailPage() {
       {asociado.estado === 'pendiente' && (() => {
         const faltantes: string[] = [];
         if (!asociado.vehiculos?.length) faltantes.push('Sin vehículo registrado');
-        const tarjeta = asociado.documentos?.find(d => d.tipo === 'tarjeta_circulacion');
-        if (!tarjeta) faltantes.push('Sin tarjeta de circulación');
-        else if (tarjeta.estado !== 'aprobado') faltantes.push('Tarjeta de circulación no aprobada');
+        const tiposRequeridos = [
+          { tipo: 'ine_frente', label: 'INE frente' },
+          { tipo: 'ine_reverso', label: 'INE reverso' },
+          { tipo: 'selfie', label: 'Selfie' },
+          { tipo: 'tarjeta_circulacion', label: 'Tarjeta de circulación' },
+        ];
+        for (const { tipo, label } of tiposRequeridos) {
+          const doc = asociado.documentos?.find(d => d.tipo === tipo);
+          if (!doc) faltantes.push(`Sin ${label}`);
+          else if (doc.estado !== 'aprobado') faltantes.push(`${label} no aprobado/a (${doc.estado})`);
+        }
         if (!faltantes.length) return null;
         return (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
@@ -261,7 +274,7 @@ export default function AsociadoDetailPage() {
         <div className="mt-4 flex gap-3">
           <button
             onClick={() => handleEstado('activo')}
-            disabled={updating}
+            disabled={updating || !kycReady}
             className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
           >
             Aprobar

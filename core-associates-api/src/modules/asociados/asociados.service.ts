@@ -188,21 +188,31 @@ export class AsociadosService {
 
     // Validar requisitos KYC antes de aprobar
     if (estado === 'activo') {
-      const [vehiculoCount, tarjeta] = await Promise.all([
+      const [vehiculoCount, documentos] = await Promise.all([
         this.prisma.vehiculo.count({ where: { asociadoId: id } }),
-        this.prisma.documento.findFirst({
-          where: { asociadoId: id, tipo: 'tarjeta_circulacion' },
+        this.prisma.documento.findMany({
+          where: { asociadoId: id },
+          select: { tipo: true, estado: true },
         }),
       ]);
 
+      const tiposRequeridos = ['ine_frente', 'ine_reverso', 'selfie', 'tarjeta_circulacion'] as const;
       const faltantes: string[] = [];
+
       if (vehiculoCount === 0) faltantes.push('vehículo registrado');
-      if (!tarjeta) faltantes.push('tarjeta de circulación');
-      else if (tarjeta.estado !== 'aprobado') faltantes.push('tarjeta de circulación aprobada (actualmente: ' + tarjeta.estado + ')');
+
+      for (const tipo of tiposRequeridos) {
+        const doc = documentos.find((d) => d.tipo === tipo);
+        if (!doc) {
+          faltantes.push(tipo.replace(/_/g, ' '));
+        } else if (doc.estado !== 'aprobado') {
+          faltantes.push(`${tipo.replace(/_/g, ' ')} aprobado/a (actualmente: ${doc.estado})`);
+        }
+      }
 
       if (faltantes.length > 0) {
         throw new BadRequestException(
-          `No se puede aprobar: falta ${faltantes.join(' y ')}`,
+          `No se puede aprobar: falta ${faltantes.join(', ')}`,
         );
       }
     }

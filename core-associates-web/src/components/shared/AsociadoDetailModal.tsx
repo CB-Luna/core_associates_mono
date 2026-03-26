@@ -511,9 +511,17 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
             {asociado.estado === 'pendiente' && (() => {
               const faltantes: string[] = [];
               if (!asociado.vehiculos?.length) faltantes.push('Sin vehículo registrado');
-              const tarjeta = asociado.documentos?.find(d => d.tipo === 'tarjeta_circulacion');
-              if (!tarjeta) faltantes.push('Sin tarjeta de circulación');
-              else if (tarjeta.estado !== 'aprobado') faltantes.push('Tarjeta de circulación no aprobada');
+              const tiposRequeridos = [
+                { tipo: 'ine_frente', label: 'INE frente' },
+                { tipo: 'ine_reverso', label: 'INE reverso' },
+                { tipo: 'selfie', label: 'Selfie' },
+                { tipo: 'tarjeta_circulacion', label: 'Tarjeta de circulación' },
+              ];
+              for (const { tipo, label } of tiposRequeridos) {
+                const doc = asociado.documentos?.find(d => d.tipo === tipo);
+                if (!doc) faltantes.push(`Sin ${label}`);
+                else if (doc.estado !== 'aprobado') faltantes.push(`${label} no aprobado/a (${doc.estado})`);
+              }
               if (!faltantes.length) return null;
               return (
                 <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
@@ -530,11 +538,16 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
 
             <div className="flex items-center justify-between">
             <div className="flex gap-2">
-              {puede('aprobar:asociados') && asociado.estado === 'pendiente' && (
+              {puede('aprobar:asociados') && asociado.estado === 'pendiente' && (() => {
+                const kycReady = !!asociado.vehiculos?.length &&
+                  ['ine_frente', 'ine_reverso', 'selfie', 'tarjeta_circulacion'].every(
+                    (tipo) => asociado.documentos?.find((d) => d.tipo === tipo)?.estado === 'aprobado',
+                  );
+                return (
                 <>
                   <button
                     onClick={() => handleEstado('activo')}
-                    disabled={updating}
+                    disabled={updating || !kycReady}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
                   >
                     <CheckCircle className="h-3.5 w-3.5" />
@@ -549,7 +562,8 @@ export function AsociadoDetailModal({ asociadoId, onClose, onUpdated }: Props) {
                     Rechazar
                   </button>
                 </>
-              )}
+                );
+              })()}
               {puede('editar:asociados') && asociado.estado === 'activo' && (
                 <button
                   onClick={() => setSuspendDialog(true)}

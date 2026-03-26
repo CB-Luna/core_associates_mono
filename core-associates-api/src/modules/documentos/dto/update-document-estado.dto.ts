@@ -4,6 +4,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 enum EstadoDocumento {
   aprobado = 'aprobado',
   rechazado = 'rechazado',
+  pendiente = 'pendiente',
 }
 
 export class UpdateDocumentEstadoDto {

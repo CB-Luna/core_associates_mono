@@ -162,16 +162,20 @@ export class DocumentosService {
       where: { id },
       data: {
         estado: estado as any,
-        revisadoPorId,
-        motivoRechazo: estado === 'rechazado' ? motivoRechazo : null,
-        fechaRevision: new Date(),
-        ...(estado === 'rechazado' ? { s3Key: '' } : {}),
+        ...(estado === 'pendiente'
+          ? { revisadoPorId: null, motivoRechazo: null, fechaRevision: null }
+          : {
+              revisadoPorId,
+              motivoRechazo: estado === 'rechazado' ? motivoRechazo : null,
+              fechaRevision: new Date(),
+              ...(estado === 'rechazado' ? { s3Key: '' } : {}),
+            }),
       },
     });
 
-    // Notificar al asociado sobre revisión de documento
+    // Notificar al asociado sobre revisión de documento (no en revert a pendiente)
     const docForNotif = await this.prisma.documento.findUnique({ where: { id }, select: { asociadoId: true, tipo: true } });
-    if (docForNotif) {
+    if (docForNotif && estado !== 'pendiente') {
       const titulo = estado === 'aprobado' ? 'Documento aprobado' : 'Documento rechazado';
       const mensaje = estado === 'aprobado'
         ? `Tu documento (${docForNotif.tipo}) ha sido aprobado.`

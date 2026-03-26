@@ -92,8 +92,14 @@ export class AuthService {
     });
 
     if (!asociado) {
-      const count = await this.prisma.asociado.count();
-      const idUnico = `ASC-${String(count + 1).padStart(4, '0')}`;
+      const last = await this.prisma.asociado.findFirst({
+        orderBy: { idUnico: 'desc' },
+        select: { idUnico: true },
+      });
+      const nextNum = last
+        ? parseInt(last.idUnico.replace('ASC-', ''), 10) + 1
+        : 1;
+      const idUnico = `ASC-${String(nextNum).padStart(4, '0')}`;
 
       asociado = await this.prisma.asociado.create({
         data: {
