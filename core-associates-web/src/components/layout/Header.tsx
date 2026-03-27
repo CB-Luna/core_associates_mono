@@ -73,8 +73,9 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const router = useRouter();
   const { user, loadFromStorage, logout } = useAuthStore();
   const menuItems = useMenuStore((s) => s.items);
-  const { puede } = usePermisos();
+  const { puede, esAbogado } = usePermisos();
   const puedeBuscar = puede('busqueda:ver');
+  const tieneConfiguración = menuItems.some((item) => item.ruta === '/configuracion' || item.children?.some((c) => c.ruta === '/configuracion'));
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -218,13 +219,24 @@ export function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
                 <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.nombre}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
               </div>
-              <button
-                onClick={() => { setDropdownOpen(false); router.push('/configuracion'); }}
-                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
-              >
-                <Settings className="h-4 w-4" />
-                Configuración
-              </button>
+              {esAbogado && (
+                <button
+                  onClick={() => { setDropdownOpen(false); router.push('/abogado/perfil'); }}
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <UserIcon className="h-4 w-4" />
+                  Mi Perfil
+                </button>
+              )}
+              {tieneConfiguración && (
+                <button
+                  onClick={() => { setDropdownOpen(false); router.push('/configuracion'); }}
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <Settings className="h-4 w-4" />
+                  Configuración
+                </button>
+              )}
 
               <div className="border-t border-gray-100 dark:border-gray-700">
                 <button

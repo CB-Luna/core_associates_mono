@@ -189,6 +189,49 @@ export default function CasosDisponiblesPage() {
           ? 'No hay casos disponibles en tu zona de operación'
           : 'No hay casos disponibles en este momento'
         }
+        cardRenderer={(c: CasoLegal) => {
+          const TIcon = tipoIcon[c.tipoPercance] || HelpCircle;
+          const km = c.distanciaKm;
+          const kmColor = km != null ? (km <= 10 ? 'text-green-600' : km <= 30 ? 'text-amber-600' : 'text-red-500') : '';
+          return (
+            <div
+              className="px-4 py-3 active:bg-gray-50"
+              onClick={() => router.push(`/abogado/casos/${c.id}`)}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tipoColorBg[c.tipoPercance] || 'bg-gray-50 text-gray-400'}`}>
+                  <TIcon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-neutral-800">{c.codigo}</p>
+                    <Badge variant={prioridadVariant[c.prioridad] ?? 'default'}>
+                      {c.prioridad.charAt(0).toUpperCase() + c.prioridad.slice(1)}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-neutral-500 capitalize mt-0.5">{c.tipoPercance.replace('_', ' ')}</p>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
+                <span>
+                  {c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '—'}
+                </span>
+                <div className="flex items-center gap-2">
+                  {km != null && (
+                    <span className={`flex items-center gap-0.5 font-semibold ${kmColor}`}>
+                      <MapPin className="h-3 w-3" />
+                      {km} km
+                    </span>
+                  )}
+                  <span>{formatFechaLegible(c.fechaApertura)}</span>
+                </div>
+              </div>
+              {c.direccionAprox && (
+                <p className="mt-1 text-xs text-neutral-400 truncate">{c.direccionAprox}</p>
+              )}
+            </div>
+          );
+        }}
       />
     </div>
   );

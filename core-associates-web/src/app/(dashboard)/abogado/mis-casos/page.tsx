@@ -67,7 +67,7 @@ export default function MisCasosAbogadoPage() {
   }, [page, estadoFilter]);
 
   useEffect(() => {
-    apiClient<DashboardAbogadoMetrics>('/casos-legales/abogado/dashboard')
+    apiClient<DashboardAbogadoMetrics>('/reportes/dashboard-abogado')
       .then((m) => setStats({
         asignados: m.casos.asignados,
         enAtencion: m.casos.enAtencion,
@@ -188,6 +188,41 @@ export default function MisCasosAbogadoPage() {
         total={total}
         onPageChange={setPage}
         emptyMessage="No tienes casos asignados"
+        cardRenderer={(c: CasoLegal) => {
+          const TIcon = tipoIcon[c.tipoPercance] || HelpCircle;
+          return (
+            <div
+              className="px-4 py-3 active:bg-gray-50"
+              onClick={() => router.push(`/abogado/casos/${c.id}`)}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tipoColorBg[c.tipoPercance] || 'bg-gray-50 text-gray-400'}`}>
+                  <TIcon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-neutral-800">{c.codigo}</p>
+                    <Badge variant={estadoVariant[c.estado] ?? 'default'}>
+                      {estadoLabel[c.estado] ?? c.estado}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-neutral-500 capitalize mt-0.5">{c.tipoPercance.replace('_', ' ')}</p>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
+                <span>
+                  {c.asociado ? `${c.asociado.nombre} ${c.asociado.apellidoPat}` : '—'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Badge variant={prioridadVariant[c.prioridad] ?? 'default'}>
+                    {c.prioridad.charAt(0).toUpperCase() + c.prioridad.slice(1)}
+                  </Badge>
+                  <span>{formatFechaLegible(c.fechaApertura)}</span>
+                </div>
+              </div>
+            </div>
+          );
+        }}
       />
     </div>
   );

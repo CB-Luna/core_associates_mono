@@ -40,11 +40,24 @@ export default function DashboardLayout({
   }, [pathname]);
 
   // Route guard: redirect proveedor away from restricted routes
+  // Route guard: redirect non-abogado/non-admin away from /abogado/* routes
   useEffect(() => {
     if (!ready || !user) return;
+    const permisos = user.permisos ?? [];
+    const esAdmin = permisos.includes('sistema:super-admin') || user.rol === 'admin';
+
     if (user.proveedorId) {
       const allowed = PROVEEDOR_ALLOWED.some((r) => pathname === r || pathname.startsWith(r + '/'));
       if (!allowed) {
+        router.replace('/dashboard');
+        return;
+      }
+    }
+
+    // /abogado/* routes: only abogados (ver-propios) and admins
+    if (pathname.startsWith('/abogado')) {
+      const esAbogado = permisos.includes('casos-legales:ver-propios');
+      if (!esAdmin && !esAbogado) {
         router.replace('/dashboard');
       }
     }
@@ -75,8 +88,10 @@ export default function DashboardLayout({
         </div>
       )}
 
-      <div className="flex flex-1 flex-col">
-        <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="sticky top-0 z-40">
+          <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
+        </div>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 dark:bg-gray-900">{children}</main>
       </div>
 
