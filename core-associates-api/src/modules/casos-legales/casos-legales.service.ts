@@ -500,6 +500,152 @@ export class CasosLegalesService {
     };
   }
 
+  /**
+   * Mapa SOS para abogados: devuelve TODOS los casos activos (no solo disponibles)
+   * pero filtrados por la zona geográfica del abogado.
+   */
+  async findAllForAbogadoMapa(
+    abogadoUsuarioId: string,
+    query: { estado?: string; prioridad?: string; limit?: number },
+  ) {
+    const { estado, prioridad, limit = 100 } = query;
+
+    const abogado = await this.prisma.usuario.findUnique({
+      where: { id: abogadoUsuarioId },
+      select: { zonaLatitud: true, zonaLongitud: true, zonaRadioKm: true },
+    });
+
+    if (abogado?.zonaLatitud != null && abogado?.zonaLongitud != null) {
+      const lat = abogado.zonaLatitud;
+      const lng = abogado.zonaLongitud;
+      const radioKm = abogado.zonaRadioKm ?? 80;
+
+      // Build parameterized query safely
+      const params: (number | string)[] = [lat, lng, radioKm]; // $1, $2, $3
+      let paramIdx = 4;
+
+      let estadoClause = `AND cl.estado NOT IN ('cerrado', 'cancelado')`;
+      if (estado) {
+        estadoClause = `AND cl.estado = $${paramIdx}`;
+        params.push(estado);
+        paramIdx++;
+      }
+
+      let prioridadClause = '';
+      if (prioridad) {
+        prioridadClause = `AND cl.prioridad = $${paramIdx}`;
+        params.push(prioridad);
+        paramIdx++;
+      }
+
+      params.push(limit); // last param
+      const limitParam = `$${paramIdx}`;
+
+      type RawCaso = {
+        id: string; codigo: string; tipo_percance: string; descripcion: string | null;
+        latitud: string; longitud: string; direccion_aprox: string | null;
+        estado: string; prioridad: string; fecha_apertura: Date;
+        fecha_asignacion: Date | null; fecha_cierre: Date | null;
+        distancia_km: string;
+        asociado_id: string; asociado_id_unico: string; asociado_nombre: string;
+        asociado_apellido_pat: string; asociado_telefono: string | null;
+        asociado_foto_url: string | null;
+        abogado_razon_social: string | null;
+        abogado_usuario_id: string | null;
+      };
+
+      const casosRaw = await this.prisma.$queryRawUnsafe<RawCaso[]>(
+        `
+        SELECT
+          cl.id, cl.codigo, cl.tipo_percance, cl.descripcion,
+          cl.latitud, cl.longitud, cl.direccion_aprox,
+          cl.estado, cl.prioridad, cl.fecha_apertura, cl.fecha_asignacion, cl.fecha_cierre,
+          cl.abogado_usuario_id,
+          a.id AS asociado_id, a.id_unico AS asociado_id_unico, a.nombre AS asociado_nombre,
+          a.apellido_pat AS asociado_apellido_pat, a.telefono AS asociado_telefono,
+          a.foto_url AS asociado_foto_url,
+          p.razon_social AS abogado_razon_social,
+          ROUND(CAST(
+            (6371 * acos(GREATEST(-1.0, LEAST(1.0,
+              cos(radians($1)) * cos(radians(CAST(cl.latitud AS float8))) *
+              cos(radians(CAST(cl.longitud AS float8)) - radians($2)) +
+              sin(radians($1)) * sin(radians(CAST(cl.latitud AS float8)))
+            )))) AS numeric
+          ), 1) AS distancia_km
+        FROM casos_legales cl
+        JOIN asociados a ON a.id = cl.asociado_id
+        LEFT JOIN proveedores p ON p.id = cl.abogado_id
+        WHERE cl.latitud IS NOT NULL AND cl.longitud IS NOT NULL
+          ${estadoClause}
+          ${prioridadClause}
+          AND (6371 * acos(GREATEST(-1.0, LEAST(1.0,
+              cos(radians($1)) * cos(radians(CAST(cl.latitud AS float8))) *
+              cos(radians(CAST(cl.longitud AS float8)) - radians($2)) +
+              sin(radians($1)) * sin(radians(CAST(cl.latitud AS float8)))
+            )))) <= $3
+        ORDER BY cl.fecha_apertura DESC
+        LIMIT ${limitParam}
+        `,
+        ...params,
+      );
+
+      const data = casosRaw.map((row) => ({
+        id: row.id,
+        codigo: row.codigo,
+        tipoPercance: row.tipo_percance,
+        descripcion: row.descripcion,
+        latitud: row.latitud,
+        longitud: row.longitud,
+        direccionAprox: row.direccion_aprox,
+        estado: row.estado,
+        prioridad: row.prioridad,
+        fechaApertura: row.fecha_apertura,
+        fechaAsignacion: row.fecha_asignacion,
+        fechaCierre: row.fecha_cierre,
+        abogadoUsuarioId: row.abogado_usuario_id,
+        asociadoId: row.asociado_id,
+        asociado: {
+          id: row.asociado_id,
+          idUnico: row.asociado_id_unico,
+          nombre: row.asociado_nombre,
+          apellidoPat: row.asociado_apellido_pat,
+          telefono: row.asociado_telefono,
+          fotoUrl: row.asociado_foto_url,
+        },
+        abogado: row.abogado_razon_social ? { razonSocial: row.abogado_razon_social } : null,
+      }));
+
+      return { data, meta: { total: data.length } };
+    }
+
+    // Sin zona: devuelve todos los casos activos (fallback)
+    const where: any = { latitud: { not: null }, longitud: { not: null } };
+    if (estado) {
+      where.estado = estado;
+    } else {
+      where.estado = { notIn: ['cerrado', 'cancelado'] };
+    }
+    if (prioridad) where.prioridad = prioridad;
+
+    const data = await this.prisma.casoLegal.findMany({
+      where,
+      take: limit,
+      orderBy: { fechaApertura: 'desc' },
+      include: {
+        asociado: {
+          select: {
+            id: true, idUnico: true, nombre: true, apellidoPat: true, telefono: true,
+            fotoUrl: true,
+          },
+        },
+        abogado: { select: { razonSocial: true } },
+        abogadoUsuario: { select: { id: true, nombre: true } },
+      },
+    });
+
+    return { data, meta: { total: data.length } };
+  }
+
   async aceptarCaso(casoId: string, abogadoUsuarioId: string) {
     const caso = await this.prisma.casoLegal.findFirst({
       where: { id: casoId, abogadoUsuarioId },

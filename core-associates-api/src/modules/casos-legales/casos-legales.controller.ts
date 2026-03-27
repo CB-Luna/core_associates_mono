@@ -109,6 +109,15 @@ export class CasosLegalesController {
     return this.casosLegalesService.getCasosDisponibles(userId, query);
   }
 
+  @Get('abogado/mapa')
+  @UseGuards(PermisosGuard)
+  @Permisos('casos-legales:ver-propios')
+  @ApiOperation({ summary: 'Casos para mapa SOS filtrados por zona del abogado' })
+  @ApiResponse({ status: 200, description: 'Casos activos dentro de la zona del abogado' })
+  getMapaAbogado(@Query() query: CasosLegalesQueryDto, @CurrentUser('id') userId: string) {
+    return this.casosLegalesService.findAllForAbogadoMapa(userId, query);
+  }
+
   @Get('abogado/mis-casos/:id/asociado-foto')
   @UseGuards(PermisosGuard)
   @Permisos('casos-legales:ver-propios')

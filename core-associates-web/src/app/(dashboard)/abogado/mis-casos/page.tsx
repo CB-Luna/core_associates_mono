@@ -107,7 +107,11 @@ export default function MisCasosAbogadoPage() {
         if (!as) return <span className="text-neutral-400 text-sm">—</span>;
         return (
           <div className="flex items-center gap-2">
-            <AsociadoPhoto asociado={{ id: as.id ?? row.original.asociadoId, nombre: as.nombre, apellidoPat: as.apellidoPat, fotoUrl: as.fotoUrl }} size="sm" />
+            <AsociadoPhoto
+              asociado={{ id: as.id ?? row.original.asociadoId, nombre: as.nombre, apellidoPat: as.apellidoPat, fotoUrl: as.fotoUrl }}
+              photoEndpoint={`/casos-legales/abogado/mis-casos/${row.original.id}/asociado-foto`}
+              size="sm"
+            />
             <div>
               <p className="text-sm font-medium text-neutral-700">{as.nombre} {as.apellidoPat}</p>
               <p className="text-xs text-neutral-400">{as.idUnico}</p>

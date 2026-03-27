@@ -72,9 +72,9 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       {/* Desktop sidebar */}
-      <div className="hidden lg:sticky lg:top-0 lg:block lg:h-screen lg:overflow-y-auto">
+      <div className="hidden lg:block lg:h-screen lg:overflow-y-auto">
         <Sidebar />
       </div>
 
@@ -88,8 +88,8 @@ export default function DashboardLayout({
         </div>
       )}
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="sticky top-0 z-40">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="shrink-0">
           <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
         </div>
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 dark:bg-gray-900">{children}</main>

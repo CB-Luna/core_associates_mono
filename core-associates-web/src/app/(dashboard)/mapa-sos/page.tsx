@@ -70,7 +70,8 @@ export default function MapaSosPage() {
       const params = new URLSearchParams({ limit: '100' });
       if (estadoFilter) params.set('estado', estadoFilter);
       if (prioridadFilter) params.set('prioridad', prioridadFilter);
-      const res = await apiClient<PaginatedResponse<any>>(`/casos-legales/admin/all?${params}`);
+      const endpoint = esAbogado ? '/casos-legales/abogado/mapa' : '/casos-legales/admin/all';
+      const res = await apiClient<PaginatedResponse<any>>(`${endpoint}?${params}`);
       setCasos(res.data);
     } catch (err: any) {
       console.error(err);
@@ -78,14 +79,15 @@ export default function MapaSosPage() {
     } finally {
       setLoading(false);
     }
-  }, [estadoFilter, prioridadFilter]);
+  }, [estadoFilter, prioridadFilter, esAbogado]);
 
   useEffect(() => {
+    const base = esAbogado ? '/casos-legales/abogado/mapa' : '/casos-legales/admin/all';
     Promise.all([
-      apiClient<PaginatedResponse<any>>('/casos-legales/admin/all?limit=1'),
-      apiClient<PaginatedResponse<any>>('/casos-legales/admin/all?limit=1&estado=abierto'),
-      apiClient<PaginatedResponse<any>>('/casos-legales/admin/all?limit=1&estado=en_atencion'),
-      apiClient<PaginatedResponse<any>>('/casos-legales/admin/all?limit=1&estado=resuelto'),
+      apiClient<PaginatedResponse<any>>(`${base}?limit=1`),
+      apiClient<PaginatedResponse<any>>(`${base}?limit=1&estado=abierto`),
+      apiClient<PaginatedResponse<any>>(`${base}?limit=1&estado=en_atencion`),
+      apiClient<PaginatedResponse<any>>(`${base}?limit=1&estado=resuelto`),
     ])
       .then(([all, abiertos, enAtencion, resueltos]) => {
         setStats({
@@ -96,7 +98,7 @@ export default function MapaSosPage() {
         });
       })
       .catch(() => {});
-  }, []);
+  }, [esAbogado]);
 
   useEffect(() => { fetchCasos(); }, [fetchCasos]);
 
@@ -330,7 +332,7 @@ export default function MapaSosPage() {
                   <p className="text-center text-xs text-gray-400">Solo puedes ver el detalle de tus casos asignados</p>
                 ) : (
                   <button
-                    onClick={() => router.push(`/casos-legales/${selectedCaso.id}`)}
+                    onClick={() => router.push(esAbogado ? `/abogado/casos/${selectedCaso.id}` : `/casos-legales/${selectedCaso.id}`)}
                     className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700"
                   >
                     <ExternalLink className="h-4 w-4" />

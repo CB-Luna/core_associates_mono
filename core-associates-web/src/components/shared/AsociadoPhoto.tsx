@@ -21,6 +21,8 @@ interface Props {
   };
   size?: Size;
   className?: string;
+  /** Override the default /asociados/{id}/foto endpoint (e.g. proxy for abogado) */
+  photoEndpoint?: string;
 }
 
 // Module-level cache to avoid hammering the API with duplicate requests.
@@ -32,45 +34,47 @@ const photoCache = new Map<string, string | null>();
  * in memory) so rendering 20 rows doesn't fire 20 simultaneous requests.
  * Shows initials when there is no photo or the id is missing.
  */
-export function AsociadoPhoto({ asociado, size = 'md', className }: Props) {
+export function AsociadoPhoto({ asociado, size = 'md', className, photoEndpoint }: Props) {
+  const cacheKey = photoEndpoint || asociado.id || '';
   const [src, setSrc] = useState<string | null>(() => {
-    const cached = photoCache.get(asociado.id ?? '');
+    const cached = photoCache.get(cacheKey);
     return cached !== undefined ? (cached ?? null) : null;
   });
   const initials = `${asociado.nombre?.[0] || ''}${asociado.apellidoPat?.[0] || ''}`.toUpperCase();
   const s = SIZE_CLASSES[size];
 
   useEffect(() => {
-    const id = asociado.id;
-    if (!id) return;
-    if (photoCache.has(id)) {
-      setSrc(photoCache.get(id) ?? null);
+    const key = photoEndpoint || asociado.id;
+    if (!key) return;
+    if (photoCache.has(key)) {
+      setSrc(photoCache.get(key) ?? null);
       return;
     }
 
     // Skip fetch if we know there's no photo: fotoUrl is explicitly null
     // and no selfie document exists (avoids flooding the console with 404s).
-    if (asociado.fotoUrl === null) {
+    if (!photoEndpoint && asociado.fotoUrl === null) {
       const hasSelfie = Array.isArray(asociado.documentos) &&
         asociado.documentos.some(d => d.tipo === 'selfie' && d.estado !== 'rechazado');
       if (!hasSelfie) {
-        photoCache.set(id, null);
+        photoCache.set(key, null);
         return;
       }
     }
 
+    const endpoint = photoEndpoint || `/asociados/${asociado.id}/foto`;
     const ctrl = new AbortController();
-    apiImageUrl(`/asociados/${id}/foto`, { signal: ctrl.signal })
+    apiImageUrl(endpoint, { signal: ctrl.signal })
       .then((url) => {
-        photoCache.set(id, url);
+        photoCache.set(key, url);
         setSrc(url);
       })
       .catch(() => {
         // Only cache the 404 result — not an abort (component unmounted)
-        if (!ctrl.signal.aborted) photoCache.set(id, null);
+        if (!ctrl.signal.aborted) photoCache.set(key, null);
       });
     return () => ctrl.abort();
-  }, [asociado.id]);
+  }, [asociado.id, photoEndpoint]);
 
   if (src) {
     return (
