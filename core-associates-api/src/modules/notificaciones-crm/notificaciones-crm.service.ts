@@ -1,11 +1,16 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Observable, fromEvent, map } from 'rxjs';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class NotificacionesCrmService {
   private readonly logger = new Logger(NotificacionesCrmService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async findAll(usuarioId: string, query: { page?: number; limit?: number; leida?: boolean }) {
     const { page = 1, limit = 10, leida } = query;
@@ -71,6 +76,17 @@ export class NotificacionesCrmService {
   }) {
     const noti = await this.prisma.notificacionCRM.create({ data });
     this.logger.log(`Notificación CRM creada: tipo=${data.tipo} para usuario=${data.usuarioId}`);
+    this.eventEmitter.emit(`notif.${data.usuarioId}`, noti);
     return noti;
+  }
+
+  /**
+   * Observable SSE stream para un usuario específico.
+   * Emite cada vez que se crea una notificación para ese usuario.
+   */
+  getStream(userId: string): Observable<MessageEvent> {
+    return fromEvent(this.eventEmitter, `notif.${userId}`).pipe(
+      map((noti) => ({ data: noti }) as MessageEvent),
+    );
   }
 }

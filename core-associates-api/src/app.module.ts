@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { configValidationSchema } from './common/config/config-validation';
@@ -35,6 +36,7 @@ import { AsistenteIaModule } from './modules/asistente-ia/asistente-ia.module';
       validationOptions: { abortEarly: false },
     }),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     ThrottlerModule.forRoot([{
       ttl: 60000,   // 1 minuto
       limit: 60,    // 60 requests por minuto por IP

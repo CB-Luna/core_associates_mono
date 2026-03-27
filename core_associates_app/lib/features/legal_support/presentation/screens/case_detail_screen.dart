@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../shared/theme/app_theme.dart';
 import '../../data/models/caso_legal.dart';
@@ -29,6 +30,85 @@ class _CaseDetailBody extends StatelessWidget {
   final CasoLegal caso;
 
   const _CaseDetailBody({required this.caso});
+
+  Widget _buildAbogadoContent(BuildContext context) {
+    final abogadoUsr = caso.abogadoUsuario;
+    final abogadoProv = caso.abogado;
+
+    if (abogadoUsr == null && abogadoProv == null) {
+      return Text(
+        'Pendiente de asignación',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: AppColors.textSecondary,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
+    final nombre = abogadoUsr?.nombre ?? abogadoProv?.razonSocial ?? '';
+    final telefono = abogadoUsr?.telefono ?? abogadoProv?.telefono;
+    final especialidad = abogadoUsr?.especialidad;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              backgroundImage: abogadoUsr?.avatarUrl != null
+                  ? NetworkImage(abogadoUsr!.avatarUrl!)
+                  : null,
+              child: abogadoUsr?.avatarUrl == null
+                  ? Icon(Icons.person, color: AppColors.primary, size: 24)
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nombre,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (especialidad != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      especialidad,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (telefono != null) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => launchUrl(Uri.parse('tel:$telefono')),
+              icon: const Icon(Icons.phone, size: 18),
+              label: Text('Llamar ($telefono)'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: BorderSide(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 
   Color get _estadoColor {
     switch (caso.estado) {
@@ -105,6 +185,11 @@ class _CaseDetailBody extends StatelessWidget {
 
           const SizedBox(height: 24),
 
+          // Timeline de estado
+          _CaseTimeline(estado: caso.estado),
+
+          const SizedBox(height: 16),
+
           // Description
           if (caso.descripcion != null && caso.descripcion!.isNotEmpty) ...[
             _SectionCard(
@@ -147,33 +232,7 @@ class _CaseDetailBody extends StatelessWidget {
           _SectionCard(
             icon: Icons.gavel,
             title: 'Abogado asignado',
-            child: caso.abogado != null
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        caso.abogado!.razonSocial,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (caso.abogado!.telefono != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          caso.abogado!.telefono!,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.primary),
-                        ),
-                      ],
-                    ],
-                  )
-                : Text(
-                    'Pendiente de asignación',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
+            child: _buildAbogadoContent(context),
           ),
 
           const SizedBox(height: 16),
@@ -295,6 +354,144 @@ class _SectionCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           child,
+        ],
+      ),
+    );
+  }
+}
+
+class _CaseTimeline extends StatelessWidget {
+  final String estado;
+
+  const _CaseTimeline({required this.estado});
+
+  static const _steps = [
+    ('SOS Reportado', 'abierto'),
+    ('Abogado Asignado', 'en_atencion'),
+    ('En Atención', 'escalado'),
+    ('Resuelto', 'resuelto'),
+  ];
+
+  int get _currentIndex {
+    switch (estado) {
+      case 'abierto':
+        return 0;
+      case 'en_atencion':
+        return 1;
+      case 'escalado':
+        return 2;
+      case 'resuelto':
+      case 'cerrado':
+        return 3;
+      case 'cancelado':
+        return -1;
+      default:
+        return 0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final current = _currentIndex;
+    if (current == -1) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.cancel, color: AppColors.error, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Caso cancelado',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.timeline, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Progreso del caso',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: List.generate(_steps.length * 2 - 1, (i) {
+              if (i.isOdd) {
+                final stepIdx = i ~/ 2;
+                final done = stepIdx < current;
+                return Expanded(
+                  child: Container(
+                    height: 3,
+                    color: done ? AppColors.primary : AppColors.border,
+                  ),
+                );
+              }
+              final stepIdx = i ~/ 2;
+              final done = stepIdx <= current;
+              final isActive = stepIdx == current;
+              return Column(
+                children: [
+                  Container(
+                    width: isActive ? 28 : 22,
+                    height: isActive ? 28 : 22,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: done
+                          ? AppColors.primary
+                          : AppColors.border.withValues(alpha: 0.4),
+                      border: isActive
+                          ? Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                              width: 3,
+                            )
+                          : null,
+                    ),
+                    child: done
+                        ? const Icon(Icons.check, size: 14, color: Colors.white)
+                        : null,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _steps[stepIdx].$1,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: done ? AppColors.primary : AppColors.textSecondary,
+                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 9,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              );
+            }),
+          ),
         ],
       ),
     );

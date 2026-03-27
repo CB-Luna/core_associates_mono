@@ -129,7 +129,7 @@ export interface Promocion {
   terminos: string | null;
   imagenUrl: string | null;
   maxCupones: number | null;
-  estado: 'activa' | 'pausada' | 'finalizada';
+  estado: 'activa' | 'pausada' | 'finalizada' | 'expirada';
   createdAt: string;
   proveedor?: Proveedor;
   _count?: {
@@ -240,9 +240,19 @@ export interface CasoLegal {
   };
   notas?: NotaCaso[];
   documentos?: DocumentoCaso[];
+  distanciaKm?: number;
   _count?: {
     notas: number;
   };
+}
+
+export interface ZonaAbogado {
+  zonaLatitud: number | null;
+  zonaLongitud: number | null;
+  zonaRadioKm: number | null;
+  zonaEstado: string | null;
+  zonaDescripcion: string | null;
+  configurada: boolean;
 }
 
 // Dashboard Metrics

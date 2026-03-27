@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell } from 'lucide-react';
+import { Bell, ChevronRight } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { usePermisos } from '@/lib/permisos';
 import type { NotificacionCRM } from '@/lib/api-types';
 
-const POLL_INTERVAL = 30_000; // 30 seconds
+const POLL_INTERVAL = 30_000; // 30 seconds — fallback when SSE unavailable
 
 export function NotificationBell() {
   const router = useRouter();
@@ -19,7 +19,7 @@ export function NotificationBell() {
   const [loadingList, setLoadingList] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Poll no-leidas count
+  // Poll no-leidas count (initial + fallback)
   const fetchCount = useCallback(async () => {
     try {
       const res = await apiClient<{ count: number }>('/notificaciones-crm/no-leidas/count');
@@ -29,12 +29,46 @@ export function NotificationBell() {
     }
   }, []);
 
+  // SSE connection with polling fallback
   useEffect(() => {
     if (!tienePermiso) return;
+
     fetchCount();
-    const interval = setInterval(fetchCount, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchCount, tienePermiso]);
+
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let es: EventSource | null = null;
+
+    const startPolling = () => {
+      if (pollInterval) return;
+      pollInterval = setInterval(fetchCount, POLL_INTERVAL);
+    };
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+
+    if (token) {
+      const url = `${baseUrl}/api/v1/notificaciones-crm/stream?token=${encodeURIComponent(token)}`;
+      es = new EventSource(url);
+
+      es.onmessage = () => {
+        setCount((c) => c + 1);
+      };
+
+      es.onerror = () => {
+        es?.close();
+        es = null;
+        startPolling();
+      };
+    } else {
+      startPolling();
+    }
+
+    return () => {
+      es?.close();
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tienePermiso]);
 
   // Fetch recent when opening
   const fetchRecent = useCallback(async () => {
@@ -157,6 +191,16 @@ export function NotificationBell() {
                 </button>
               ))
             )}
+          </div>
+
+          <div className="border-t border-gray-100 px-4 py-2 dark:border-gray-700">
+            <button
+              onClick={() => { setOpen(false); router.push('/notificaciones'); }}
+              className="flex w-full items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-medium text-primary-600 transition-colors hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/20"
+            >
+              Ver historial completo
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
       )}

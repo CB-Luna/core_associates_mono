@@ -81,6 +81,14 @@ export class CasosLegalesService {
             telefono: true,
           },
         },
+        abogadoUsuario: {
+          select: {
+            nombre: true,
+            avatarUrl: true,
+            especialidad: true,
+            telefono: true,
+          },
+        },
         notas: {
           where: { esPrivada: false },
           orderBy: { createdAt: 'desc' },
@@ -169,7 +177,7 @@ export class CasosLegalesService {
     cancelado: ['abierto'],
   };
 
-  async updateEstado(id: string, estado: string) {
+  async updateEstado(id: string, estado: string, realizadoPorId?: string) {
     const caso = await this.prisma.casoLegal.findUnique({ where: { id } });
     if (!caso) throw new NotFoundException('Caso no encontrado');
 
@@ -187,7 +195,57 @@ export class CasosLegalesService {
     if (estado === 'en_atencion' && caso.estado === 'resuelto') {
       data.fechaCierre = null; // Reabrir limpia fecha cierre
     }
-    return this.prisma.casoLegal.update({ where: { id }, data });
+    const updated = await this.prisma.casoLegal.update({ where: { id }, data });
+
+    // Notificar a otros admin/operadores con atribución de quién realizó el cambio
+    if (realizadoPorId) {
+      this.notificarCambioEstado(caso, estado, realizadoPorId).catch((err) =>
+        this.logger.error('Error notificando cambio de estado', err),
+      );
+    }
+
+    return updated;
+  }
+
+  private async notificarCambioEstado(
+    caso: { id: string; codigo: string },
+    nuevoEstado: string,
+    realizadoPorId: string,
+  ) {
+    const estadoLabels: Record<string, string> = {
+      en_atencion: 'en atención',
+      escalado: 'escalado',
+      resuelto: 'resuelto',
+      cerrado: 'cerrado',
+      cancelado: 'cancelado',
+      abierto: 'reabierto',
+    };
+
+    const realizadoPor = await this.prisma.usuario.findUnique({
+      where: { id: realizadoPorId },
+      select: { nombre: true },
+    });
+    const nombreOperador = realizadoPor?.nombre ?? 'un operador';
+    const estadoLabel = estadoLabels[nuevoEstado] ?? nuevoEstado;
+
+    const titulo = `Caso ${caso.codigo} — estado actualizado`;
+    const mensaje = `El caso fue marcado como "${estadoLabel}" por ${nombreOperador}`;
+
+    // Notificar a todos los admin/operadores activos excepto quien hizo el cambio
+    const destinatarios = await this.prisma.usuario.findMany({
+      where: { rol: { in: ['admin', 'operador'] }, estado: 'activo', id: { not: realizadoPorId } },
+      select: { id: true },
+    });
+    for (const dest of destinatarios) {
+      await this.notificacionesCrm.crear({
+        usuarioId: dest.id,
+        titulo,
+        mensaje,
+        tipo: 'estado_cambio',
+        referenciaId: caso.id,
+        referenciaTipo: 'caso_legal',
+      });
+    }
   }
 
   async updatePrioridad(id: string, prioridad: string) {
@@ -329,12 +387,98 @@ export class CasosLegalesService {
     return caso;
   }
 
-  async getCasosDisponibles(query: { page?: number; limit?: number }) {
+  async getCasosDisponibles(abogadoUsuarioId: string, query: { page?: number; limit?: number }) {
     const { page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const where = { estado: 'abierto' as const, abogadoUsuarioId: null };
+    const abogado = await this.prisma.usuario.findUnique({
+      where: { id: abogadoUsuarioId },
+      select: { zonaLatitud: true, zonaLongitud: true, zonaRadioKm: true },
+    });
 
+    if (abogado?.zonaLatitud != null && abogado?.zonaLongitud != null) {
+      const lat = abogado.zonaLatitud;
+      const lng = abogado.zonaLongitud;
+      const radioKm = abogado.zonaRadioKm ?? 80;
+
+      type RawCaso = {
+        id: string; codigo: string; tipo_percance: string; descripcion: string | null;
+        latitud: string; longitud: string; direccion_aprox: string | null;
+        estado: string; prioridad: string; fecha_apertura: Date;
+        fecha_asignacion: Date | null; fecha_cierre: Date | null;
+        distancia_km: string;
+        asociado_id_unico: string; asociado_nombre: string;
+        asociado_apellido_pat: string; asociado_foto_url: string | null;
+      };
+
+      const [casosRaw, countRaw] = await Promise.all([
+        this.prisma.$queryRaw<RawCaso[]>`
+          SELECT
+            cl.id, cl.codigo, cl.tipo_percance, cl.descripcion,
+            cl.latitud, cl.longitud, cl.direccion_aprox,
+            cl.estado, cl.prioridad, cl.fecha_apertura, cl.fecha_asignacion, cl.fecha_cierre,
+            a.id_unico AS asociado_id_unico, a.nombre AS asociado_nombre,
+            a.apellido_pat AS asociado_apellido_pat, a.foto_url AS asociado_foto_url,
+            ROUND(CAST(
+              (6371 * acos(GREATEST(-1.0, LEAST(1.0,
+                cos(radians(${lat})) * cos(radians(CAST(cl.latitud AS float8))) *
+                cos(radians(CAST(cl.longitud AS float8)) - radians(${lng})) +
+                sin(radians(${lat})) * sin(radians(CAST(cl.latitud AS float8)))
+              )))) AS numeric
+            ), 1) AS distancia_km
+          FROM casos_legales cl
+          JOIN asociados a ON a.id = cl.asociado_id
+          WHERE cl.estado = 'abierto'
+            AND cl.abogado_usuario_id IS NULL
+            AND (6371 * acos(GREATEST(-1.0, LEAST(1.0,
+                cos(radians(${lat})) * cos(radians(CAST(cl.latitud AS float8))) *
+                cos(radians(CAST(cl.longitud AS float8)) - radians(${lng})) +
+                sin(radians(${lat})) * sin(radians(CAST(cl.latitud AS float8)))
+              )))) <= ${radioKm}
+          ORDER BY distancia_km ASC
+          LIMIT ${limit} OFFSET ${skip}
+        `,
+        this.prisma.$queryRaw<[{ count: bigint }]>`
+          SELECT COUNT(*) as count
+          FROM casos_legales cl
+          WHERE cl.estado = 'abierto'
+            AND cl.abogado_usuario_id IS NULL
+            AND (6371 * acos(GREATEST(-1.0, LEAST(1.0,
+                cos(radians(${lat})) * cos(radians(CAST(cl.latitud AS float8))) *
+                cos(radians(CAST(cl.longitud AS float8)) - radians(${lng})) +
+                sin(radians(${lat})) * sin(radians(CAST(cl.latitud AS float8)))
+              )))) <= ${radioKm}
+        `,
+      ]);
+
+      const total = Number(countRaw[0].count);
+      const data = casosRaw.map((row) => ({
+        id: row.id,
+        codigo: row.codigo,
+        tipoPercance: row.tipo_percance,
+        descripcion: row.descripcion,
+        latitud: row.latitud,
+        longitud: row.longitud,
+        direccionAprox: row.direccion_aprox,
+        estado: row.estado,
+        prioridad: row.prioridad,
+        fechaApertura: row.fecha_apertura,
+        fechaAsignacion: row.fecha_asignacion,
+        fechaCierre: row.fecha_cierre,
+        distanciaKm: Number(row.distancia_km),
+        asociado: {
+          idUnico: row.asociado_id_unico,
+          nombre: row.asociado_nombre,
+          apellidoPat: row.asociado_apellido_pat,
+          fotoUrl: row.asociado_foto_url,
+        },
+      }));
+
+      return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
+    }
+
+    // Sin zona configurada: devuelve todos los casos disponibles sin filtro geográfico
+    const where = { estado: 'abierto' as const, abogadoUsuarioId: null };
     const [data, total] = await Promise.all([
       this.prisma.casoLegal.findMany({
         where,
@@ -423,6 +567,18 @@ export class CasosLegalesService {
     if (!caso) throw new NotFoundException('Caso no encontrado');
     if (caso.estado !== 'abierto' || caso.abogadoUsuarioId) {
       throw new BadRequestException('Este caso no está disponible para postulación');
+    }
+
+    // Validar: máximo 3 postulaciones activas (casos abiertos sin asignar donde ya postuló)
+    const postulacionesActivas = await this.prisma.notaCaso.count({
+      where: {
+        autorId: abogadoUsuarioId,
+        esPrivada: true,
+        caso: { estado: 'abierto', abogadoUsuarioId: null },
+      },
+    });
+    if (postulacionesActivas >= 3) {
+      throw new BadRequestException('Ya tienes el máximo de 3 postulaciones activas. Espera a que se procese alguna antes de postularte a nuevos casos.');
     }
 
     const abogado = await this.prisma.usuario.findUnique({
@@ -642,11 +798,33 @@ export class CasosLegalesService {
     }
   }
 
-  private async notificarAbogadosNuevoCaso(caso: { id: string; codigo: string; tipoPercance: string; prioridad: string }) {
-    const abogados = await this.prisma.usuario.findMany({
-      where: { rol: 'abogado', estado: 'activo' },
-      select: { id: true },
-    });
+  private async notificarAbogadosNuevoCaso(caso: { id: string; codigo: string; tipoPercance: string; prioridad: string; latitud?: any; longitud?: any }) {
+    const casoLat = caso.latitud != null ? Number(caso.latitud) : null;
+    const casoLng = caso.longitud != null ? Number(caso.longitud) : null;
+
+    let abogados: { id: string }[];
+
+    if (casoLat != null && casoLng != null) {
+      // Notificar solo abogados sin zona configurada O dentro del radio
+      abogados = await this.prisma.$queryRaw<{ id: string }[]>`
+        SELECT u.id
+        FROM usuarios u
+        WHERE u.rol = 'abogado' AND u.estado = 'activo'
+          AND (
+            u.zona_latitud IS NULL OR u.zona_longitud IS NULL
+            OR (6371 * acos(GREATEST(-1.0, LEAST(1.0,
+                cos(radians(u.zona_latitud)) * cos(radians(${casoLat}::float8)) *
+                cos(radians(${casoLng}::float8) - radians(u.zona_longitud)) +
+                sin(radians(u.zona_latitud)) * sin(radians(${casoLat}::float8))
+              )))) <= COALESCE(u.zona_radio_km, 80)
+          )
+      `;
+    } else {
+      abogados = await this.prisma.usuario.findMany({
+        where: { rol: 'abogado', estado: 'activo' },
+        select: { id: true },
+      });
+    }
 
     const titulo = 'Nuevo caso disponible';
     const prioridadLabel = caso.prioridad === 'alta' ? '🔴 Alta' : caso.prioridad === 'media' ? '🟡 Media' : '🟢 Baja';

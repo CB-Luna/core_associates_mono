@@ -54,6 +54,29 @@ class AbogadoInfo {
   }
 }
 
+class AbogadoUsuarioInfo {
+  final String nombre;
+  final String? avatarUrl;
+  final String? especialidad;
+  final String? telefono;
+
+  const AbogadoUsuarioInfo({
+    required this.nombre,
+    this.avatarUrl,
+    this.especialidad,
+    this.telefono,
+  });
+
+  factory AbogadoUsuarioInfo.fromJson(Map<String, dynamic> json) {
+    return AbogadoUsuarioInfo(
+      nombre: json['nombre'] as String,
+      avatarUrl: json['avatarUrl'] as String?,
+      especialidad: json['especialidad'] as String?,
+      telefono: json['telefono'] as String?,
+    );
+  }
+}
+
 class CasoLegal {
   final String id;
   final String codigo;
@@ -67,6 +90,7 @@ class CasoLegal {
   final String fechaApertura;
   final String? fechaCierre;
   final AbogadoInfo? abogado;
+  final AbogadoUsuarioInfo? abogadoUsuario;
   final List<NotaCaso> notas;
 
   const CasoLegal({
@@ -82,6 +106,7 @@ class CasoLegal {
     required this.fechaApertura,
     this.fechaCierre,
     this.abogado,
+    this.abogadoUsuario,
     this.notas = const [],
   });
 
@@ -134,6 +159,11 @@ class CasoLegal {
       fechaCierre: json['fechaCierre'] as String?,
       abogado: json['abogado'] != null
           ? AbogadoInfo.fromJson(json['abogado'] as Map<String, dynamic>)
+          : null,
+      abogadoUsuario: json['abogadoUsuario'] != null
+          ? AbogadoUsuarioInfo.fromJson(
+              json['abogadoUsuario'] as Map<String, dynamic>,
+            )
           : null,
       notas:
           (json['notas'] as List<dynamic>?)

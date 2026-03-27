@@ -17,6 +17,7 @@ const estadoOptions = [
   { label: 'Activa', value: 'activa' },
   { label: 'Pausada', value: 'pausada' },
   { label: 'Finalizada', value: 'finalizada' },
+  { label: 'Expirada', value: 'expirada' },
 ];
 
 function PromocionThumbnail({ promocionId, imagenUrl }: { promocionId: string; imagenUrl: string | null }) {
@@ -176,8 +177,9 @@ export default function PromocionesPage() {
       header: 'Estado',
       cell: ({ getValue }) => {
         const estado = getValue() as string;
+        const variant = estado === 'activa' ? 'success' : estado === 'pausada' ? 'warning' : estado === 'expirada' ? 'danger' : 'default';
         return (
-          <Badge variant={estado === 'activa' ? 'success' : estado === 'pausada' ? 'warning' : 'default'}>
+          <Badge variant={variant}>
             {estado}
           </Badge>
         );
@@ -188,6 +190,7 @@ export default function PromocionesPage() {
       header: 'Acciones',
       cell: ({ row }) => {
         const p = row.original;
+        if (p.estado === 'expirada' || p.estado === 'finalizada') return null;
         return (
           <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
             {p.estado === 'activa' && (
@@ -200,11 +203,9 @@ export default function PromocionesPage() {
                 <Play className="h-4 w-4" />
               </button>
             )}
-            {p.estado !== 'finalizada' && (
-              <button onClick={() => handleEstadoChange(p.id, 'finalizada')} title="Finalizar" className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100">
-                <StopCircle className="h-4 w-4" />
-              </button>
-            )}
+            <button onClick={() => handleEstadoChange(p.id, 'finalizada')} title="Finalizar" className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100">
+              <StopCircle className="h-4 w-4" />
+            </button>
           </div>
         );
       },
@@ -253,7 +254,7 @@ export default function PromocionesPage() {
                       <p className="truncate font-semibold text-gray-900 dark:text-gray-100">{p.titulo}</p>
                       <p className="truncate text-[11px] text-gray-400">{p.proveedor?.razonSocial || '—'}</p>
                     </div>
-                    <Badge variant={p.estado === 'activa' ? 'success' : p.estado === 'pausada' ? 'warning' : 'default'}>{p.estado}</Badge>
+                    <Badge variant={p.estado === 'activa' ? 'success' : p.estado === 'pausada' ? 'warning' : p.estado === 'expirada' ? 'danger' : 'default'}>{p.estado}</Badge>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${isPct ? 'bg-green-50 text-green-700' : 'bg-emerald-50 text-emerald-700'}`}>
@@ -271,7 +272,7 @@ export default function PromocionesPage() {
                     {p.estado === 'pausada' && (
                       <button onClick={() => handleEstadoChange(p.id, 'activa')} title="Activar" className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-green-200 text-green-500 hover:bg-green-50"><Play className="h-3.5 w-3.5" /></button>
                     )}
-                    {p.estado !== 'finalizada' && (
+                    {p.estado !== 'finalizada' && p.estado !== 'expirada' && (
                       <button onClick={() => handleEstadoChange(p.id, 'finalizada')} title="Finalizar" className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 text-gray-400 hover:bg-gray-50"><StopCircle className="h-3.5 w-3.5" /></button>
                     )}
                   </div>

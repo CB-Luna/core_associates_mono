@@ -125,7 +125,7 @@ export class AuthService {
             titulo: 'Nuevo asociado registrado',
             mensaje: `El asociado ${idUnico} se registró y está pendiente de revisión.`,
             tipo: 'nuevo_asociado',
-            referenciaId: asociado.id,
+            referenciaId: asociado!.id,
             referenciaTipo: 'asociado',
           }).catch(() => {}),
         );
@@ -584,5 +584,58 @@ export class AuthService {
 
     const permisos = usuario?.rolRef?.permisos.map((rp) => rp.permiso.codigo) ?? [];
     return { permisos };
+  }
+
+  // ── Zona de operación del abogado ──
+
+  async updateZonaAbogado(
+    userId: string,
+    dto: {
+      zonaLatitud?: number;
+      zonaLongitud?: number;
+      zonaRadioKm?: number;
+      zonaEstado?: string;
+      zonaDescripcion?: string;
+    },
+  ): Promise<{ message: string }> {
+    const usuario = await this.prisma.usuario.findUnique({ where: { id: userId } });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    await this.prisma.usuario.update({
+      where: { id: userId },
+      data: {
+        zonaLatitud: dto.zonaLatitud !== undefined ? dto.zonaLatitud : undefined,
+        zonaLongitud: dto.zonaLongitud !== undefined ? dto.zonaLongitud : undefined,
+        zonaRadioKm: dto.zonaRadioKm !== undefined ? dto.zonaRadioKm : undefined,
+        zonaEstado: dto.zonaEstado !== undefined ? dto.zonaEstado : undefined,
+        zonaDescripcion: dto.zonaDescripcion !== undefined ? dto.zonaDescripcion : undefined,
+      },
+    });
+
+    return { message: 'Zona de operación actualizada' };
+  }
+
+  async getMiZona(userId: string): Promise<{
+    zonaLatitud: number | null;
+    zonaLongitud: number | null;
+    zonaRadioKm: number | null;
+    zonaEstado: string | null;
+    zonaDescripcion: string | null;
+    configurada: boolean;
+  }> {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: userId },
+      select: { zonaLatitud: true, zonaLongitud: true, zonaRadioKm: true, zonaEstado: true, zonaDescripcion: true },
+    });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    return {
+      zonaLatitud: usuario.zonaLatitud,
+      zonaLongitud: usuario.zonaLongitud,
+      zonaRadioKm: usuario.zonaRadioKm,
+      zonaEstado: usuario.zonaEstado,
+      zonaDescripcion: usuario.zonaDescripcion,
+      configurada: usuario.zonaLatitud != null && usuario.zonaLongitud != null,
+    };
   }
 }

@@ -247,7 +247,7 @@ export class DocumentosService {
         where: { asociadoId, esPrincipal: true },
         select: { marca: true, modelo: true, anio: true, color: true, placas: true, numeroSerie: true },
       });
-      if (vehiculo) datosVehiculo = vehiculo;
+      if (vehiculo) datosVehiculo = { ...vehiculo, numeroSerie: vehiculo.numeroSerie ?? undefined };
     }
 
     const prompt = PRE_VALIDACION_PROMPT(tipo, datosVehiculo);

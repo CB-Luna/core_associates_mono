@@ -322,7 +322,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         data['numeroSerie'] = _serieCtrl.text.trim();
       }
 
-      final vehiculo = await ref.read(vehiculosProvider.notifier).addVehiculo(data);
+      final vehiculo = await ref
+          .read(vehiculosProvider.notifier)
+          .addVehiculo(data);
 
       // Subir foto del vehículo (opcional, no bloquea el avance)
       if (_vehicleImagePath != null) {
@@ -1011,7 +1013,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                   ),
                                   onPressed: obState.isSaving
                                       ? null
-                                      : () => setState(() => _vehicleImagePath = null),
+                                      : () => setState(
+                                          () => _vehicleImagePath = null,
+                                        ),
                                 ),
                               ),
                             ),

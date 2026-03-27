@@ -171,7 +171,7 @@ export function ProveedorDetailModal({ proveedorId, onClose, onUpdated }: Props)
                           {formatFechaLegible(p.fechaInicio)} - {formatFechaLegible(p.fechaFin)}
                         </p>
                       </div>
-                      <Badge variant={p.estado === 'activa' ? 'success' : p.estado === 'pausada' ? 'warning' : 'default'}>
+                      <Badge variant={p.estado === 'activa' ? 'success' : p.estado === 'pausada' ? 'warning' : p.estado === 'expirada' ? 'danger' : 'default'}>
                         {p.estado}
                       </Badge>
                     </div>

@@ -105,8 +105,8 @@ export class CasosLegalesController {
   @Permisos('casos-legales:ver-disponibles')
   @ApiOperation({ summary: 'Listar casos sin abogado (disponibles)' })
   @ApiResponse({ status: 200, description: 'Lista de casos disponibles' })
-  getCasosDisponibles(@Query() query: CasosLegalesQueryDto) {
-    return this.casosLegalesService.getCasosDisponibles(query);
+  getCasosDisponibles(@Query() query: CasosLegalesQueryDto, @CurrentUser('id') userId: string) {
+    return this.casosLegalesService.getCasosDisponibles(userId, query);
   }
 
   @Get('abogado/mis-casos/:id/asociado-foto')
@@ -167,8 +167,12 @@ export class CasosLegalesController {
   @ApiResponse({ status: 401, description: 'No autenticado' })
   @ApiResponse({ status: 403, description: 'Solo admin/operador' })
   @ApiResponse({ status: 404, description: 'Caso no encontrado' })
-  updateEstado(@Param('id') id: string, @Body() dto: UpdateEstadoCasoDto) {
-    return this.casosLegalesService.updateEstado(id, dto.estado);
+  updateEstado(
+    @Param('id') id: string,
+    @Body() dto: UpdateEstadoCasoDto,
+    @CurrentUser('id') realizadoPorId: string,
+  ) {
+    return this.casosLegalesService.updateEstado(id, dto.estado, realizadoPorId);
   }
 
   @Put(':id/prioridad')

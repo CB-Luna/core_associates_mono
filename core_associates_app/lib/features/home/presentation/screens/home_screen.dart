@@ -386,9 +386,21 @@ class _VerificationChecklist extends ConsumerWidget {
 
     final items = [
       _CheckItem('Datos personales', 'aprobado', Icons.person_outline),
-      _CheckItem('Selfie de verificación', selfieEstado, Icons.camera_alt_outlined),
-      _CheckItem('Vehículo registrado', vehiculoEstado, Icons.directions_car_outlined),
-      _CheckItem('Tarjeta de circulación', docEstado('tarjeta_circulacion'), Icons.credit_card_outlined),
+      _CheckItem(
+        'Selfie de verificación',
+        selfieEstado,
+        Icons.camera_alt_outlined,
+      ),
+      _CheckItem(
+        'Vehículo registrado',
+        vehiculoEstado,
+        Icons.directions_car_outlined,
+      ),
+      _CheckItem(
+        'Tarjeta de circulación',
+        docEstado('tarjeta_circulacion'),
+        Icons.credit_card_outlined,
+      ),
       _CheckItem('INE Frente', docEstado('ine_frente'), Icons.badge_outlined),
       _CheckItem('INE Reverso', docEstado('ine_reverso'), Icons.badge_outlined),
     ];
@@ -461,7 +473,9 @@ class _VerificationChecklist extends ConsumerWidget {
                     item.label,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: _CheckItem.labelColorForEstado(item.estado),
-                      decoration: item.completed ? TextDecoration.lineThrough : null,
+                      decoration: item.completed
+                          ? TextDecoration.lineThrough
+                          : null,
                     ),
                   ),
                 ],

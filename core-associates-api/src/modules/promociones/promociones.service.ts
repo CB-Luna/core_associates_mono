@@ -6,6 +6,15 @@ import { CreatePromocionDto } from './dto/create-promocion.dto';
 
 const BUCKET_PROMOTIONS = 'core-associates-promotions';
 
+/** Computes effective estado: if fechaFin < now and estado is 'activa', returns 'expirada' */
+function computeEstadoEfectivo<T extends { estado: string; fechaFin: Date | string }>(promo: T): T & { estado: string } {
+  const fechaFin = typeof promo.fechaFin === 'string' ? new Date(promo.fechaFin) : promo.fechaFin;
+  if (promo.estado === 'activa' && fechaFin < new Date()) {
+    return { ...promo, estado: 'expirada' };
+  }
+  return promo;
+}
+
 @Injectable()
 export class PromocionesService {
   constructor(
@@ -60,7 +69,7 @@ export class PromocionesService {
       throw new NotFoundException('Promoción no encontrada');
     }
 
-    return promocion;
+    return computeEstadoEfectivo(promocion);
   }
 
   // Admin endpoints
@@ -69,7 +78,15 @@ export class PromocionesService {
     const skip = (page - 1) * limit;
 
     const where: Prisma.PromocionWhereInput = {};
-    if (estado) where.estado = estado as EstadoPromocion;
+    if (estado === 'expirada') {
+      where.estado = 'activa';
+      where.fechaFin = { lt: new Date() };
+    } else if (estado === 'activa') {
+      where.estado = 'activa';
+      where.fechaFin = { gte: new Date() };
+    } else if (estado) {
+      where.estado = estado as EstadoPromocion;
+    }
     if (search) {
       where.OR = [
         { titulo: { contains: search, mode: 'insensitive' } },
@@ -77,7 +94,7 @@ export class PromocionesService {
       ];
     }
 
-    const [data, total] = await Promise.all([
+    const [rawData, total] = await Promise.all([
       this.prisma.promocion.findMany({
         where,
         skip,
@@ -90,6 +107,8 @@ export class PromocionesService {
       }),
       this.prisma.promocion.count({ where }),
     ]);
+
+    const data = rawData.map(computeEstadoEfectivo);
 
     return {
       data,
@@ -144,12 +163,20 @@ export class PromocionesService {
     const skip = (page - 1) * limit;
 
     const where: Prisma.PromocionWhereInput = { proveedorId };
-    if (estado) where.estado = estado as EstadoPromocion;
+    if (estado === 'expirada') {
+      where.estado = 'activa';
+      where.fechaFin = { lt: new Date() };
+    } else if (estado === 'activa') {
+      where.estado = 'activa';
+      where.fechaFin = { gte: new Date() };
+    } else if (estado) {
+      where.estado = estado as EstadoPromocion;
+    }
     if (search) {
       where.titulo = { contains: search, mode: 'insensitive' };
     }
 
-    const [data, total] = await Promise.all([
+    const [rawData, total] = await Promise.all([
       this.prisma.promocion.findMany({
         where,
         skip,
@@ -162,6 +189,8 @@ export class PromocionesService {
       }),
       this.prisma.promocion.count({ where }),
     ]);
+
+    const data = rawData.map(computeEstadoEfectivo);
 
     return {
       data,

@@ -65,7 +65,16 @@ export class ProveedoresService {
       throw new NotFoundException('Proveedor no encontrado');
     }
 
-    return proveedor;
+    // Compute effective estado for promotions
+    const promociones = proveedor.promociones.map((p) => {
+      const fechaFin = typeof p.fechaFin === 'string' ? new Date(p.fechaFin) : p.fechaFin;
+      if (p.estado === 'activa' && fechaFin < new Date()) {
+        return { ...p, estado: 'expirada' as const };
+      }
+      return p;
+    });
+
+    return { ...proveedor, promociones };
   }
 
   async create(dto: CreateProveedorDto) {

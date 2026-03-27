@@ -442,6 +442,13 @@ model Usuario {
   telefono           String?       @db.VarChar(20)
   direccion          String?       @db.VarChar(300)
   temaId             String?       @map("tema_id") @db.Uuid
+
+  // Zona de operación (solo abogados)
+  zonaLatitud        Float?        @map("zona_latitud")
+  zonaLongitud       Float?        @map("zona_longitud")
+  zonaRadioKm        Int?          @default(80) @map("zona_radio_km")
+  zonaEstado         String?       @map("zona_estado") @db.VarChar(100)
+  zonaDescripcion    String?       @map("zona_descripcion") @db.VarChar(200)
   estado        EstadoUsuario @default(activo)
   ultimoAcceso  DateTime?     @map("ultimo_acceso")
   createdAt     DateTime      @default(now()) @map("created_at")

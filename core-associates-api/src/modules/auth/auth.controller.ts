@@ -10,6 +10,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
+import { UpdateZonaDto } from './dto/update-zona.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermisosGuard } from '../../common/guards/permisos.guard';
@@ -237,5 +238,28 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   deleteAvatar(@Param('id', ParseUUIDPipe) id: string) {
     return this.authService.deleteAvatar(id);
+  }
+
+  // ── Zona de operación del abogado ──
+
+  @Get('me/zona')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener mi zona de operación' })
+  @ApiResponse({ status: 200, description: 'Zona de operación' })
+  getMiZona(@CurrentUser('id') userId: string) {
+    return this.authService.getMiZona(userId);
+  }
+
+  @Put('me/zona')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar mi zona de operación (abogados)' })
+  @ApiResponse({ status: 200, description: 'Zona actualizada' })
+  updateMiZona(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateZonaDto,
+  ) {
+    return this.authService.updateZonaAbogado(userId, dto);
   }
 }
