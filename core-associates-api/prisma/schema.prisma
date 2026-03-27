@@ -257,6 +257,7 @@ model ConfiguracionIA {
   umbralAutoRechazo     Float  @default(0.40) @map("umbral_auto_rechazo")
   maxRechazosPreval     Int    @default(5)    @map("max_rechazos_preval")
   horasBloqueoPreval    Int    @default(24)   @map("horas_bloqueo_preval")
+  nivelRigurosidad      Int    @default(2)    @map("nivel_rigurosidad") // 1=Básico, 2=Moderado, 3=Estricto, 4=Máximo
 
   // Campos específicos del chatbot (solo aplican a clave='chatbot_assistant')
   chatbotActivo              Boolean @default(true)  @map("chatbot_activo")

@@ -97,6 +97,8 @@ export function ConfAITab() {
   const [chatTestMessages, setChatTestMessages] = useState<{ role: string; content: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [testTipo, setTestTipo] = useState<string>('ine_frente');
+
   const [form, setForm] = useState({
     nombre: '',
     provider: 'google',
@@ -110,6 +112,7 @@ export function ConfAITab() {
     umbralAutoRechazo: 0.40,
     maxRechazosPreval: 5,
     horasBloqueoPreval: 24,
+    nivelRigurosidad: 2,
     chatbotActivo: true,
     modoAvanzadoDisponible: true,
     maxPreguntasPorHora: 20,
@@ -131,6 +134,7 @@ export function ConfAITab() {
       umbralAutoRechazo: config.umbralAutoRechazo ?? 0.40,
       maxRechazosPreval: config.maxRechazosPreval ?? 5,
       horasBloqueoPreval: config.horasBloqueoPreval ?? 24,
+      nivelRigurosidad: config.nivelRigurosidad ?? 2,
       chatbotActivo: config.chatbotActivo ?? true,
       modoAvanzadoDisponible: config.modoAvanzadoDisponible ?? true,
       maxPreguntasPorHora: config.maxPreguntasPorHora ?? 20,
@@ -191,6 +195,7 @@ export function ConfAITab() {
         body.umbralAutoRechazo = form.umbralAutoRechazo;
         body.maxRechazosPreval = form.maxRechazosPreval;
         body.horasBloqueoPreval = form.horasBloqueoPreval;
+        body.nivelRigurosidad = form.nivelRigurosidad;
       }
       if (selected.clave === 'chatbot_assistant') {
         body.chatbotActivo = form.chatbotActivo;
@@ -233,7 +238,7 @@ export function ConfAITab() {
     try {
       const fd = new FormData();
       fd.append('file', testFile);
-      fd.append('tipo', 'ine_frontal');
+      fd.append('tipo', testTipo);
       const result = await apiClient<any>('/documentos/pre-validar', { method: 'POST', body: fd });
       setTestResult(result);
     } catch (err: any) {
@@ -455,6 +460,39 @@ export function ConfAITab() {
             <SectionToggle title="Reglas del modulo" icon={Shield} open={openSections.reglas} onToggle={() => toggleSection('reglas')}>
               {isDocModule && (
                 <>
+                  {/* Nivel de rigurosidad */}
+                  <div className="mb-6">
+                    <label className="mb-2 block text-sm font-medium text-gray-700">Nivel de rigurosidad de la IA</label>
+                    <p className="mb-3 text-xs text-gray-500">Controla que tan estricta es la validacion documental. Niveles mas altos rechazan mas documentos.</p>
+                    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                      {[
+                        { value: 1, label: 'Basico', desc: 'Solo valida tipo', color: 'green' },
+                        { value: 2, label: 'Moderado', desc: 'Rechaza 3+ fallos cruzados', color: 'blue' },
+                        { value: 3, label: 'Estricto', desc: 'Rechaza cualquier fallo', color: 'amber' },
+                        { value: 4, label: 'Maximo', desc: 'Estricto + liveness', color: 'red' },
+                      ].map((level) => {
+                        const isSelected = form.nivelRigurosidad === level.value;
+                        const colorMap: Record<string, string> = {
+                          green: isSelected ? 'border-green-500 bg-green-50 ring-1 ring-green-500' : 'border-gray-200 hover:border-green-300',
+                          blue: isSelected ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200 hover:border-blue-300',
+                          amber: isSelected ? 'border-amber-500 bg-amber-50 ring-1 ring-amber-500' : 'border-gray-200 hover:border-amber-300',
+                          red: isSelected ? 'border-red-500 bg-red-50 ring-1 ring-red-500' : 'border-gray-200 hover:border-red-300',
+                        };
+                        return (
+                          <button
+                            key={level.value}
+                            type="button"
+                            onClick={() => setForm((f) => ({ ...f, nivelRigurosidad: level.value }))}
+                            className={`rounded-lg border-2 p-3 text-left transition-all ${colorMap[level.color]}`}
+                          >
+                            <div className="text-sm font-semibold text-gray-800">{level.value}. {level.label}</div>
+                            <div className="mt-1 text-xs text-gray-500">{level.desc}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <p className="mb-4 text-xs text-gray-500">Umbrales de confianza para auto-aprobacion/rechazo y limites anti-abuso</p>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
@@ -575,7 +613,17 @@ export function ConfAITab() {
               {isDocModule && (
                 <div>
                   <p className="mb-3 text-xs text-gray-500">Sube una imagen de prueba para verificar que la IA responde correctamente</p>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <select
+                      value={testTipo}
+                      onChange={(e) => setTestTipo(e.target.value)}
+                      className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    >
+                      <option value="ine_frente">INE Frente</option>
+                      <option value="ine_reverso">INE Reverso</option>
+                      <option value="selfie">Selfie</option>
+                      <option value="tarjeta_circulacion">Tarjeta Circulacion</option>
+                    </select>
                     <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => { setTestFile(e.target.files?.[0] || null); setTestResult(null); }} className="hidden" />
                     <button onClick={() => fileInputRef.current?.click()}
                       className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"

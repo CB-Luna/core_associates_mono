@@ -13,6 +13,7 @@ import '../../../documents/presentation/providers/documents_provider.dart';
 import '../../data/profile_repository.dart';
 import '../providers/onboarding_provider.dart';
 import '../providers/profile_provider.dart';
+import 'selfie_capture_screen.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -192,6 +193,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _preValidationError = null;
     });
 
+    // Selfie: use dedicated camera screen with face guide overlay
+    if (tipo == 'selfie') {
+      final path = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(builder: (_) => const SelfieCaptureScreen()),
+      );
+      if (path == null || !mounted) return;
+      _onImageCaptured(path, tipo);
+      return;
+    }
+
     ImageSource? source;
     if (cameraOnly) {
       source = ImageSource.camera;
@@ -222,14 +234,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       source: source,
       imageQuality: 85,
       maxWidth: 1200,
-      preferredCameraDevice: tipo == 'selfie'
-          ? CameraDevice.front
-          : CameraDevice.rear,
+      preferredCameraDevice: CameraDevice.rear,
     );
     if (picked == null || !mounted) return;
+    _onImageCaptured(picked.path, tipo);
+  }
 
+  Future<void> _onImageCaptured(String path, String tipo) async {
     setState(() {
-      _capturedImagePath = picked.path;
+      _capturedImagePath = path;
       _isPreValidating = true;
       _preValidationError = null;
     });
@@ -237,7 +250,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // Pre-validate with AI
     try {
       final repo = ref.read(documentsRepositoryProvider);
-      final result = await repo.preValidar(picked.path, tipo);
+      final result = await repo.preValidar(path, tipo);
       final valida = result['valida'] as bool? ?? false;
 
       if (!mounted) return;

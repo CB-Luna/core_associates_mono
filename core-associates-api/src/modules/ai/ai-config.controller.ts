@@ -78,6 +78,11 @@ export class AiConfigController {
     if (dto.temperatura !== undefined) data.temperatura = dto.temperatura;
     if (dto.maxTokens !== undefined) data.maxTokens = dto.maxTokens;
     if (dto.activo !== undefined) data.activo = dto.activo;
+    if (dto.umbralAutoAprobacion !== undefined) data.umbralAutoAprobacion = dto.umbralAutoAprobacion;
+    if (dto.umbralAutoRechazo !== undefined) data.umbralAutoRechazo = dto.umbralAutoRechazo;
+    if (dto.maxRechazosPreval !== undefined) data.maxRechazosPreval = dto.maxRechazosPreval;
+    if (dto.horasBloqueoPreval !== undefined) data.horasBloqueoPreval = dto.horasBloqueoPreval;
+    if (dto.nivelRigurosidad !== undefined) data.nivelRigurosidad = dto.nivelRigurosidad;
     if (dto.chatbotActivo !== undefined) data.chatbotActivo = dto.chatbotActivo;
     if (dto.modoAvanzadoDisponible !== undefined) data.modoAvanzadoDisponible = dto.modoAvanzadoDisponible;
     if (dto.maxPreguntasPorHora !== undefined) data.maxPreguntasPorHora = dto.maxPreguntasPorHora;

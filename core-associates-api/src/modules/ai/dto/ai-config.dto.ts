@@ -73,6 +73,13 @@ export class CreateAiConfigDto {
   @Min(1)
   @Max(168)
   horasBloqueoPreval?: number;
+
+  @ApiPropertyOptional({ example: 2, description: 'Nivel de rigurosidad: 1=Básico, 2=Moderado, 3=Estricto, 4=Máximo' })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(4)
+  nivelRigurosidad?: number;
 }
 
 export class UpdateAiConfigDto {
@@ -150,6 +157,13 @@ export class UpdateAiConfigDto {
   @Min(1)
   @Max(168)
   horasBloqueoPreval?: number;
+
+  @ApiPropertyOptional({ example: 2, description: 'Nivel de rigurosidad: 1=Básico, 2=Moderado, 3=Estricto, 4=Máximo' })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(4)
+  nivelRigurosidad?: number;
 
   // ── Campos chatbot ──
   @ApiPropertyOptional({ description: 'Chatbot globalmente activo' })

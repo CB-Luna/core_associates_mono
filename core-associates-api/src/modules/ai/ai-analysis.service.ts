@@ -22,7 +22,7 @@ export class AiAnalysisService {
   /**
    * Get the appropriate prompt for a document type.
    */
-  private getPromptForType(tipo: string): string {
+  private getPromptForType(tipo: string, nivelRigurosidad: number = 2): string {
     switch (tipo) {
       case 'ine_frente':
         return INE_FRENTE_PROMPT;
@@ -31,7 +31,7 @@ export class AiAnalysisService {
       case 'tarjeta_circulacion':
         return TARJETA_CIRCULACION_PROMPT;
       case 'selfie':
-        return SELFIE_PROMPT;
+        return SELFIE_PROMPT(nivelRigurosidad);
       default:
         return 'Analiza este documento y extrae toda la información relevante. Responde con JSON.';
     }
@@ -94,7 +94,14 @@ export class AiAnalysisService {
     try {
       // Get file from MinIO
       const buffer = await this.storage.getFile(s3Bucket, s3Key);
-      const prompt = this.getPromptForType(tipo);
+
+      // Get nivelRigurosidad from config
+      const docConfig = await this.prisma.configuracionIA.findUnique({
+        where: { clave: 'document_analyzer' },
+      }).catch(() => null);
+      const nivelRigurosidad = docConfig?.nivelRigurosidad ?? 2;
+
+      const prompt = this.getPromptForType(tipo, nivelRigurosidad);
 
       // Send to Claude
       const { data, tokens, timeMs } = await this.aiService.analyzeImage(
@@ -374,6 +381,7 @@ export class AiAnalysisService {
 
     const umbralAprobacion = config?.umbralAutoAprobacion ?? 0.90;
     const umbralRechazo = config?.umbralAutoRechazo ?? 0.40;
+    const nivelRigurosidad = config?.nivelRigurosidad ?? 2;
 
     // Check critical validation failures
     const criticalKeys = [
@@ -384,7 +392,30 @@ export class AiAnalysisService {
       (key) => validaciones[key] === false,
     );
 
-    if (hasCriticalFailure || confianza < umbralRechazo) {
+    // Check cross-validation failures based on nivelRigurosidad
+    const crossKeys = [
+      'coincide_nombre', 'coincide_apellido_paterno', 'coincide_apellido_materno',
+      'coincide_placas', 'coincide_marca', 'coincide_anio', 'coincide_propietario',
+    ];
+    const crossFailures = crossKeys.filter((key) => validaciones[key] === false);
+    const crossFailureCount = crossFailures.length;
+
+    let hasCrossFailure = false;
+    if (nivelRigurosidad >= 3) {
+      // Estricto: reject any cross-validation failure
+      hasCrossFailure = crossFailureCount > 0;
+    } else if (nivelRigurosidad >= 2) {
+      // Moderado: reject if 3+ cross-validation failures
+      hasCrossFailure = crossFailureCount >= 3;
+    }
+    // Nivel 1 (Básico): ignore cross-validation failures
+
+    // Adjust confidence threshold for level 4
+    const effectiveUmbralRechazo = nivelRigurosidad >= 4
+      ? Math.max(umbralRechazo, 0.50)
+      : umbralRechazo;
+
+    if (hasCriticalFailure || hasCrossFailure || confianza < effectiveUmbralRechazo) {
       // Auto-reject — build user-friendly messages
       const motivos: string[] = [];
       if (hasCriticalFailure) {
@@ -392,7 +423,11 @@ export class AiAnalysisService {
         const friendlyMessages = failed.map((k) => this.VALIDATION_LABELS[k] || k);
         motivos.push(...friendlyMessages);
       }
-      if (confianza < umbralRechazo) {
+      if (hasCrossFailure) {
+        const failedCross = crossFailures.map((k) => this.VALIDATION_LABELS[k] || k);
+        motivos.push(...failedCross);
+      }
+      if (confianza < effectiveUmbralRechazo) {
         motivos.push('La calidad o claridad de la imagen es insuficiente');
       }
 

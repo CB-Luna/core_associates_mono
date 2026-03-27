@@ -250,7 +250,7 @@ export class DocumentosService {
       if (vehiculo) datosVehiculo = { ...vehiculo, numeroSerie: vehiculo.numeroSerie ?? undefined };
     }
 
-    const prompt = PRE_VALIDACION_PROMPT(tipo, datosVehiculo);
+    const prompt = PRE_VALIDACION_PROMPT(tipo, datosVehiculo, config.nivelRigurosidad ?? 2);
     let resultado: { valida: boolean; motivo?: string; advertencia?: string };
 
     try {
@@ -324,6 +324,7 @@ export class DocumentosService {
       umbralAutoRechazo: config?.umbralAutoRechazo ?? 0.40,
       maxRechazosPreval: config?.maxRechazosPreval ?? 5,
       horasBloqueoPreval: config?.horasBloqueoPreval ?? 24,
+      nivelRigurosidad: config?.nivelRigurosidad ?? 2,
     };
   }
 }

@@ -6,6 +6,7 @@
 export const PRE_VALIDACION_PROMPT = (
   tipoEsperado: string,
   datosVehiculo?: { marca?: string; modelo?: string; anio?: number; color?: string; placas?: string; numeroSerie?: string },
+  nivelRigurosidad: number = 2,
 ): string => {
   const descripciones: Record<string, string> = {
     ine_frente:
@@ -73,5 +74,9 @@ Si es válida pero tiene problemas menores (algo borrosa, iluminación pobre per
   "advertencia": "Descripción breve de la advertencia en español mexicano"
 }
 
-IMPORTANTE: Sé tolerante con la calidad de imagen (brillo, enfoque), pero sé ESTRICTO con el tipo de contenido. Solo rechaza si claramente NO es el tipo de documento esperado o si es completamente ilegible.`;
+IMPORTANTE: Sé tolerante con la calidad de imagen (brillo, enfoque), pero sé ESTRICTO con el tipo de contenido. Solo rechaza si claramente NO es el tipo de documento esperado o si es completamente ilegible.${nivelRigurosidad >= 3 ? `
+
+VALIDACIÓN DE AUTENTICIDAD (nivel ${nivelRigurosidad}):
+- Verifica que el documento NO sea una foto de pantalla (busca bordes de monitor, reflejos de pantalla, patrones Moiré, pixelado de pantalla).
+- Si es selfie: verifica que NO sea una foto de otra foto impresa (busca bordes de papel, textura de impresión, iluminación plana antinatural).${nivelRigurosidad >= 4 ? '\n- LIVENESS: Busca indicios de que la persona está presente en el momento: reflejos naturales en los ojos, profundidad de campo natural, micro-texturas de piel reales. Si detectas que es claramente una foto de foto o de pantalla, rechaza con "valida": false y motivo "Se detectó imagen no tomada en vivo".' : '\n- Si detectas evidente foto de pantalla o foto de foto, marca advertencia pero no rechaces automáticamente.'}` : ''}`;
 };

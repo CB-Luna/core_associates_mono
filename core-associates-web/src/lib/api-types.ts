@@ -469,6 +469,7 @@ export interface ConfiguracionIA {
   umbralAutoRechazo: number;
   maxRechazosPreval: number;
   horasBloqueoPreval: number;
+  nivelRigurosidad: number;
   chatbotActivo: boolean;
   modoAvanzadoDisponible: boolean;
   maxPreguntasPorHora: number;
